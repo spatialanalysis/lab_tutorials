@@ -1,0 +1,627 @@
+---
+output: word_document
+---
+
+# Aggregate vehicle counts by Community Area
+
+by Luc Anselin (anselin@uchicago.edu) (8/23/2016)
+
+We are going to count how many abandoned vehicles are in each Community Area. The
+community area ID happens to be part of the vehicle points layer, so that we don't
+have to carry out an explicit spatial join (that would be an alternative approach).
+The end result is a data frame with the Community Area ID and the count of abandoned
+vehicles that we can then join with the Comminity Area polygon layer in GeoDa.
+
+Note: this is written with R beginners in mind, more seasoned R users can probably skip most of the comments.
+
+For more extensive details about each function, see the R (or RStudio) help files.
+
+Packages used:
+
+- **foreign**
+
+### Create a data frame with the vehicle point observations
+
+We will use the **foreign** package to read the **dbf** file associated with the points data layer 
+**abandoned15_9_pts** that was created in GeoDa. Note: it doesn't matter whether we use the file with the
+point ID variable or without, since the latter will not be used. However, it is important that you use the file where
+the missing Community Area code (area 53 for observation 696) was fixed.
+
+We use **read.dbf** and specify the point layer as the input file. As before, we use **head** to make sure all is OK.
+
+
+```R
+library(foreign)
+vpoints <- read.dbf("abandoned15_9_pts_1.dbf")
+head(vpoints)
+```
+
+
+<table>
+<thead><tr><th scope=col>year</th><th scope=col>month</th><th scope=col>credate</th><th scope=col>Ward</th><th scope=col>Polic_rict</th><th scope=col>Commu_Area</th><th scope=col>Latitude</th><th scope=col>Longitude</th></tr></thead>
+<tbody>
+	<tr><td>2015      </td><td>9         </td><td>2015-09-01</td><td> 3        </td><td> 9        </td><td>37        </td><td>41.79584  </td><td>-87.63289 </td></tr>
+	<tr><td>2015      </td><td>9         </td><td>2015-09-01</td><td>49        </td><td>24        </td><td> 1        </td><td>42.01450  </td><td>-87.67822 </td></tr>
+	<tr><td>2015      </td><td>9         </td><td>2015-09-01</td><td>27        </td><td>12        </td><td>28        </td><td>41.88544  </td><td>-87.66681 </td></tr>
+	<tr><td>2015      </td><td>9         </td><td>2015-09-02</td><td> 4        </td><td> 2        </td><td>36        </td><td>41.81816  </td><td>-87.60088 </td></tr>
+	<tr><td>2015      </td><td>9         </td><td>2015-09-02</td><td> 5        </td><td> 3        </td><td>43        </td><td>41.76780  </td><td>-87.58582 </td></tr>
+	<tr><td>2015      </td><td>9         </td><td>2015-09-02</td><td>26        </td><td>12        </td><td>24        </td><td>41.89728  </td><td>-87.68703 </td></tr>
+</tbody>
+</table>
+
+
+
+### Calculate the point count by Community Area
+
+There are many ways to carry out this calculation in R, including the **aggregate** function and its counterpart in some specialized packages. However, in this instance, since we only count the number of events in a particular category, this is easily accomplished using the **table** command. This yields a contingency table that lists how
+many observations are in each category, where the Community Area serves as the category.
+
+After the **table** command, we turn the resulting data object into a data frame with the **as.data.frame** command.
+
+
+```R
+pcounts <- table(vpoints$Commu_Area)
+pcounts
+```
+
+
+    
+      1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20 
+     42  50  17  29  49  40  28   9  12  28  40   8  14  58 104  64  84  29  69  17 
+     21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40 
+     29  71  47  76  98  12  13  31  15  32  20  30   1   7  14   7   3  17  10  11 
+     41  42  43  44  45  46  48  49  50  51  52  53  55  56  57  58  59  60  61  62 
+      6   6  34  35  11  21  15  29   7  12  16  16   5  30  13  48  23  30  45  31 
+     63  64  65  66  67  68  69  70  71  72  73  74  75  76  77 
+     39  22  33  78  27  22  39  43  32   6  37   3  21   7  41 
+
+
+
+```R
+pcframe <- as.data.frame(pcounts)
+head(pcframe)
+```
+
+
+<table>
+<thead><tr><th scope=col>Var1</th><th scope=col>Freq</th></tr></thead>
+<tbody>
+	<tr><td>1 </td><td>42</td></tr>
+	<tr><td>2 </td><td>50</td></tr>
+	<tr><td>3 </td><td>17</td></tr>
+	<tr><td>4 </td><td>29</td></tr>
+	<tr><td>5 </td><td>49</td></tr>
+	<tr><td>6 </td><td>40</td></tr>
+</tbody>
+</table>
+
+
+
+### Gotcha
+
+This all looks fine, except that there is a problem. Upon closer examination of the table, you can see that
+Areas 47 (Burnside) and 54 (Riverdale) don't appear in the table. We can also conclude this from 
+applying the **dim** command to the data frame: it has only 75 rows, whereas there are 77 neighborhoods.
+Apparently, no vehicles were abandoned in those 
+Areas (we leave aside the question whether this is real or a coding error).
+
+
+```R
+dim(pcframe)
+```
+
+
+<ol class=list-inline>
+	<li>75</li>
+	<li>2</li>
+</ol>
+
+
+
+In and of itself, the mismatch is not a problem, but the point is to illustrate how to deal with this problem.
+
+Basically, we need to end up with a data frame that has all the IDs for the Community Areas and a value of zero
+for the counts in Area 47 and 54.
+
+One approach is to initialize a 77 by 1 vector with zero and then extract the values of the vehicle counts from
+the data frame, using the Community Area ID as row numbers. Af first sight, this would be a straightforward application of the subsetting command **[ ]**. Howver, there is a catch. The Area ID values in the **Var1** column
+of the data frame are not numeric, but **factors**. In R, a **factor** is used for categorical variables and its value in and of itself is meaningless (internally, the factors are turned into **levels** and become
+consecutive values). Since there are only 75 different neighborhoods with counts, the factor **Var1** will only take 75 levels, and not the 77 that we need.
+
+This situation illustrates how important it is in R to know the exact type of the variables you are working with. The 
+best way to find out is to experiment, for example, by carrying out an **is.factor** test in **Var1** (remember to
+use the dollar sign unless you have attached the data frame).
+
+
+```R
+is.factor(pcframe$Var1)
+```
+
+
+TRUE
+
+
+In order to convert the factors to a numeric value that is not their level, we need to jump through some hoops. First, 
+we turn the factor into its level, which is a character. Then we turn that character back into
+a numeric value, so "24" becomes 24. These numeric values can then be used as row indices to insert the vehicle
+counts in the correct position.
+
+To keep things simple, we extract the factor as a new variable **nnf** and show the **levels**.
+
+
+```R
+nnf <- pcframe$Var1
+levels(nnf)
+```
+
+
+<ol class=list-inline>
+	<li>'1'</li>
+	<li>'2'</li>
+	<li>'3'</li>
+	<li>'4'</li>
+	<li>'5'</li>
+	<li>'6'</li>
+	<li>'7'</li>
+	<li>'8'</li>
+	<li>'9'</li>
+	<li>'10'</li>
+	<li>'11'</li>
+	<li>'12'</li>
+	<li>'13'</li>
+	<li>'14'</li>
+	<li>'15'</li>
+	<li>'16'</li>
+	<li>'17'</li>
+	<li>'18'</li>
+	<li>'19'</li>
+	<li>'20'</li>
+	<li>'21'</li>
+	<li>'22'</li>
+	<li>'23'</li>
+	<li>'24'</li>
+	<li>'25'</li>
+	<li>'26'</li>
+	<li>'27'</li>
+	<li>'28'</li>
+	<li>'29'</li>
+	<li>'30'</li>
+	<li>'31'</li>
+	<li>'32'</li>
+	<li>'33'</li>
+	<li>'34'</li>
+	<li>'35'</li>
+	<li>'36'</li>
+	<li>'37'</li>
+	<li>'38'</li>
+	<li>'39'</li>
+	<li>'40'</li>
+	<li>'41'</li>
+	<li>'42'</li>
+	<li>'43'</li>
+	<li>'44'</li>
+	<li>'45'</li>
+	<li>'46'</li>
+	<li>'48'</li>
+	<li>'49'</li>
+	<li>'50'</li>
+	<li>'51'</li>
+	<li>'52'</li>
+	<li>'53'</li>
+	<li>'55'</li>
+	<li>'56'</li>
+	<li>'57'</li>
+	<li>'58'</li>
+	<li>'59'</li>
+	<li>'60'</li>
+	<li>'61'</li>
+	<li>'62'</li>
+	<li>'63'</li>
+	<li>'64'</li>
+	<li>'65'</li>
+	<li>'66'</li>
+	<li>'67'</li>
+	<li>'68'</li>
+	<li>'69'</li>
+	<li>'70'</li>
+	<li>'71'</li>
+	<li>'72'</li>
+	<li>'73'</li>
+	<li>'74'</li>
+	<li>'75'</li>
+	<li>'76'</li>
+	<li>'77'</li>
+</ol>
+
+
+
+We now convert this to a numeric value using **as.numeric(levels( ))**. While this is not that efficient in
+general, since each factor is unique in our case, that doesn't matter much.
+
+
+```R
+nnn <- as.numeric(levels(nnf))
+nnn
+```
+
+
+<ol class=list-inline>
+	<li>1</li>
+	<li>2</li>
+	<li>3</li>
+	<li>4</li>
+	<li>5</li>
+	<li>6</li>
+	<li>7</li>
+	<li>8</li>
+	<li>9</li>
+	<li>10</li>
+	<li>11</li>
+	<li>12</li>
+	<li>13</li>
+	<li>14</li>
+	<li>15</li>
+	<li>16</li>
+	<li>17</li>
+	<li>18</li>
+	<li>19</li>
+	<li>20</li>
+	<li>21</li>
+	<li>22</li>
+	<li>23</li>
+	<li>24</li>
+	<li>25</li>
+	<li>26</li>
+	<li>27</li>
+	<li>28</li>
+	<li>29</li>
+	<li>30</li>
+	<li>31</li>
+	<li>32</li>
+	<li>33</li>
+	<li>34</li>
+	<li>35</li>
+	<li>36</li>
+	<li>37</li>
+	<li>38</li>
+	<li>39</li>
+	<li>40</li>
+	<li>41</li>
+	<li>42</li>
+	<li>43</li>
+	<li>44</li>
+	<li>45</li>
+	<li>46</li>
+	<li>48</li>
+	<li>49</li>
+	<li>50</li>
+	<li>51</li>
+	<li>52</li>
+	<li>53</li>
+	<li>55</li>
+	<li>56</li>
+	<li>57</li>
+	<li>58</li>
+	<li>59</li>
+	<li>60</li>
+	<li>61</li>
+	<li>62</li>
+	<li>63</li>
+	<li>64</li>
+	<li>65</li>
+	<li>66</li>
+	<li>67</li>
+	<li>68</li>
+	<li>69</li>
+	<li>70</li>
+	<li>71</li>
+	<li>72</li>
+	<li>73</li>
+	<li>74</li>
+	<li>75</li>
+	<li>76</li>
+	<li>77</li>
+</ol>
+
+
+
+
+```R
+is.factor(nnn)
+```
+
+
+FALSE
+
+
+We now initialize a vector of length 77 (the max value taken by the Community Area ID) to zero. Then we extract the
+**Freq** column from the **pcframe** data frame and assign it to the row numbers that correspond to **nnn**.
+
+
+```R
+narea <- max(vpoints$Commu_Area)
+vc <- vector(mode="numeric",length=narea)
+vc
+```
+
+
+<ol class=list-inline>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+</ol>
+
+
+
+
+```R
+length(vc)
+```
+
+
+77
+
+
+
+```R
+vc[nnn] <- pcframe$Freq
+vc
+```
+
+
+<ol class=list-inline>
+	<li>42</li>
+	<li>50</li>
+	<li>17</li>
+	<li>29</li>
+	<li>49</li>
+	<li>40</li>
+	<li>28</li>
+	<li>9</li>
+	<li>12</li>
+	<li>28</li>
+	<li>40</li>
+	<li>8</li>
+	<li>14</li>
+	<li>58</li>
+	<li>104</li>
+	<li>64</li>
+	<li>84</li>
+	<li>29</li>
+	<li>69</li>
+	<li>17</li>
+	<li>29</li>
+	<li>71</li>
+	<li>47</li>
+	<li>76</li>
+	<li>98</li>
+	<li>12</li>
+	<li>13</li>
+	<li>31</li>
+	<li>15</li>
+	<li>32</li>
+	<li>20</li>
+	<li>30</li>
+	<li>1</li>
+	<li>7</li>
+	<li>14</li>
+	<li>7</li>
+	<li>3</li>
+	<li>17</li>
+	<li>10</li>
+	<li>11</li>
+	<li>6</li>
+	<li>6</li>
+	<li>34</li>
+	<li>35</li>
+	<li>11</li>
+	<li>21</li>
+	<li>0</li>
+	<li>15</li>
+	<li>29</li>
+	<li>7</li>
+	<li>12</li>
+	<li>16</li>
+	<li>16</li>
+	<li>0</li>
+	<li>5</li>
+	<li>30</li>
+	<li>13</li>
+	<li>48</li>
+	<li>23</li>
+	<li>30</li>
+	<li>45</li>
+	<li>31</li>
+	<li>39</li>
+	<li>22</li>
+	<li>33</li>
+	<li>78</li>
+	<li>27</li>
+	<li>22</li>
+	<li>39</li>
+	<li>43</li>
+	<li>32</li>
+	<li>6</li>
+	<li>37</li>
+	<li>3</li>
+	<li>21</li>
+	<li>7</li>
+	<li>41</li>
+</ol>
+
+
+
+### Write csv file
+
+We now have all the pieces to put together a data frame with the vehicle counts and write that out to a csv file.
+
+We create a sequence from 1 to narea as the ID variable and then combine this with the vehicle counts **vc** into a 
+data frame. To make sure the resulting dbf file will have the ID variable as an integer, we specify
+**as.integer** to force the correct type. Also, we use **names** to give the columns better variable names. Finally, with **write.csv** we create the 
+csv output file.
+
+
+```R
+nid <- (1:narea)
+vcframe <- data.frame(as.integer(nid),as.integer(vc))
+vcframe
+```
+
+
+<table>
+<thead><tr><th scope=col>as.integer.nid.</th><th scope=col>as.integer.vc.</th></tr></thead>
+<tbody>
+	<tr><td> 1 </td><td> 42</td></tr>
+	<tr><td> 2 </td><td> 50</td></tr>
+	<tr><td> 3 </td><td> 17</td></tr>
+	<tr><td> 4 </td><td> 29</td></tr>
+	<tr><td> 5 </td><td> 49</td></tr>
+	<tr><td> 6 </td><td> 40</td></tr>
+	<tr><td> 7 </td><td> 28</td></tr>
+	<tr><td> 8 </td><td>  9</td></tr>
+	<tr><td> 9 </td><td> 12</td></tr>
+	<tr><td>10 </td><td> 28</td></tr>
+	<tr><td>11 </td><td> 40</td></tr>
+	<tr><td>12 </td><td>  8</td></tr>
+	<tr><td>13 </td><td> 14</td></tr>
+	<tr><td>14 </td><td> 58</td></tr>
+	<tr><td>15 </td><td>104</td></tr>
+	<tr><td>16 </td><td> 64</td></tr>
+	<tr><td>17 </td><td> 84</td></tr>
+	<tr><td>18 </td><td> 29</td></tr>
+	<tr><td>19 </td><td> 69</td></tr>
+	<tr><td>20 </td><td> 17</td></tr>
+	<tr><td>21 </td><td> 29</td></tr>
+	<tr><td>22 </td><td> 71</td></tr>
+	<tr><td>23 </td><td> 47</td></tr>
+	<tr><td>24 </td><td> 76</td></tr>
+	<tr><td>25 </td><td> 98</td></tr>
+	<tr><td>26 </td><td> 12</td></tr>
+	<tr><td>27 </td><td> 13</td></tr>
+	<tr><td>28 </td><td> 31</td></tr>
+	<tr><td>29 </td><td> 15</td></tr>
+	<tr><td>30 </td><td> 32</td></tr>
+	<tr><td>⋮</td><td>⋮</td></tr>
+	<tr><td>48</td><td>15</td></tr>
+	<tr><td>49</td><td>29</td></tr>
+	<tr><td>50</td><td> 7</td></tr>
+	<tr><td>51</td><td>12</td></tr>
+	<tr><td>52</td><td>16</td></tr>
+	<tr><td>53</td><td>16</td></tr>
+	<tr><td>54</td><td> 0</td></tr>
+	<tr><td>55</td><td> 5</td></tr>
+	<tr><td>56</td><td>30</td></tr>
+	<tr><td>57</td><td>13</td></tr>
+	<tr><td>58</td><td>48</td></tr>
+	<tr><td>59</td><td>23</td></tr>
+	<tr><td>60</td><td>30</td></tr>
+	<tr><td>61</td><td>45</td></tr>
+	<tr><td>62</td><td>31</td></tr>
+	<tr><td>63</td><td>39</td></tr>
+	<tr><td>64</td><td>22</td></tr>
+	<tr><td>65</td><td>33</td></tr>
+	<tr><td>66</td><td>78</td></tr>
+	<tr><td>67</td><td>27</td></tr>
+	<tr><td>68</td><td>22</td></tr>
+	<tr><td>69</td><td>39</td></tr>
+	<tr><td>70</td><td>43</td></tr>
+	<tr><td>71</td><td>32</td></tr>
+	<tr><td>72</td><td> 6</td></tr>
+	<tr><td>73</td><td>37</td></tr>
+	<tr><td>74</td><td> 3</td></tr>
+	<tr><td>75</td><td>21</td></tr>
+	<tr><td>76</td><td> 7</td></tr>
+	<tr><td>77</td><td>41</td></tr>
+</tbody>
+</table>
+
+
+
+
+```R
+names(vcframe) <- c("AREAID","Vehicles")
+```
+
+
+```R
+write.csv(vcframe,"vehicle_counts.csv",row.names=FALSE)
+```
+
+
+```R
+
+```

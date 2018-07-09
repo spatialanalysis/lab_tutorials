@@ -1,0 +1,683 @@
+---
+output: word_document
+---
+
+# Community Area Population from a pdf File
+
+by Luc Anselin (anselin@uchicago.edu) (8/22/2016)
+
+Pulling the data for the Chicago Community Area 2010 population from a pdf file, available
+at http://www.cityofchicago.org/city/en/depts/dcd/supp_info/community_area_2000and2010censuspopulationcomparisons.html.
+This link is to a pdf file that contains a table with the neighborhood ID, the neighborhood name, the populations
+for 2010 and 2000, the difference between the two years and the percentage difference.
+
+
+Note: this is written with R beginners in mind, more seasoned R users can probably skip most of the comments.
+
+For more extensive details about each function, see the R (or RStudio) help files.
+
+Packages used:
+
+- **pdftools**
+
+### Extracting the content from a pdf file
+
+A pdf file is difficult to handle as a source of data, since it doesn't contain tags like an html file.
+We will use the **pdftools** package that allows us to turn the contents of a pdf file into a list of long character strings,
+one for each page of the document. This packages is not installed by default, so you may have to use
+**install.packages("pdftools")** if it is not installed.
+
+The resulting data structure is somewhat complex and not necessarily easy to parse. However, in our case, the table has such a simple structure that we can extract the population values by doing some sleuthing on which columns
+contain those values. This will illustrate the power of the various parsing and text extraction functions available in R.
+
+We start by turning the pdf into a list of text strings, and then organize that list so that it only contains the table entries for the 77 community area neighborhoods.
+
+
+
+#### Reading the pdf file
+
+We use the **pdf_text** function from the **pdftools** to turn the pdf file into a list of character strings, one
+for each page.
+
+
+```R
+library(pdftools)
+dat <- pdf_text("Census_2010_and_2000_CA_Populations.pdf")
+```
+
+We check the contents of the **dat** object.
+
+
+```R
+dat
+```
+
+
+<ol class=list-inline>
+	<li><span style=white-space:pre-wrap>'                          CITY OF CHICAGO
+                        CENSUS 2010 AND 2000
+                                             Population
+Num      Community Area     2010        2,000      Difference Percentage
+ 1  Rogers Park              54,991     63,484        -8,493    -13.4%
+ 2  West Ridge               71,942     73,199        -1,257     -1.7%
+ 3  Uptown                   56,362     63,551        -7,189    -11.3%
+ 4  Lincoln Square           39,493     44,574        -5,081    -11.4%
+ 5  North Center             31,867     31,895          -28      -0.1%
+ 6  Lake View                94,368     94,817         -449      -0.5%
+ 7  Lincoln Park             64,116     64,320         -204      -0.3%
+ 8  Near North Side          80,484     72,811        7,673      10.5%
+ 9  Edison Park              11,187     11,259          -72      -0.6%
+ 10 Norwood Park             37,023     37,669         -646      -1.7%
+ 11 Jefferson Park           25,448     25,859         -411      -1.6%
+ 12 Forest Glen              18,508     18,165         343       1.9%
+ 13 North Park               17,931     18,514         -583      -3.1%
+ 14 Albany Park              51,542     57,655        -6,113    -10.6%
+ 15 Portage Park             64,124     65,340        -1,216     -1.9%
+ 16 Irving Park              53,359     58,643        -5,284     -9.0%
+ 17 Dunning                  41,932     42,164         -232      -0.6%
+ 18 Montclare                13,426     12,646         780       6.2%
+ 19 Belmont Cragin           78,743     78,144         599       0.8%
+ 20 Hermosa                  25,010     26,908        -1,898     -7.1%
+ 21 Avondale                 39,262     43,083        -3,821     -8.9%
+ 22 Logan Square             73,595     82,715        -9,120    -11.0%
+ 23 Humboldt Park            56,323     65,836        -9,513    -14.4%
+ 24 West Town                81,432     87,435        -6,003     -6.9%
+ 25 Austin                   98,514    117,527       -19,013    -16.2%
+ 26 West Garfield Park       18,001     23,019        -5,018    -21.8%
+ 27 East Garfield Park       20,567     20,881         -314      -1.5%
+ 28 Near West Side           54,881     46,419        8,462      18.2%
+ 29 North Lawndale           35,912     41,768        -5,856    -14.0%
+ 30 South Lawndale           79,288     91,071       -11,783    -12.9%
+ 31 Lower West Side          35,769     44,031        -8,262    -18.8%
+ 32 Loop                     29,283     16,388        12,895     78.7%
+ 33 Near South Side          21,390     9,509         11,881    124.9%
+ 34 Armour Square            13,391     12,032        1,359      11.3%
+ 35 Douglas                  18,238     26,470        -8,232    -31.1%
+ 36 Oakland                    5,918    6,110          -192      -3.1%
+ 37 Fuller Park                2,876    3,420          -544     -15.9%
+ 38 Grand Boulevard          21,929     28,006        -6,077    -21.7%
+ 39 Kenwood                  17,841     18,363         -522      -2.8%
+ 40 Washington Park          11,717     14,146        -2,429    -17.2%
+'</span></li>
+	<li><span style=white-space:pre-wrap>'                             CITY OF CHICAGO
+                           CENSUS 2010 AND 2000
+                                                 Population
+Num     Community Area         2010         2,000      Difference Percentage
+ 41 Hyde Park                    25,681     29,920         -4,239   -14.2%
+ 42 Woodlawn                     25,983     27,086         -1,103    -4.1%
+ 43 South Shore                  49,767     61,556        -11,789   -19.2%
+ 44 Chatham                      31,028     37,275         -6,247   -16.8%
+ 45 Avalon Park                  10,185     11,147          -962     -8.6%
+ 46 South Chicago                31,198     38,596         -7,398   -19.2%
+ 47 Burnside                      2,916     3,294           -378    -11.5%
+ 48 Calumet Heights              13,812     15,974         -2,162   -13.5%
+ 49 Roseland                     44,619     52,723         -8,104   -15.4%
+ 50 Pullman                       7,325     8,921          -1,596   -17.9%
+ 51 South Deering                15,109     16,990         -1,881   -11.1%
+ 52 East Side                    23,042     23,653          -611     -2.6%
+ 53 West Pullman                 29,651     36,649         -6,998   -19.1%
+ 54 Riverdale                     6,482     9,809          -3,327   -33.9%
+ 55 Hegewisch                     9,426     9,781           -355     -3.6%
+ 56 Garfield Ridge               34,513     36,101         -1,588    -4.4%
+ 57 Archer Heights               13,393     12,644          749      5.9%
+ 58 Brighton Park                45,368     44,912          456      1.0%
+ 59 McKinley Park                15,612     15,962          -350     -2.2%
+ 60 Bridgeport                   31,977     33,694         -1,717    -5.1%
+ 61 New City                     44,377     51,721         -7,344   -14.2%
+ 62 West Elsdon                  18,109     15,921         2,188    13.7%
+ 63 Gage Park                    39,894     39,193          701      1.8%
+ 64 Clearing                     23,139     22,331          808      3.6%
+ 65 West Lawn                    33,355     29,235         4,120    14.1%
+ 66 Chicago Lawn                 55,628     61,412         -5,784    -9.4%
+ 67 West Englewood               35,505     45,282         -9,777   -21.6%
+ 68 Englewood                    30,654     40,222         -9,568   -23.8%
+ 69 Greater Grand Crossing       32,602     38,619         -6,017   -15.6%
+ 70 Ashburn                      41,081     39,584         1,497     3.8%
+ 71 Auburn Gresham               48,743     55,928         -7,185   -12.8%
+ 72 Beverly                      20,034     21,992         -1,958    -8.9%
+ 73 Washington Heights           26,493     29,843         -3,350   -11.2%
+ 74 Mount Greenwood              19,093     18,820          273      1.5%
+ 75 Morgan Park                  22,544     25,226         -2,682   -10.6%
+ 76 O\'Hare                       12,756     11,956          800      6.7%
+ 77 Edgewater                    56,521     62,198         -5,677    -9.1%
+    Total                     2,695,598   2,896,016      -200,418    -6.9%
+'</span></li>
+</ol>
+
+
+
+The **dat** object has two entries, one for each page. Each entry is a string. So, when you check the length of the item, it may be surprising that its **length** is only 1. That is because the underlying structure is unknown, it is simply a collection of characters. 
+
+
+```R
+length(dat[[1]])
+```
+
+
+1
+
+
+#### Turning each line in the file into a list
+
+We can carry this out one step at a time, but in order to reach some level of abstraction, we turn it
+into a loop. First, we initialize the neighborhood list (**nnlist**) with an empty character [first line below].
+Next comes the loop for values of the index **i** going from 1 to 2 (recall that the list has only two elements, one
+for each page). Since each element is just one long string, we use the **strsplit** string split command to separate
+the long string into a list of one string for each line, by using the return character **\n** as the separator
+[line 3 in the code snippet below]. We then extract the first element of the resulting list
+using the double bracket notation (this is a side effect of the way lists are organized -- if this seems strange, check the R intro document). We subsequently strip the first four lines from this list (these lines do not contain data -- of course the only way we know this is by carefully checking
+the structure of the pdf file).
+
+To streamline the resulting data structure (again, a special characteristic of lists) we turn it into a simple
+vector by means of **unlist**. This then allows us to concatenate the result to the current **nnlist** (initially,
+just an empty character, after the first step it contains the empty character and the first page, and at the
+end it has the empty character, the first and the second page).
+
+
+```R
+nnlist <- ""
+for (i in 1:2) {
+  ppage <- strsplit(dat[[i]],split="\n")
+  nni <- ppage[[1]]
+  nni <- nni[-(1:4)]
+  nnu <- unlist(nni)
+  nnlist <- c(nnlist,nnu)
+}
+length(nnlist)
+```
+
+
+79
+
+
+The resulting list has 79 elements. Now, we still need to strip the first (empty) element, and the last
+element, which is nothing but the totals. We thus extract the elements from **2** to **length - 1**.
+
+
+```R
+nnlist <- nnlist[2:(length(nnlist)-1)]
+length(nnlist)
+```
+
+
+77
+
+
+The resulting vector consists of 77 elements that are each a string corresponding to a line in the table.
+
+
+```R
+nnlist[1:3]
+```
+
+
+<ol class=list-inline>
+	<li><span style=white-space:pre-wrap>' 1  Rogers Park              54,991     63,484        -8,493    -13.4%'</span></li>
+	<li><span style=white-space:pre-wrap>' 2  West Ridge               71,942     73,199        -1,257     -1.7%'</span></li>
+	<li><span style=white-space:pre-wrap>' 3  Uptown                   56,362     63,551        -7,189    -11.3%'</span></li>
+</ol>
+
+
+
+### Extracting the population values
+
+We first initialize a vector of zeros to hold the population values. It is the preferred approach to 
+initialize a vector first if one knows its size, rather than having it grow by appending rows or columns.
+We use the **vector** command and specify the **mode** to **numeric** and give the **length** as the
+length of the list.
+
+
+```R
+nnpop <- vector(mode="numeric",length=length(nnlist))
+nnpop
+```
+
+
+<ol class=list-inline>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+	<li>0</li>
+</ol>
+
+
+
+We again will use a loop to process each element of the list (each line of the table) one by one.
+We use the **substr** command to extract the characters between position 27 and 39 (these values
+were determined after taking a careful look at the structure of the table). However, there is still a problem, since
+the population values contain commas. We now do two things in one line of code. First, we use **gsub**
+to substitute the character **,** by an empty**""**. We turn the result into a numeric value by
+means of **as.numeric**. We then assign this number to position **i** of the vector. The resulting
+vector **nnpop** contains the population for each of the community areas.
+
+
+```R
+for (i in (1:length(nnlist))) {
+     popchar <- substr(nnlist[i],start=27,stop=39)
+     popval <- as.numeric(gsub(",","",popchar))
+     nnpop[i] <- popval
+}
+nnpop
+```
+
+
+<ol class=list-inline>
+	<li>54991</li>
+	<li>71942</li>
+	<li>56362</li>
+	<li>39493</li>
+	<li>31867</li>
+	<li>94368</li>
+	<li>64116</li>
+	<li>80484</li>
+	<li>11187</li>
+	<li>37023</li>
+	<li>25448</li>
+	<li>18508</li>
+	<li>17931</li>
+	<li>51542</li>
+	<li>64124</li>
+	<li>53359</li>
+	<li>41932</li>
+	<li>13426</li>
+	<li>78743</li>
+	<li>25010</li>
+	<li>39262</li>
+	<li>73595</li>
+	<li>56323</li>
+	<li>81432</li>
+	<li>98514</li>
+	<li>18001</li>
+	<li>20567</li>
+	<li>54881</li>
+	<li>35912</li>
+	<li>79288</li>
+	<li>35769</li>
+	<li>29283</li>
+	<li>21390</li>
+	<li>13391</li>
+	<li>18238</li>
+	<li>5918</li>
+	<li>2876</li>
+	<li>21929</li>
+	<li>17841</li>
+	<li>11717</li>
+	<li>25681</li>
+	<li>25983</li>
+	<li>49767</li>
+	<li>31028</li>
+	<li>10185</li>
+	<li>31198</li>
+	<li>2916</li>
+	<li>13812</li>
+	<li>44619</li>
+	<li>7325</li>
+	<li>15109</li>
+	<li>23042</li>
+	<li>29651</li>
+	<li>6482</li>
+	<li>9426</li>
+	<li>34513</li>
+	<li>13393</li>
+	<li>45368</li>
+	<li>15612</li>
+	<li>31977</li>
+	<li>44377</li>
+	<li>18109</li>
+	<li>39894</li>
+	<li>23139</li>
+	<li>33355</li>
+	<li>55628</li>
+	<li>35505</li>
+	<li>30654</li>
+	<li>32602</li>
+	<li>41081</li>
+	<li>48743</li>
+	<li>20034</li>
+	<li>26493</li>
+	<li>19093</li>
+	<li>22544</li>
+	<li>12756</li>
+	<li>56521</li>
+</ol>
+
+
+
+### Creating a data frame
+
+In addition to the vector of the population values, we also need a vector of ID values. Since the community
+area indicators are simple sequence numbers, we create such a vector to serve as the ID.
+
+
+```R
+nnid <- (1:length(nnlist))
+nnid
+```
+
+
+<ol class=list-inline>
+	<li>1</li>
+	<li>2</li>
+	<li>3</li>
+	<li>4</li>
+	<li>5</li>
+	<li>6</li>
+	<li>7</li>
+	<li>8</li>
+	<li>9</li>
+	<li>10</li>
+	<li>11</li>
+	<li>12</li>
+	<li>13</li>
+	<li>14</li>
+	<li>15</li>
+	<li>16</li>
+	<li>17</li>
+	<li>18</li>
+	<li>19</li>
+	<li>20</li>
+	<li>21</li>
+	<li>22</li>
+	<li>23</li>
+	<li>24</li>
+	<li>25</li>
+	<li>26</li>
+	<li>27</li>
+	<li>28</li>
+	<li>29</li>
+	<li>30</li>
+	<li>31</li>
+	<li>32</li>
+	<li>33</li>
+	<li>34</li>
+	<li>35</li>
+	<li>36</li>
+	<li>37</li>
+	<li>38</li>
+	<li>39</li>
+	<li>40</li>
+	<li>41</li>
+	<li>42</li>
+	<li>43</li>
+	<li>44</li>
+	<li>45</li>
+	<li>46</li>
+	<li>47</li>
+	<li>48</li>
+	<li>49</li>
+	<li>50</li>
+	<li>51</li>
+	<li>52</li>
+	<li>53</li>
+	<li>54</li>
+	<li>55</li>
+	<li>56</li>
+	<li>57</li>
+	<li>58</li>
+	<li>59</li>
+	<li>60</li>
+	<li>61</li>
+	<li>62</li>
+	<li>63</li>
+	<li>64</li>
+	<li>65</li>
+	<li>66</li>
+	<li>67</li>
+	<li>68</li>
+	<li>69</li>
+	<li>70</li>
+	<li>71</li>
+	<li>72</li>
+	<li>73</li>
+	<li>74</li>
+	<li>75</li>
+	<li>76</li>
+	<li>77</li>
+</ol>
+
+
+
+We turn the vectors **nnid** and **nnpop** into a data frame using the **data.frame** command.
+Since the variable names assigned automatically are not that informative, we force them to
+**NID** and **POP2010** using the **names** command. Also, as we did before, we make sure the ID variable
+is an integer (for merging in GeoDa) by means of **as.integer( )**.
+
+
+```R
+neighpop <- data.frame(as.integer(nnid),nnpop)
+neighpop
+```
+
+
+<table>
+<thead><tr><th scope=col>as.integer.nnid.</th><th scope=col>nnpop</th></tr></thead>
+<tbody>
+	<tr><td> 1   </td><td>54991</td></tr>
+	<tr><td> 2   </td><td>71942</td></tr>
+	<tr><td> 3   </td><td>56362</td></tr>
+	<tr><td> 4   </td><td>39493</td></tr>
+	<tr><td> 5   </td><td>31867</td></tr>
+	<tr><td> 6   </td><td>94368</td></tr>
+	<tr><td> 7   </td><td>64116</td></tr>
+	<tr><td> 8   </td><td>80484</td></tr>
+	<tr><td> 9   </td><td>11187</td></tr>
+	<tr><td>10   </td><td>37023</td></tr>
+	<tr><td>11   </td><td>25448</td></tr>
+	<tr><td>12   </td><td>18508</td></tr>
+	<tr><td>13   </td><td>17931</td></tr>
+	<tr><td>14   </td><td>51542</td></tr>
+	<tr><td>15   </td><td>64124</td></tr>
+	<tr><td>16   </td><td>53359</td></tr>
+	<tr><td>17   </td><td>41932</td></tr>
+	<tr><td>18   </td><td>13426</td></tr>
+	<tr><td>19   </td><td>78743</td></tr>
+	<tr><td>20   </td><td>25010</td></tr>
+	<tr><td>21   </td><td>39262</td></tr>
+	<tr><td>22   </td><td>73595</td></tr>
+	<tr><td>23   </td><td>56323</td></tr>
+	<tr><td>24   </td><td>81432</td></tr>
+	<tr><td>25   </td><td>98514</td></tr>
+	<tr><td>26   </td><td>18001</td></tr>
+	<tr><td>27   </td><td>20567</td></tr>
+	<tr><td>28   </td><td>54881</td></tr>
+	<tr><td>29   </td><td>35912</td></tr>
+	<tr><td>30   </td><td>79288</td></tr>
+	<tr><td>⋮</td><td>⋮</td></tr>
+	<tr><td>48   </td><td>13812</td></tr>
+	<tr><td>49   </td><td>44619</td></tr>
+	<tr><td>50   </td><td> 7325</td></tr>
+	<tr><td>51   </td><td>15109</td></tr>
+	<tr><td>52   </td><td>23042</td></tr>
+	<tr><td>53   </td><td>29651</td></tr>
+	<tr><td>54   </td><td> 6482</td></tr>
+	<tr><td>55   </td><td> 9426</td></tr>
+	<tr><td>56   </td><td>34513</td></tr>
+	<tr><td>57   </td><td>13393</td></tr>
+	<tr><td>58   </td><td>45368</td></tr>
+	<tr><td>59   </td><td>15612</td></tr>
+	<tr><td>60   </td><td>31977</td></tr>
+	<tr><td>61   </td><td>44377</td></tr>
+	<tr><td>62   </td><td>18109</td></tr>
+	<tr><td>63   </td><td>39894</td></tr>
+	<tr><td>64   </td><td>23139</td></tr>
+	<tr><td>65   </td><td>33355</td></tr>
+	<tr><td>66   </td><td>55628</td></tr>
+	<tr><td>67   </td><td>35505</td></tr>
+	<tr><td>68   </td><td>30654</td></tr>
+	<tr><td>69   </td><td>32602</td></tr>
+	<tr><td>70   </td><td>41081</td></tr>
+	<tr><td>71   </td><td>48743</td></tr>
+	<tr><td>72   </td><td>20034</td></tr>
+	<tr><td>73   </td><td>26493</td></tr>
+	<tr><td>74   </td><td>19093</td></tr>
+	<tr><td>75   </td><td>22544</td></tr>
+	<tr><td>76   </td><td>12756</td></tr>
+	<tr><td>77   </td><td>56521</td></tr>
+</tbody>
+</table>
+
+
+
+
+```R
+names(neighpop) <- c("NID","POP2010")
+neighpop
+```
+
+
+<table>
+<thead><tr><th scope=col>NID</th><th scope=col>POP2010</th></tr></thead>
+<tbody>
+	<tr><td> 1   </td><td>54991</td></tr>
+	<tr><td> 2   </td><td>71942</td></tr>
+	<tr><td> 3   </td><td>56362</td></tr>
+	<tr><td> 4   </td><td>39493</td></tr>
+	<tr><td> 5   </td><td>31867</td></tr>
+	<tr><td> 6   </td><td>94368</td></tr>
+	<tr><td> 7   </td><td>64116</td></tr>
+	<tr><td> 8   </td><td>80484</td></tr>
+	<tr><td> 9   </td><td>11187</td></tr>
+	<tr><td>10   </td><td>37023</td></tr>
+	<tr><td>11   </td><td>25448</td></tr>
+	<tr><td>12   </td><td>18508</td></tr>
+	<tr><td>13   </td><td>17931</td></tr>
+	<tr><td>14   </td><td>51542</td></tr>
+	<tr><td>15   </td><td>64124</td></tr>
+	<tr><td>16   </td><td>53359</td></tr>
+	<tr><td>17   </td><td>41932</td></tr>
+	<tr><td>18   </td><td>13426</td></tr>
+	<tr><td>19   </td><td>78743</td></tr>
+	<tr><td>20   </td><td>25010</td></tr>
+	<tr><td>21   </td><td>39262</td></tr>
+	<tr><td>22   </td><td>73595</td></tr>
+	<tr><td>23   </td><td>56323</td></tr>
+	<tr><td>24   </td><td>81432</td></tr>
+	<tr><td>25   </td><td>98514</td></tr>
+	<tr><td>26   </td><td>18001</td></tr>
+	<tr><td>27   </td><td>20567</td></tr>
+	<tr><td>28   </td><td>54881</td></tr>
+	<tr><td>29   </td><td>35912</td></tr>
+	<tr><td>30   </td><td>79288</td></tr>
+	<tr><td>⋮</td><td>⋮</td></tr>
+	<tr><td>48   </td><td>13812</td></tr>
+	<tr><td>49   </td><td>44619</td></tr>
+	<tr><td>50   </td><td> 7325</td></tr>
+	<tr><td>51   </td><td>15109</td></tr>
+	<tr><td>52   </td><td>23042</td></tr>
+	<tr><td>53   </td><td>29651</td></tr>
+	<tr><td>54   </td><td> 6482</td></tr>
+	<tr><td>55   </td><td> 9426</td></tr>
+	<tr><td>56   </td><td>34513</td></tr>
+	<tr><td>57   </td><td>13393</td></tr>
+	<tr><td>58   </td><td>45368</td></tr>
+	<tr><td>59   </td><td>15612</td></tr>
+	<tr><td>60   </td><td>31977</td></tr>
+	<tr><td>61   </td><td>44377</td></tr>
+	<tr><td>62   </td><td>18109</td></tr>
+	<tr><td>63   </td><td>39894</td></tr>
+	<tr><td>64   </td><td>23139</td></tr>
+	<tr><td>65   </td><td>33355</td></tr>
+	<tr><td>66   </td><td>55628</td></tr>
+	<tr><td>67   </td><td>35505</td></tr>
+	<tr><td>68   </td><td>30654</td></tr>
+	<tr><td>69   </td><td>32602</td></tr>
+	<tr><td>70   </td><td>41081</td></tr>
+	<tr><td>71   </td><td>48743</td></tr>
+	<tr><td>72   </td><td>20034</td></tr>
+	<tr><td>73   </td><td>26493</td></tr>
+	<tr><td>74   </td><td>19093</td></tr>
+	<tr><td>75   </td><td>22544</td></tr>
+	<tr><td>76   </td><td>12756</td></tr>
+	<tr><td>77   </td><td>56521</td></tr>
+</tbody>
+</table>
+
+
+
+### Create a csv output file
+
+We write the contents of the data frame to a csv file. As before, we use the **row.names=FALSE** option to
+avoid the extraneous first column in the output file.
+
+
+```R
+write.csv(neighpop,"Community_Pop.csv",row.names=FALSE)
+```
+
+
+```R
+
+```

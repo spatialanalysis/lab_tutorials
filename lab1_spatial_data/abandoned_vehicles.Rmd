@@ -1,0 +1,277 @@
+---
+output: word_document
+---
+
+# Abandoned Vehicles as Points
+
+by Luc Anselin (anselin@uchicago.edu) (8/22/2016)
+
+Creating a csv file with the latitude and longitude of abandoned vehicles in Chicago. Data from the 
+Chicago open data portal.
+
+Note: this is written with R beginners in mind, more seasoned R users can probably skip most of the comments.
+
+For more extensive details about each function, see the R (or RStudio) help files.
+
+Packages used:
+
+- **lubridate**
+
+### Read the csv file and turn into a data frame
+
+- use the command **read.csv**
+
+
+```R
+vehicall <- read.csv("Abandoned_Vehicles_Map.csv")
+```
+
+Check on the variable names (column headings) and check on the first few lines of the table, just to make sure all is well.
+
+- use **names** to get the variable names
+
+- use **head** to list the first few lines
+
+
+```R
+names(vehicall)
+```
+
+
+<ol class=list-inline>
+	<li>'Creation.Date'</li>
+	<li>'Status'</li>
+	<li>'Completion.Date'</li>
+	<li>'Service.Request.Number'</li>
+	<li>'Type.of.Service.Request'</li>
+	<li>'License.Plate'</li>
+	<li>'Vehicle.Make.Model'</li>
+	<li>'Vehicle.Color'</li>
+	<li>'Current.Activity'</li>
+	<li>'Most.Recent.Action'</li>
+	<li>'How.Many.Days.Has.the.Vehicle.Been.Reported.as.Parked.'</li>
+	<li>'Street.Address'</li>
+	<li>'ZIP.Code'</li>
+	<li>'X.Coordinate'</li>
+	<li>'Y.Coordinate'</li>
+	<li>'Ward'</li>
+	<li>'Police.District'</li>
+	<li>'Community.Area'</li>
+	<li>'Latitude'</li>
+	<li>'Longitude'</li>
+	<li>'Location'</li>
+</ol>
+
+
+
+
+```R
+head(vehicall)
+```
+
+
+<table>
+<thead><tr><th scope=col>Creation.Date</th><th scope=col>Status</th><th scope=col>Completion.Date</th><th scope=col>Service.Request.Number</th><th scope=col>Type.of.Service.Request</th><th scope=col>License.Plate</th><th scope=col>Vehicle.Make.Model</th><th scope=col>Vehicle.Color</th><th scope=col>Current.Activity</th><th scope=col>Most.Recent.Action</th><th scope=col>⋯</th><th scope=col>Street.Address</th><th scope=col>ZIP.Code</th><th scope=col>X.Coordinate</th><th scope=col>Y.Coordinate</th><th scope=col>Ward</th><th scope=col>Police.District</th><th scope=col>Community.Area</th><th scope=col>Latitude</th><th scope=col>Longitude</th><th scope=col>Location</th></tr></thead>
+<tbody>
+	<tr><td>01/01/2011                                         </td><td>Completed - Dup                                    </td><td>01/07/2011                                         </td><td>11-00002767                                        </td><td>Abandoned Vehicle Complaint                        </td><td>0000000000                                         </td><td>Jeep/Cherokee                                      </td><td>Red                                                </td><td>                                                   </td><td>                                                   </td><td>⋯                                                  </td><td>5629 N KEDVALE AVE                                 </td><td>60646                                              </td><td>1147717                                            </td><td>1937054                                            </td><td>39                                                 </td><td>17                                                 </td><td>13                                                 </td><td>41.98368                                           </td><td>-87.73197                                          </td><td>(41.983680361597564, -87.7319663736746)            </td></tr>
+	<tr><td>01/01/2011                                         </td><td>Completed - Dup                                    </td><td>01/07/2011                                         </td><td>11-00002779                                        </td><td>Abandoned Vehicle Complaint                        </td><td>REAR PLATE STARTS W/848 AND FRONT PLATE STARTS W/ K</td><td>Isuzu                                              </td><td>Red                                                </td><td>                                                   </td><td>                                                   </td><td>⋯                                                  </td><td>5629 N KEDVALE AVE                                 </td><td>60646                                              </td><td>1147717                                            </td><td>1937054                                            </td><td>39                                                 </td><td>17                                                 </td><td>13                                                 </td><td>41.98368                                           </td><td>-87.73197                                          </td><td>(41.983680361597564, -87.7319663736746)            </td></tr>
+	<tr><td>01/01/2011                                         </td><td>Completed - Dup                                    </td><td>01/20/2011                                         </td><td>11-00003001                                        </td><td>Abandoned Vehicle Complaint                        </td><td>9381880                                            </td><td>Toyota                                             </td><td>Silver                                             </td><td>                                                   </td><td>                                                   </td><td>⋯                                                  </td><td>2053 N KILBOURN AVE                                </td><td>60639                                              </td><td>1146056                                            </td><td>1913269                                            </td><td>31                                                 </td><td>25                                                 </td><td>20                                                 </td><td>41.91859                                           </td><td>-87.73868                                          </td><td>(41.91858774162382, -87.73868431751842)            </td></tr>
+	<tr><td>01/01/2011                                         </td><td>Completed - Dup                                    </td><td>01/21/2011                                         </td><td>11-00003309                                        </td><td>Abandoned Vehicle Complaint                        </td><td>MI S CS860                                         </td><td>Jeep/Cherokee                                      </td><td>Gold                                               </td><td>                                                   </td><td>                                                   </td><td>⋯                                                  </td><td>736 W BUENA AVE                                    </td><td>60613                                              </td><td>1170576                                            </td><td>1928214                                            </td><td>46                                                 </td><td>23                                                 </td><td> 3                                                 </td><td>41.95861                                           </td><td>-87.64888                                          </td><td>(41.95860696269331, -87.64887590959788)            </td></tr>
+	<tr><td>01/01/2011                                         </td><td>Completed - Dup                                    </td><td>01/21/2011                                         </td><td>11-00003316                                        </td><td>Abandoned Vehicle Complaint                        </td><td>MI SCS860                                          </td><td>                                                   </td><td>Gold                                               </td><td>                                                   </td><td>                                                   </td><td>⋯                                                  </td><td>736 W BUENA AVE                                    </td><td>60613                                              </td><td>1170576                                            </td><td>1928214                                            </td><td>46                                                 </td><td>23                                                 </td><td> 3                                                 </td><td>41.95861                                           </td><td>-87.64888                                          </td><td>(41.95860696269331, -87.64887590959788)            </td></tr>
+	<tr><td>01/01/2011                                         </td><td>Completed                                          </td><td>01/05/2011                                         </td><td>11-00001976                                        </td><td>Abandoned Vehicle Complaint                        </td><td>H924236                                            </td><td>Ford                                               </td><td>White                                              </td><td>                                                   </td><td>                                                   </td><td>⋯                                                  </td><td>6059 S KOMENSKY AVE                                </td><td>60629                                              </td><td>1150408                                            </td><td>1864110                                            </td><td>13                                                 </td><td> 8                                                 </td><td>65                                                 </td><td>41.78237                                           </td><td>-87.72394                                          </td><td>(41.78237428405976, -87.72394038021173)            </td></tr>
+</tbody>
+</table>
+
+
+
+### Create year and month variables as numeric
+
+Create a new variable **credate** that converts the **Creation.Date** to an R **date** format, which can then be easily manipulated by specialized packages. We will use **lubridate** which has very convenient functions **year** and **month**. These commands extract the corresponding items from a **Date** format and turn them into a numeric value. This package also has many other convenient data manipulation functions, but those are beyond our scope here.
+
+- first we create the variable in a data format using **as.Date**, we specify the variable as **Creation.Date**
+and the format as **%m/%d/%Y** given what is used in the initial file (month/day/year in four digits) 
+
+- if you are unfamiliar with R, note the use of the dollar sign to specify a variable in a given data frame; it may seem strange at first, but you will quickly get used to it
+
+- again, we make sure all works as expected by listing the first few lines using **head**
+
+
+```R
+vehicall$credate <- as.Date(vehicall$Creation.Date,"%m/%d/%Y")
+head(vehicall$credate)
+```
+
+
+    [1] "2011-01-01" "2011-01-01" "2011-01-01" "2011-01-01" "2011-01-01"
+    [6] "2011-01-01"
+
+
+Make the **lubridate** package active with the **library** command (make sure the package is installed, if not, install it with **install.packages**)
+
+
+```R
+library(lubridate)
+```
+
+    
+    Attaching package: ‘lubridate’
+    
+    The following object is masked from ‘package:base’:
+    
+        date
+    
+
+
+We create two new variables, one for the year and one for the month by using the respective functions **year** and **month** from the **lubridate** package. Again, we will use **head** to check that all is OK.
+
+
+```R
+vehicall$year <- year(vehicall$credate)
+head(vehicall$year)
+```
+
+
+<ol class=list-inline>
+	<li>2011</li>
+	<li>2011</li>
+	<li>2011</li>
+	<li>2011</li>
+	<li>2011</li>
+	<li>2011</li>
+</ol>
+
+
+
+
+```R
+vehicall$month <- month(vehicall$credate)
+head(vehicall$month)
+```
+
+
+<ol class=list-inline>
+	<li>1</li>
+	<li>1</li>
+	<li>1</li>
+	<li>1</li>
+	<li>1</li>
+	<li>1</li>
+</ol>
+
+
+
+### Select observations for a given month/year
+
+Now, we will use the very powerful R **[ , ]** subsetting commands to extract only those observations that match the
+year and month criteria. For example, to select the observations (rows) for September 2015, we use **year == 2015**
+and **month == 9**. We put each statement in parentheses for clarity, but that is not necessary. Make sure not to 
+forget the **","** followed by space before the closing bracket: this ensures that all the variables (columns) are
+selected.
+
+Again, we use **head** to see the first lines. In addition, we also use the **dim** command to show the dimensions of the resulting data frame. 
+
+
+```R
+abandon_15_9 <- vehicall[ (vehicall$year == 2015) & (vehicall$month == 9), ]
+head(abandon_15_9)
+dim(abandon_15_9)
+```
+
+
+<table>
+<thead><tr><th></th><th scope=col>Creation.Date</th><th scope=col>Status</th><th scope=col>Completion.Date</th><th scope=col>Service.Request.Number</th><th scope=col>Type.of.Service.Request</th><th scope=col>License.Plate</th><th scope=col>Vehicle.Make.Model</th><th scope=col>Vehicle.Color</th><th scope=col>Current.Activity</th><th scope=col>Most.Recent.Action</th><th scope=col>⋯</th><th scope=col>Y.Coordinate</th><th scope=col>Ward</th><th scope=col>Police.District</th><th scope=col>Community.Area</th><th scope=col>Latitude</th><th scope=col>Longitude</th><th scope=col>Location</th><th scope=col>credate</th><th scope=col>year</th><th scope=col>month</th></tr></thead>
+<tbody>
+	<tr><th scope=row>107034</th><td>09/01/2015                                       </td><td>Completed                                        </td><td>09/01/2015                                       </td><td>15-04497171                                      </td><td>Abandoned Vehicle Complaint                      </td><td>E671293                                          </td><td>Chevrolet                                        </td><td>Black                                            </td><td>FVI - Outcome                                    </td><td>Return to Owner - Vehicle                        </td><td>⋯                                                </td><td>     NA                                          </td><td> 3                                               </td><td> 9                                               </td><td>37                                               </td><td>41.79584                                         </td><td>-87.63289                                        </td><td>(41.7958353436477, -87.63288785584677)           </td><td>2015-09-01                                       </td><td>2015                                             </td><td>9                                                </td></tr>
+	<tr><th scope=row>107035</th><td>09/01/2015                                       </td><td>Completed                                        </td><td>09/01/2015                                       </td><td>15-04499490                                      </td><td>Abandoned Vehicle Complaint                      </td><td>UNKNOWN                                          </td><td>Jeep/Cherokee                                    </td><td>Gray                                             </td><td>FVI - Outcome                                    </td><td>Vehicle was moved from original address requested</td><td>⋯                                                </td><td>     NA                                          </td><td>49                                               </td><td>24                                               </td><td> 1                                               </td><td>42.01450                                         </td><td>-87.67822                                        </td><td>(42.01449699912976, -87.67822416417681)          </td><td>2015-09-01                                       </td><td>2015                                             </td><td>9                                                </td></tr>
+	<tr><th scope=row>107036</th><td>09/01/2015                                       </td><td>Completed                                        </td><td>09/01/2015                                       </td><td>15-04501261                                      </td><td>Abandoned Vehicle Complaint                      </td><td>N/A                                              </td><td>(Unlisted Make)                                  </td><td>Black                                            </td><td>FVI - Outcome                                    </td><td>Return to Owner - Vehicle                        </td><td>⋯                                                </td><td>     NA                                          </td><td>27                                               </td><td>12                                               </td><td>28                                               </td><td>41.88544                                         </td><td>-87.66681                                        </td><td>(41.88544236574685, -87.66680842588522)          </td><td>2015-09-01                                       </td><td>2015                                             </td><td>9                                                </td></tr>
+	<tr><th scope=row>107119</th><td>09/02/2015                                       </td><td>Completed - Dup                                  </td><td>09/02/2015                                       </td><td>15-04520641                                      </td><td>Abandoned Vehicle Complaint                      </td><td>9856420                                          </td><td>Honda                                            </td><td>Blue                                             </td><td>FVI - Outcome                                    </td><td>Create Work Order                                </td><td>⋯                                                </td><td>1877350                                          </td><td> 4                                               </td><td> 2                                               </td><td>36                                               </td><td>41.81816                                         </td><td>-87.60088                                        </td><td>(41.81816098393261, -87.6008847868268)           </td><td>2015-09-02                                       </td><td>2015                                             </td><td>9                                                </td></tr>
+	<tr><th scope=row>107120</th><td>09/02/2015                                       </td><td>Completed - Dup                                  </td><td>09/02/2015                                       </td><td>15-04522485                                      </td><td>Abandoned Vehicle Complaint                      </td><td>6401667                                          </td><td>Buick                                            </td><td>Cream                                            </td><td>FVI - Outcome                                    </td><td>Create Work Order                                </td><td>⋯                                                </td><td>1858880                                          </td><td> 5                                               </td><td> 3                                               </td><td>43                                               </td><td>41.76780                                         </td><td>-87.58582                                        </td><td>(41.76779762303839, -87.58581991823232)          </td><td>2015-09-02                                       </td><td>2015                                             </td><td>9                                                </td></tr>
+	<tr><th scope=row>107121</th><td>09/02/2015                                       </td><td>Completed - Dup                                  </td><td>09/02/2015                                       </td><td>15-04525443                                      </td><td>Abandoned Vehicle Complaint                      </td><td>UNKNOWN                                          </td><td>Buick                                            </td><td>Blue                                             </td><td>FVI - Outcome                                    </td><td>Create Work Order                                </td><td>⋯                                                </td><td>1905690                                          </td><td>26                                               </td><td>12                                               </td><td>24                                               </td><td>41.89728                                         </td><td>-87.68703                                        </td><td>(41.897281897854185, -87.68702748042514)         </td><td>2015-09-02                                       </td><td>2015                                             </td><td>9                                                </td></tr>
+</tbody>
+</table>
+
+
+
+
+<ol class=list-inline>
+	<li>2220</li>
+	<li>24</li>
+</ol>
+
+
+
+In this example, there are 2220 abandoned vehicles with a time stamp of September 2015, and 24 variables in the data frame.
+
+### Select desired variables
+
+We will select only a few of the variables. Besides the data stamps, we will keep the **Ward**, **Police.District**,
+**Comunity.Area**, **Latitude** and **Longitude**.
+
+First, we create a vector that contains all these variable names (using the omnipresent **c** command). Note how
+the variables names have to be in quotes (they are string variables).
+
+
+```R
+vehvariables <- c("year","month","credate","Ward","Police.District","Community.Area","Latitude","Longitude")
+```
+
+Now, we do the column selection using the **[ , ]** subsetting of the data frame. In order to use the variable
+names as listed in **vehvariables** (and to avoid having to type the data frame name with a dollar symbol for
+each variable), we use the **with** command. This specifies the data frame on which the commands are to operate.
+It is an alternative to the more traditional **attach** and **detach** convention. You specify the name of
+the data frame to be used, followed by the command, in this case the subsetting. Again, note the importance
+of having the comma with an empty space in front of it to specify that all rows are to be selected.
+
+
+```R
+veh2015_9 <- with(abandon_15_9,abandon_15_9[,vehvariables])
+```
+
+
+```R
+head(veh2015_9)
+dim(veh2015_9)
+```
+
+
+<table>
+<thead><tr><th></th><th scope=col>year</th><th scope=col>month</th><th scope=col>credate</th><th scope=col>Ward</th><th scope=col>Police.District</th><th scope=col>Community.Area</th><th scope=col>Latitude</th><th scope=col>Longitude</th></tr></thead>
+<tbody>
+	<tr><th scope=row>107034</th><td>2015      </td><td>9         </td><td>2015-09-01</td><td> 3        </td><td> 9        </td><td>37        </td><td>41.79584  </td><td>-87.63289 </td></tr>
+	<tr><th scope=row>107035</th><td>2015      </td><td>9         </td><td>2015-09-01</td><td>49        </td><td>24        </td><td> 1        </td><td>42.01450  </td><td>-87.67822 </td></tr>
+	<tr><th scope=row>107036</th><td>2015      </td><td>9         </td><td>2015-09-01</td><td>27        </td><td>12        </td><td>28        </td><td>41.88544  </td><td>-87.66681 </td></tr>
+	<tr><th scope=row>107119</th><td>2015      </td><td>9         </td><td>2015-09-02</td><td> 4        </td><td> 2        </td><td>36        </td><td>41.81816  </td><td>-87.60088 </td></tr>
+	<tr><th scope=row>107120</th><td>2015      </td><td>9         </td><td>2015-09-02</td><td> 5        </td><td> 3        </td><td>43        </td><td>41.76780  </td><td>-87.58582 </td></tr>
+	<tr><th scope=row>107121</th><td>2015      </td><td>9         </td><td>2015-09-02</td><td>26        </td><td>12        </td><td>24        </td><td>41.89728  </td><td>-87.68703 </td></tr>
+</tbody>
+</table>
+
+
+
+
+<ol class=list-inline>
+	<li>2220</li>
+	<li>8</li>
+</ol>
+
+
+
+Now, there are only 8 variables left out of the original 24.
+
+### Write a new csv file
+
+We use the **write.csv** command, specifying the data frame and its file name. Note the importance ot setting
+**row.names = FALSE** or else the original sequence numbers are added to the output file (those numbers appearing
+in the left-most column of the data frame listing above). We will add our own identifier later in **GeoDa**.
+
+Note: if a file with the specified file name already exists, it will be over-written.
+
+
+```R
+write.csv(veh2015_9,"vehicles2015_9.csv",row.names=FALSE)
+```
+
+
+```R
+
+```
