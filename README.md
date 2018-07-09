@@ -1,2 +1,2 @@
 # lab_tutorials
-R tutorials for spatial data science class
+R tutorials for spatial data science class.
