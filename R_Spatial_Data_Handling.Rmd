@@ -1,0 +1,278 @@
+---
+title: "R Spatial Data Handling"
+output: html_notebook
+---
+
+This is an R notebook covering the functionality of the Spatial Data Handling Section of the GeoDa workbook. An overview of the the contents of the notebook:
+
+-Loading Libraries
+-Loading the data
+-converting Dates from String to Date format
+-Filtering the table for specific entries
+-Renaming colunms
+-Converting to a shapefile
+-Checking and adding/adjusting projections
+-Dealing with community area missing information
+-Merging Data
+-Bivariate Operations
+-Chloropleth mapping
+
+The libraries to be used:
+-tidyverse: used to filter data and select columns
+
+-lubridate: will be used to select information out of the date format when filtering the data
+
+-sf: will be used to convert our data set into a simple feature object, to read in the boundary file,
+     and perform point in polygon on the data set to fill in missing community area information
+     
+-dplry: will be used to perform table joins and create abandoned vehicle counts for each community area
+
+-tmap: used to make the choropleth maps
+
+-pdftools: will be used to read and parse a pdf for chicago community area population information
+
+-RSocrata: is used to read the data directly from the chicago data portal  
+
+Below are the libraries necessary for the R version of Spatial Data Handling 
+```{r}
+library(tidyverse)
+library(lubridate)
+library(sf)
+library(tmap)
+library(pdftools)
+library(RSocrata)
+```
+Setting the working directory
+```{r}
+setwd("~/Downloads/lab_tutorials/Spatial Data Handling")
+```
+
+Data is from the Chicago data portal and is 311 calls about abandoned vehicles
+
+Loading the data from the working directry
+```{r}
+stem <- "https://data.cityofchicago.org/resource"
+file1 <- "/suj7-cg3j.csv"
+
+vehicle_data <- read.socrata(paste0(stem,file1))
+head(vehicle_data)
+```
+
+After looking at the first few rows of the data, most of the information is in String format. In order to select rows by date, we first need to convert the date from a String to a date format using the as.Date function.
+
+```{r}
+vehicle_data$credate <- as.Date(vehicle_data$creation_date,"%Y-%m-%d")
+head(vehicle_data)
+```
+
+Now that the Dates have been converted from strings to dates, we can select different time periods using the filter function and the date format. We can use the year() and month() functions from lubridate in our filration process to get observations in the year 2016 and month of september.
+
+```{r}
+vehicle_data <- vehicle_data %>% filter(year(vehicle_data$credate) == 2016)
+vehicle_data <- vehicle_data %>% filter(month(vehicle_data$credate) == 9)
+head(vehicle_data)
+```
+
+We can select columns using the tidyverse select command. We then rename the columns for later convenience, as the column names are kind of long and contain the (`) symbol
+
+```{r}
+names(vehicle_data)
+
+#selects columns
+selected_data <- vehicle_data %>% select(credate, street_address, zip_code, x_coordinate, y_coordinate, ward, police_district, community_area, latitude, longitude )
+
+#view names of columns
+names(selected_data)
+
+
+
+
+
+```
+
+
+Next is turning the selected data into a shapefile, but we will have to filter out the point that doesnt have a latitude and longitude value or dont have an x and y coordinate.
+
+
+```{r}
+
+#filtering
+selected_data <- selected_data %>% filter(latitude != "na")
+
+coord_data <- selected_data %>% filter(x_coordinate != "na")
+
+
+#conerting to a simple features object
+sf_data = st_as_sf(coord_data, coords = c("x_coordinate", "y_coordinate"))
+
+#checking ours point plot... won't contain useful information
+plot(sf_data)
+```
+
+After the data frame is converted to a spatial points data frame, we need to check the projection and add one if the information is absent
+
+```{r}
+
+#checks the projection of the point layer
+st_crs(sf_data)
+#returns NA, so we need to set a projection
+
+#The projection information is missing, so we will add the one for chicago: +init=epsg:32616
+sf_data <- sf_data %>% st_set_crs(32616)
+
+#check the projection again and we should have EPSG: 32616
+st_crs(sf_data)
+
+
+```
+
+
+
+
+
+
+We will next read the shapefile into our R environment using SF functionality. The function requires a correct file path if the file is not directly in your working directory.
+
+```{r}
+chicago_bound <- st_read("boundaries/boundary.shp")
+plot(chicago_bound)
+```
+
+
+
+
+
+
+
+
+
+Here we check the projection of the boundary file. It has one, but we need to it to be the same as the point data, so we use st_transform to change the projection
+
+```{r}
+#projection of shapefile
+
+#checks the projection of the point layer
+st_crs(chicago_bound)
+
+#returns EPSG: 4326, so we need to transform to 32616
+
+chicago_bound <- chicago_bound %>% st_transform(32616)
+
+#check the projection again and we should have EPSG: 32616
+st_crs(sf_data)
+
+```
+
+
+
+
+
+
+Now we need to deal with the missing community area information in the data frame. Rather than removing those observations from the data we are going to use point in polygon fill in the missing values, using their x and y values and the chicago_boundary polygons
+
+
+
+```{r}
+#having a bit of trouble with the point polygon part
+
+check <- st_join(sf_data, chicago_bound, join = st_within)
+
+
+```
+
+
+
+
+
+
+Now we need population information about each of the community areas to get an accurate depiction of the spatial varation of abandon vehicles in Chicago. A choropleth map with the just the counts of abandoned vehicles in an area does not say much because a factor like this is likely correlated with population size. We need to examine the variations in a rate form to separate these effects to make any conclusions about the data. The information we need is in the form of a pdf, which is not particularly convenient, but is still a far better option than hard typing in the population information for each community area. We first start by reading the pdf into the R environment using the pdf_text() function 
+```{r}
+#reading the pdf
+dat <-pdf_text("Census_2010_and_2000_CA_Populations.pdf")
+```
+
+
+
+
+
+
+
+
+```{r}
+length(dat[[1]])
+```
+
+
+
+
+
+
+```{r}
+nnlist <-""
+for (i in 1:2) {
+  ppage <-strsplit(dat[[i]],split="\n")
+  nni <-ppage[[1]]nni <-nni[-(1:4)]
+  nnu <-unlist(nni)
+  nnlist <-c(nnlist,nnu)
+  }
+length(nnlist)
+```
+
+
+
+```{r}
+nnlist <-nnlist[2:(length(nnlist)-1)]
+length(nnlist)
+```
+
+
+
+
+```{r}
+nnpop <-vector(mode="numeric",length=length(nnlist))
+```
+
+
+
+```{r}
+for (i in (1:length(nnlist))) {
+  popchar <-substr(nnlist[i],start=27,stop=39)
+  popval <-as.numeric(gsub(",","",popchar))
+  nnpop[i] <-popval
+  }
+```
+
+
+
+
+
+
+
+```{r}
+neighpop <-data.frame(as.integer(nnid),nnpop)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
