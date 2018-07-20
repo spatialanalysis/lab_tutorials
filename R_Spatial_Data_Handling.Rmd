@@ -79,7 +79,7 @@ We can select columns using the tidyverse select command. We then rename the col
 names(vehicle_data)
 
 #selects columns
-selected_data <- vehicle_data %>% select(credate, street_address, zip_code, x_coordinate, y_coordinate, ward, police_district, community_area, latitude, longitude )
+selected_data <- vehicle_data %>% select(x_coordinate, y_coordinate, longitude, latitude, credate, street_address, zip_code, ward, police_district, community_area)
 
 #view names of columns
 names(selected_data)
@@ -97,13 +97,13 @@ Next is turning the selected data into a shapefile, but we will have to filter o
 ```{r}
 
 #filtering
-selected_data <- selected_data %>% filter(latitude != "na")
+selected_data <- selected_data %>% filter(!(is.na(latitude)))
 
-coord_data <- selected_data %>% filter(x_coordinate != "na")
+coord_data <- selected_data %>% filter(!(is.na(x_coordinate)))
 
 
 #conerting to a simple features object
-sf_data = st_as_sf(coord_data, coords = c("x_coordinate", "y_coordinate"))
+sf_data = st_as_sf(coord_data, coords = c("longitude", "latitude"), agr = "constant")
 
 #checking ours point plot... won't contain useful information
 plot(sf_data)
@@ -118,11 +118,12 @@ st_crs(sf_data)
 #returns NA, so we need to set a projection
 
 #The projection information is missing, so we will add the one for chicago: +init=epsg:32616
-sf_data <- sf_data %>% st_set_crs(32616)
+sf_data <- sf_data %>% st_set_crs(4326)
 
+sf_data <- sf_data %>% st_transform(32616)
 #check the projection again and we should have EPSG: 32616
 st_crs(sf_data)
-
+write_csv(coord_data, "september_16_vehicles.csv")
 
 ```
 
@@ -134,7 +135,8 @@ st_crs(sf_data)
 We will next read the shapefile into our R environment using SF functionality. The function requires a correct file path if the file is not directly in your working directory.
 
 ```{r}
-chicago_bound <- st_read("boundaries/boundary.shp")
+chicago_bound <- st_read("boundaries/boundary.shp", agr = "constant")
+
 plot(chicago_bound)
 ```
 
@@ -173,14 +175,47 @@ Now we need to deal with the missing community area information in the data fram
 
 
 ```{r}
-#having a bit of trouble with the point polygon part
+#check projections
+st_crs(chicago_bound)
+st_crs(sf_data)
 
-check <- st_join(sf_data, chicago_bound, join = st_within)
-
+#join data to get all comm area data
+full_comm_data <- st_join(sf_data, chicago_bound["area_num_1"])
 
 ```
 
 
+
+Now that we have the missing community area information, we can move forward and get counts of abandoned vechicles for each communtiy area. To do this we will use the dplry function count(). This function will give us a dataframe with the counts of a specified variable. In this case it is area_num_1. Next we will use the select column to drop the added geometry section of our resulting data frame to make joining the data more convenient. Lastly, in this code chunk we rename the count column "n" to a more descriptive name 
+```{r}
+
+full_comm_data$area_num_1 <- as.numeric(full_comm_data$area_num_1)
+
+#creating counts of abandoned vehicles per community area
+counts <- full_comm_data %>% count(area_num_1) 
+counts <- select(as.data.frame(counts), -geometry)
+
+#giving the count column a more descriptive name for mapping purposes
+names(counts)[2] <- "abandoned_vehicle_counts"
+```
+
+
+
+Here we will join the counts data to chicago_bound, so we can make the first map. First we change the chicago_bound area_num_1 column to numeric to keep the the join data of the same type. We then do a left join of chicago_bound and the counts data frame by the communtiy area id column, which is call "area_num_1"
+```{r}
+chicago_bound$area_num_1 <- as.numeric(chicago_bound$area_num_1)
+chicago_bound_counts <- left_join(chicago_bound, counts, by = "area_num_1")
+```
+
+
+
+
+
+Now we have enough to make the first choropleth map. We use the tmap library to create a basic map of the counts. Note this information is not particularly useful because these counts will be heavily dependent on the population of a communtiy area. We have to get population information about the community areas to be able to sepate this effect.
+```{r}
+tm_shape(chicago_bound_counts) +
+  tm_polygons("abandoned_vehicle_counts", id = "area_num_1")
+```
 
 
 
@@ -197,7 +232,7 @@ dat <-pdf_text("Census_2010_and_2000_CA_Populations.pdf")
 
 
 
-
+The result data structure is just one large string and we will have to take advatage of the layout of the table get the information.
 ```{r}
 length(dat[[1]])
 ```
@@ -206,18 +241,22 @@ length(dat[[1]])
 
 
 
-
+We can carry this out one step at a time, but in order to reach some level of abstraction, we turn it into a loop. First, we initialize the neighborhood list (nnlist) with an empty character [first line below]. Next comes the loop for values of the index igoing from 1 to 2 (recall that the list has only two elements, one for each page). Since each element is just one long string, we use the strsplitstring split command to separate the long string into a list of one string for each line,by using the return character \nas the separator [line 3 in the code snippet below]. We then extract the first element of the resulting list using the double bracket notation (this is a side effect of the way lists are organized --if this seems strange, check the R intro document). We subsequently strip the first four lines from this list (these lines do not contain data --of course the only way we know this is by carefully checking the structure of the pdf file).To streamline the resulting data structure (again, a special characteristic of lists) we turn it into a simple vector by means of unlist. This then allows us to concatenate the result to the current nnlist(initially, just an empty character, after the first step it contains the empty character and the first page, and at the end it has the empty character, the first and the second page).
 ```{r}
 nnlist <-""
 for (i in 1:2) {
   ppage <-strsplit(dat[[i]],split="\n")
-  nni <-ppage[[1]]nni <-nni[-(1:4)]
+  nni <-ppage[[1]]
+  nni <-nni[-(1:4)]
   nnu <-unlist(nni)
   nnlist <-c(nnlist,nnu)
   }
 length(nnlist)
 ```
 
+
+
+The resulting list has 79 elements. Now, we still need to strip the first (empty) element, and the last element, which is nothing but the totals. We thus extract the elements from 2to length -1.
 
 
 ```{r}
@@ -227,11 +266,15 @@ length(nnlist)
 
 
 
+We first initialize a vector of zeros to hold the population values. It is the preferred approach to initialize a vector first if one knows its size, rather than having it grow by appending rows or columns. We use the vectorcommand and specify the modeto numericand give the lengthas the length of the list.
+
 
 ```{r}
 nnpop <-vector(mode="numeric",length=length(nnlist))
 ```
 
+
+We again will use a loop to process each element of the list (each line of the table) one by one. We use the substrcommand to extract the characters between position 27 and 39 (these values were determined after taking a careful look at the structure of the table). However, there is still a problem, since the population values contain commas. We now do two things in one line of code. First, we use gsubto substitute the character ,by an empty"". We turn the result into a numeric value by means of as.numeric. We then assign this number to position iof the vector. The resulting vector nnpopcontains the population for each of the community areas.
 
 
 ```{r}
@@ -244,31 +287,48 @@ for (i in (1:length(nnlist))) {
 
 
 
-
-
+In addition to the vector of the population values, we also need a vector of ID values. Since the community area indicators are simple sequence numbers, we create such a vector to serve as the ID.
 
 
 ```{r}
+nnid <-(1:length(nnlist))
+```
+
+We turn the vectors nnidand nnpopinto a data frame using the data.framecommand. Since the variable names assigned automatically are not that informative, we force them to NIDand POP2010using the namescommand. Also, as we did before, we make sure the ID variable is an integer (formerging in GeoDa) by means of as.integer( )
+
+```{r}
 neighpop <-data.frame(as.integer(nnid),nnpop)
+head(neighpop)
+```
+
+
+
+
+Now that we have a data frame with the population data for each community area, we can proceed by joining the data to chicago_bound_counts. We will join do the join with the dplyr left_join() function in the same manner as used earlier for the counts. To do this, we will name the community area id section as area_num_1 and will join the dataframe to the sf object by this common variable.
+
+```{r}
+names(neighpop) <- c("area_num_1", "population")
+chicago_bound_final <- left_join(chicago_bound_counts, neighpop, by = "area_num_1")
+```
+
+
+
+
+Now we will create a new column with abandoned vehicles per 1000 people using bivariate operations, the population data column, and the abandoned vehicle count column
+```{r}
+chicago_bound_final <- chicago_bound_final %>% mutate(vehicles_per_1000_people = abandoned_vehicle_counts / nnpop * 1000) 
 ```
 
 
 
 
 
+Now that we have abandoned vehicles in terms of a rate, we can make a more meaningful map with the tmap library.
 
-
-
-
-
-
-
-
-
-
-
-
-
+```{r}
+tm_shape(chicago_bound_final) +
+  tm_polygons("vehicles_per_1000_people", id = "area_num_1")
+```
 
 
 
