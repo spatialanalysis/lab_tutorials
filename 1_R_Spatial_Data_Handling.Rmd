@@ -1,0 +1,645 @@
+---
+title: "Spatial Data Handling"
+subtitle: "R Notes"
+author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
+date: "08/01/2018"
+output:
+  html_document:
+    fig_caption: yes
+    self_contained: no
+    toc: yes
+    toc_depth: 4
+    css: tutor.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br>
+
+## Introduction {-}
+
+This R notebook covers the functionality of the [Spatial Data Handling](http://geodacenter.github.io/workbook/1_datascience/lab1.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages. 
+
+The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments
+on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).
+
+In this lab, we will use the City of Chicago open data portal to download data on abandoned vehicles. Our end goal is to create a choropleth map with abandoned vehicles per capita for Chicago community areas. Before we can create the maps, we will need to download the information, select observations, aggregate data, join different files and carry out variable transformations in order to obtain a so-called “spatially intensive” variable for mapping (i.e., not just a count of abandoned vehicles, but a per capita ratio).
+
+### Objectives {-}
+
+After completing the notebook, you should know how to carry out the following tasks:
+
+- Download data from any Socrata-driven open data portal, such as the 
+  [City of Chicago open data portal](https://data.cityofchicago.org)
+
+- Filtering a data frame for specific entries
+
+- Selecting and renaming columns
+
+- Creating a simple features spatial object
+
+- Checking and adding/adjusting projection information
+
+- Dealing with missing data
+
+- Spatial join
+
+- Spatial aggregation
+
+- Parsing a pdf file
+
+- Merging data sets
+
+- Creating new variables
+
+- Basic choropleth mapping
+
+#### R Packages used {-}
+
+- **RSocrata**: to read data directly from a Socrata powered open data portal, such as the Chicago open data portal  
+
+- **tidyverse** (includes **dplyr**): to manipulate data frames, such as filtering data, selecting columns, and creating new variables
+
+- **lubridate**: to select information out of the *date* format when filtering the data
+
+- **sf**: to create and manipulate simple features spatial objects, to read in the boundary file, and perform point in polygon on the data set to fill in missing community area information
+
+- **pdftools**: to read and parse a pdf for chicago community area population information
+
+- **tmap**: to make nice looking choropleth maps
+
+#### R Commands used {-}
+
+Below follows a list of the commands used in this notebook. For further details
+and a comprehensive list of options, please consult the 
+[R documentation](https://www.rdocumentation.org).
+
+- **base R**: `install.packages`, `library`, `head`, `dim`, `class`, `as.Date`, `names`, `!is.na`, `is.numeric`, `as.integer`, `is.integer`, `length`, `strsplit`, `unlist`, `for`, `vector`, `substr`, `gsub`, `as.numeric`, `data.frame`
+
+- **RSocrata**: `read.socrata`
+
+- **tidyverse**: `filter`, `%>%` (pipe), `select` (with renaming), `count`, `rename`, `mutate`
+
+- **lubridate**: `year`, `month`
+
+- **sf**: `st_as_sf`, `plot`, `st_crs`, `read_sf`, `st_transform`, `st_join`, `st_geometry`, `st_write`
+
+- **pdftools**: `pdf_text`
+
+- **tmap**: `tm_shape`, `tm_polygons`
+
+## Preliminaries {-}
+
+Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not
+actually be saving any files.^[Use `setwd(directorypath)` to specify the working directory.]
+
+### Loading packages {-}
+
+First, we load all the required packages using the `library` command. If you don't have some of these in your system, make sure to install them first as well as
+their dependencies.^[Use 
+`install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(sf)
+library(tmap)
+library(pdftools)
+library(RSocrata)
+```
+
+## Obtaining data from the Chicago Open Data portal {-} 
+
+We will use the specialized **RSocrata** package to download the file with 311 calls about abandoned vehicles from the [City of Chicago open data portal](https://data.cityofchicago.org). A list of different types of 311 nuisance calls is given by selecting the button for
+[Service Requests](https://data.cityofchicago.org/browse?category=Service%20Requests).
+The abandoned vehicles data are contained in the entry for
+[311 Service Requests - Abandoned Vehicles](https://data.cityofchicago.org/Service-Requests/311-Service-Requests-Abandoned-Vehicles/3c9v-pnva).
+
+Select the **API** button and copy the **API Endpoint** from the interface. This is the
+target file that we will download using the `read.socrata` function from the
+**RSocrata** package. Note, this is a large file, so it may take a while to download.
+
+First, we set the target file name to pass to the `read.socrata` function. Copy the
+API Endpoint and paste the file path, as shown below.
+
+```{r}
+socrata.file <- "https://data.cityofchicago.org/resource/suj7-cg3j.csv"
+```
+
+Next, download the file using `read.socrata`. This will turn the data into an R data frame. After the download is completed, we use the `head` command to get a sense of the contents of the data frame.
+
+```{r}
+vehicle.data <- read.socrata(socrata.file)
+head(vehicle.data)
+```
+
+
+
+A quick glance at the table reveals quite a bit of missing information, something
+we will have to deal with. We also check the dimension of this data frame using the
+`dim` command:
+
+```{r}
+dim(vehicle.data)
+```
+
+The table has 200,657 observations on 26 variables (the number of observations
+may be different as the table is constantly updated).
+
+In RStudio, the type of the variable in each column is listed under its name. For example, under **creation_date**, we see **S3: POSIXct**. You can also find out the same information by applying a `class` command to the variable
+**vehicle.data$creation_date**, as in
+
+```{r}
+class(vehicle.data$creation_date)
+```
+
+The result again yields **POSIXct**, which is a common format used for *dates*.
+
+Note that **RSocrata** is able to tell the date format from a simple string. In contrast, if we had downloaded the file manually as a csv (comma separated value) file, this would not be the case (see the GeoDa example). In that instance, we would have to convert the **creation_date** to a date format explicitly using `as.Date`.
+
+## Selecting Observations for a Given Time Period {-}
+As in the GeoDa example, we are not using all the data, but will analyze the abandoned vehicle locations for a given time period, i.e., the month of September 2016.
+
+### Extracting observations for the desired time period {-}
+To extract the observations for the selected year (2016) and month (9), we will use the `year` and `month` functions from the **lubridate** package. We will embed these expressions in a `filter` command (from **tidyverse**) to select the rows/observations that match the specified criterion. We will also use the pipe command `%>%` to move the original data frame through the different filter stages and assign the end result to **vehicle.sept16**.
+
+We again check the contents with a `head` command.
+
+```{r}
+vehicle.sept16 <- vehicle.data %>% filter(year(creation_date) == 2016) %>%
+                  filter(month(creation_date) == 9)
+head(vehicle.sept16)
+```
+
+and the dimension:
+
+```{r}
+dim(vehicle.sept16)
+```
+
+The filtered table now only has 2,637 observations.
+
+### Selecting the variables for the final table {-}
+The current data frame contains 26 variables. Several of these are not really of interest to us, since we basically want the locations of the events. We will use
+the `select` command from **tidyverse** to pick out the columns that we want to keep. In addition, we will use the rename option in `select` to give new variable names. While this is not absolutely necessary at this stage (**RSocrata** has turned
+any *weird* variable names into proper R names), we may later want to save the
+data as a point shape file. The data associated with a shape file are store in a 
+separate dBase file, and dBase only allows 10 characters for variable names.
+
+So, in order to save ourselves some work later on, we will rename the selected
+variables to strings that do not exceed 10 characters.
+
+First, we check the variable names using the `names` command.
+
+```{r}
+names(vehicle.sept16)
+```
+
+To keep things simple, we will only keep **community_area**, **latitude** and
+**longitude**, and turn them into **comm**, **lat** and **lon**. The new data set is **vehicles.final**. Note that to rename a variable, the new name is listed first, on the left hand side of the equal sign, and the old name is on the right hand side.
+We check the result with the `head` command.
+
+```{r}
+vehicles.final <- vehicle.sept16 %>% select(comm = community_area, 
+                          lat = latitude, lon = longitude)
+head(vehicles.final)
+```
+
+## Creating a Point Layer {-}
+So far, we have only dealt with a regular data frame, without taking advantage of any spatial features. However, the data frame contains fields with coordinates and R can turn these into an explicit spatial points layer that can be saved in a range of GIS formats. To accomplish this, we will use the (new) simple features or **sf** package functionality, which improves upon the older **sp**.
+
+We will first use the **lat** and **lon** columns in the data frame to create a
+spatial points object. Note that **lon** is the x-coordinate and **lat** is the y-coordinate.
+
+### Creating a point layer from coordinates in a table - principle {-}
+In **sf**, a simple features object is constructed by combining a *geometry* with the actual data (in a data frame). However, this is simplified for *point objects* when the data frame contains the coordinates as variables. This is the case in our example, where we have latitude and longitude. We also have x and y, but since we are not sure what projection these coordinates correspond with, they are not useful at this stage.
+
+The advantage of lat-lon is that they are decimal degrees, and thus unprojected. 
+However, we can provide the information on the datum, typically WGS84 (the standard
+used in most applications for decimal degrees) by passing the coordinate reference
+system argument (**crs**) set to the **EPSG** code 4326. After that, we can
+use the built-in projection transformation functionality in **sf** to turn the points into any projection we want.^[A good resource on coordinate reference systems is the [spatialreference.org](http://spatialreference.org) site, which contains thousands of references in a variety of commonly used formats.]
+
+#### Missing coordinates {-}
+In order to create a points layer, we need coordinates for every observation. However,
+as we can see from the `head` command above, there are (at least) two observations that do not have lat-lon information. Before we can proceed, we need to remove these from the data frame.
+
+We again use a `filter` command, but now combine it with the `!is.na` expression,
+i.e., is not missing (na). We take a little short cut by assuming that if one of lat or lon is missing, the other one will be missing as well (although to keep it completely general, we would need to check each variable separately). We assign the result
+to the **vehicle.coord** data frame.
+
+```{r}
+vehicle.coord <- vehicles.final %>% filter(!(is.na(lat)))
+dim(vehicle.coord)
+```
+
+As it turns out, the two rows we noticed above were the only two with missing coordinates (the number of rows went from 2,637 to 2,635).
+
+### Creating a spatial points object {-}
+The **sf** package turns a non-spatial object like a data frame into a 
+simple features spatial object by means of the `st_as_sf` function. This function can take a large number of arguments, but for now we will only use a few:
+
+- the name of the data frame, i.e., vehicle.coord
+
+- **coords**: the variable names for x and y (given in parentheses)
+
+- **crs**: the coordinate reference system, here using the EPSG code of 4326
+
+- **agr**: the so-called attibute-geometry-relationship which specifies how the attribute information (the data) relate to the geometry (the points); in our
+example, we will use "constant"
+
+In our example, we create **vehicle.points** and check its class.
+
+```{r}
+vehicle.points = st_as_sf(vehicle.coord, coords = c("lon", "lat"), crs = 4326, agr = "constant")
+class(vehicle.points)
+```
+
+Even though it is not that informative at this stage, we can also make a quick `plot`.
+Later, we will see how we can refine these plots using the **tmap** package.
+
+```{r}
+plot(vehicle.points)
+```
+
+We can also do a quick check of the projection information using the
+`st_crs` command.
+
+```{r}
+st_crs(vehicle.points)
+```
+
+The **proj4string** is a slightly more informative description than the simple EPSG code and confirms the data are not projected (longlat) using the WGS84 datum for the decimal degree coordinates.
+
+## Abandoned Vehicles by Community Area {-}
+At this point, we will go about things in a slightly different way from how
+they are illustrated in the GeoDa workbook example. As it turns out, some of the points have missing community area information, which is a critical element to compute the number of abandoned cars at that scale. In GeoDa, we used a visual approach to obtain the missing information. Here, we will exploit some of the GIS functionality in **sf** to carry out a **spatial join**. This boils down to identifying which points belong to each community area (a so-called *point in polygon query*) and assigning the corresponding community area identifier to each  point.
+
+We proceed in three steps. First, we create a simple features spatial polygon object with the boundaries of the community areas, which we download from the Chicago Open Data portal. Next,
+we carry out a spatial join between our points object and the polygon object to assing a community area code to each point. Finally, we compute the point count by community area.
+
+### Community Area boundary file {-}
+We resort to the City of Chicago open data portal for the boundary file of
+the community areas.
+From the opening screen, select the button for 
+[Facilities & Geo Boundaries](https://data.cityofchicago.org/browse?category=Facilities+%26+Geographic%20Boundaries). This yields a list of different boundary files for a range of geographic areal units. The one for the community areas is
+ [Boundaries - Community Areas (current)](https://data.cityofchicago.org/Facilities-Geographic-Boundaries/Boundaries-Community-Areas-current-/cauq-8yn6). This brings up an overview map of the geography of the community areas of Chicago. Of course, we could simply select one of the export buttons to download the files, but we want to do this programmatically. As it turns out, **sf** can read a **geojson** formatted file directly from the web, and we will exploit that functionality. 
+ 
+First, we need the name for the file. We can check the Socrata API file name, but that contains a **json** file, and we want a specific **geojson** file. As it turns out, the latter is simply the same file name, but with the **geojson** file extension. We set our
+variable **comm.file** to this URL and then use `sf_read` to load the boundary information into **chicago.comm**. As before, we can do a quick check of the class using the `class` command.
+
+```{r}
+comm.file <- "https://data.cityofchicago.org/resource/igwz-8jzy.geojson"
+chicago.comm <- read_sf(comm.file)
+class(chicago.comm)
+```
+
+In addition, we check the projection information using `st_crs`.
+
+```{r}
+st_crs(chicago.comm)
+```
+
+Again, the layer is unprojected in decimal degrees. Also, a quick `plot`.
+
+```{r}
+plot(chicago.comm)
+```
+
+We also use `head` to check on the types of the variables.
+
+```{r}
+head(chicago.comm)
+```
+
+
+#### Changing projections {-}
+Before moving on to the spatial join operation, we will convert both the community area boundaries and the vehicle points to the same projection, using the `st_transform`
+command. We assign the UTM (Universal Tranverse Mercator) zone 16N, which the the proper one for Chicago, with an EPSG code of 32616. After the projection transformation, we
+check the result using `st_crs`.
+
+```{r}
+chicago.comm <- st_transform(chicago.comm,32616)
+st_crs(chicago.comm)
+```
+
+```{r}
+vehicle.points <- st_transform(vehicle.points,32616)
+st_crs(vehicle.points)
+```
+
+### Spatial join {-}
+In essence, the spatial join operation finds the polygon to which each point belongs. Several points belong to the same polygon, so this is a many-to-one join. Instead of joining all the features of the polygon layer, we specify just **area_num_1**, which is the community area indicator. The command is `st_join` to which we pass the point layer as the first sf object, and the polygon layer as the second sf object (with only one column designated). We assign the result to the new spatial object **comm.pts**. We check the contents of the new object using a `head` command.
+
+```{r}
+comm.pts <- st_join(vehicle.points,chicago.comm["area_num_1"])
+head(comm.pts)
+```
+
+As we can see, the community area in **comm** matches the entry in **area_num_1**. However, there is one more issue to deal with. Upon closer examination, we find that the **area_num_1** variable is not numeric using the `is.numeric` check.
+
+```{r}
+is.numeric(comm.pts$area_num_1)
+```
+
+So, we proceed to turn this variable into a numeric format using `as.integer` and
+then do a quick check by means of `is.integer`.
+
+```{r}
+comm.pts$area_num_1 <- as.integer(comm.pts$area_num_1)
+is.integer(comm.pts$area_num_1)
+```
+
+The same problem occurs in the **chicago.comm** data set, which can cause trouble later on when we will join it with other data. Therefore, we turn it into an integer
+as well.
+
+```{r}
+chicago.comm$area_num_1 <- as.integer(chicago.comm$area_num_1)
+```
+
+
+### Counts by community area {-}
+We now need to count the number of points in each polygon. We proceed in two steps. First, we illustrate how we can move back from the simple features spatial points object to a simple data frame by stripping the geometry column. This is accomplished by setting `st_geometry` to **NULL**. We check the class of the new object to make sure it is no longer a simple feature.
+
+```{r}
+st_geometry(comm.pts) <- NULL
+class(comm.pts)
+```
+
+We next take advantage of the **tidyverse** `count` function to create a new data frame with the identifier of the community area and the number of points contained in each community area.
+
+```{r}
+veh.cnts <- comm.pts %>% count(area_num_1)
+head(veh.cnts)
+```
+
+The new data frame has two fields: the original identifier **area_num_1** and the
+count as **n**.  We can change the variable names for the count to something more meaningful by means of the **tidyverse** `rename` command and turn it from **n** to **AGG.COUNT** (to use the same variable as in the GeoDa workbook). Similarly, we also shorten **area_num_1** to **comm**. Again, the new name is on the LHS of the equal sign and the old name on the RHS.
+
+```{r}
+veh.cnts <- veh.cnts %>% rename(comm = area_num_1, AGG.COUNT = n)
+head(veh.cnts)
+```
+
+### Mapping the vehicle counts {-}
+
+At this point, we have a polygon layer with the community area boundaries and some identifiers (**chicago.comm**) and a data frame with the community identifier and the aggregate vehicle count (**veh.cnts**). In order to map the vehicle counts by community area, we need to `join` the two tables. We use the `left_join` command and use
+**area_num_1** as the key for the first table (the community area boundaries),
+and **comm** as the key for the second table (the vehicle counts). Since we assured
+that both variables are now integers, the join will work (if one were a character and the other integer, there would be an error message). Note how in the command below, the two keys can be different, which makes for a slightly more complex `by` statement.
+
+```{r}
+chicago.comm <- left_join(chicago.comm,veh.cnts, by = c("area_num_1" = "comm"))
+```
+
+We can double check that the vehicle counts were added using the `head` command.
+
+```{r}
+head(chicago.comm)
+```
+
+#### Basic choropleth map {-}
+As we saw earlier, we can construct rudimentary maps using the `plot` command
+in **sf**, but for further control, we will use the **tmap** package. This uses
+a logic similar to Wilkinson's *grammar of graphics*, which is also the basis for the
+structure of the plot commands in the **ggplot** package.
+
+We leave a detailed treatment of **tmap** for a future lab and just use the basic
+defaults in this example. The commands are layered and always start by specifying a
+layer using the `tm_shape` command. In our example, this is **chicago.comm**. 
+Next (after the plus sign) follow one of more drawing commands that cover a wide
+range of geographic shapes. Here, we will just use `tm_polygons` and specify
+**AGG.COUNT** as the variable to determine the classification. We leave everything to the default and obtain a map that illustrates the spatial distribution of the
+abandoned vehicle counts by community area.
+
+```{r}
+tm_shape(chicago.comm) +
+  tm_polygons("AGG.COUNT")
+```
+
+However, this map can be highly misleading since it pertains to a so-called
+*spatially extensive* variable, such as a count. Even if every area had the
+same risk of having abandoned vehicles, larger community areas would have 
+higher counts. In other words, since the count is directly related to the
+size of the area, it does not provide a proper indication of the risk.
+
+Instead, we should map a *spatially intensive* variable, which is corrected
+for the size of the unit. For example, this can be achieved by expressing the
+variable as a density (counts per area), or as some other ratio, such as
+the counts per capita. In order to calculate this ratio, we first need to
+obtain the population for each community area.
+
+## Community Area Population Data {-}
+
+The Chicago Community Area 2010 population is contained in a pdf file, available
+from the [City of Chicago web site](http://www.cityofchicago.org/city/en/depts/dcd/supp_info/community_area_2000and2010censuspopulationcomparisons.html).
+
+This link is to a pdf file that contains a table with the neighborhood ID, the neighborhood name, the populations
+for 2010 and 2000, the difference between the two years and the percentage difference. The full path to the pdf file is
+https://www.cityofchicago.org/content/dam/city/depts/zlup/Zoning_Main_Page/Publications/Census_2010_Community_Area_Profiles/Census_2010_and_2000_CA_Populations.pdf
+
+### Extracting a pdf file {-}
+
+A pdf file is difficult to handle as a source of data, since it doesn't contain tags like an html file.
+We will use the **pdftools** package that allows us to turn the contents of a pdf file into a list of long character strings. 
+
+The resulting data structure is somewhat complex and not necessarily easy to parse. However, in our case, the table has such a simple structure that we can extract the population values by doing some sleuthing on which columns
+contain those values. This will illustrate the power of the various parsing and text extraction functions available in R.
+
+We use the `pdf_text` function from **pdftools** to turn the pdf file into a list of character strings, one
+for each page. We specify the URL of the file as the input source.
+
+```{r}
+pdf.file <- "https://www.cityofchicago.org/content/dam/city/depts/zlup/Zoning_Main_Page/Publications/Census_2010_Community_Area_Profiles/Census_2010_and_2000_CA_Populations.pdf"
+pop.dat <- pdf_text(pdf.file)
+class(pop.dat)
+```
+
+We check the length of the data object using the **length** command and find that indeed it has only two elements (one for each page).
+
+```{r}
+length(pop.dat)
+```
+
+### Parsing the pdf file {-}
+
+The **pop.dat** object has two entries, one for each page. Each entry is a string. So, when you check the length of each item, it may be surprising that its **length** is only 1. That is because the underlying structure is unknown, it is simply a collection of characters. For example, the first element, **pop.dat[[1]]**:
+
+```{r}
+length(pop.dat[[1]])
+```
+
+We will parse this file by first turning each element into a separate list and then extracting the parts we are interested in.
+
+First, to illustrate in detail what is going on, we will go through each step one by one, but then, 
+in order to reach some level of efficiency, we turn it
+into a loop over the two elements, `for (i in 1:2)`.
+
+We start by initializing a vector (**nnlist**) with an empty character, and confirm that it is indeed initialized.
+
+```{r}
+nnlist <- ""
+nnlist
+```
+
+Next, we create a list of strings, one for each line in the table, by using the
+`strsplit` operation. This splits
+the long string into a list of one string for each line, by using the return character **\\n** as the separator (the value for the **split** argument).
+
+The resulting list, **pop.dat[[1]]**, contains a list of 44 elements, matching the contents of the first page of the pdf file.
+
+```{r}
+ppage <- strsplit(pop.dat[[1]],split="\n")
+ppage[[1]]
+```
+
+Each element is one long string, corresponding to a table row. We remove the first four lines (using the - operation on the list elements 1 through 4).
+
+```{r}
+nni <- ppage[[1]]
+nni <- nni[-(1:4)]
+nni
+```
+
+To streamline the resulting data structure for further operations, we turn it into a simple
+vector by means of `unlist`. This then allows us to concatenate the result to the current **nnlist** vector (initially, this contains just a single element
+with an empty character, after the first step it contains the empty character and the first page).
+
+```{r}
+nnu <- unlist(nni)
+nnlist <- c(nnlist,nnu)
+nnlist
+```
+
+
+We now repeat this operation for **pop.dat[[2]]**. More efficiently, we implement it as a loop, replacing **i** in turn by 1 and 2. This yields:
+
+```{r}
+
+nnlist <- ""
+for (i in 1:2) {
+  ppage <- strsplit(pop.dat[[i]],split="\n")
+  nni <- ppage[[1]]
+  nni <- nni[-(1:4)]
+  nnu <- unlist(nni)
+  nnlist <- c(nnlist,nnu)
+}
+```
+
+At the end of the loop, we check the contents of the vector **nnlist**.
+
+```{r}
+nnlist
+```
+
+This is now a vector of 79 elements, each of which is a string. To clean things up, strip the first (empty) element, and the last
+element, which is nothing but the totals. We thus extract the elements from **2** to **length - 1**.
+
+```{r}
+nnlist <- nnlist[2:(length(nnlist)-1)]
+```
+
+### Extracting the population values
+
+We first initialize a vector of zeros to hold the population values. It is the preferred approach to 
+initialize a vector first if one knows its size, rather than having it grow by appending rows or columns.
+We use the `vector` command and specify the **mode** to **numeric** and give the **length** as the
+length of the list.
+
+```{r}
+nnpop <- vector(mode="numeric",length=length(nnlist))
+```
+
+We again will use a loop to process each element of the list (each line of the table) one by one.
+We use the `substr` command to extract the characters between position 27 and 39 (these values
+were determined after taking a careful look at the structure of the table). However, there is still a problem, since
+the population values contain commas. We now do two things in one line of code. First, we use `gsub`
+to substitute the comma character by an empty **""**. We turn the result into a numeric value by
+means of `as.numeric`. We then assign this number to position **i** of the vector. The resulting
+vector **nnpop** contains the population for each of the community areas.
+
+```{r}
+for (i in (1:length(nnlist))) {
+     popchar <- substr(nnlist[i],start=27,stop=39)
+     popval <- as.numeric(gsub(",","",popchar))
+     nnpop[i] <- popval
+}
+nnpop
+```
+
+### Creating a data frame with population values {-}
+
+As a final step in the process of collecting the community area
+population information, we combine the vector with the population
+counts and a vector with community ID information into a data frame.
+
+Since the community
+area indicators are simple sequence numbers, we create such a vector to serve as the ID,
+again using the length of the vector to determine the extent.
+
+```{r}
+nnid <- (1:length(nnlist))
+nnid
+```
+
+We turn the vectors **nnid** and **nnpop** into a data frame using the `data.frame` command.
+Since the variable names assigned automatically are not that informative, we next force them to
+**NID** and **POP2010** using the `names` command. Also, as we did before, we make sure the ID variable
+is an integer (for merging in GeoDa) by means of `as.integer`.
+
+```{r}
+neighpop <- data.frame(as.integer(nnid),nnpop)
+names(neighpop) <- c("NID","POP2010")
+head(neighpop)
+```
+
+## Mapping Community Area Abandoned Vehicles Per Capita {-}
+
+### Computing abandoned vehicles per capita {-}
+
+Before proceeding further, we `left_join` the community population data to the community
+area layer, in the same way as we did for the vehicle counts.
+
+```{r}
+chicago.comm <- left_join(chicago.comm,neighpop, by = c("area_num_1" = "NID"))
+head(chicago.comm)
+```
+
+We will now create a new variable using the **tidyverse** `mutate` command as the ratio
+of vehicle counts per 1000 population.
+
+```{r}
+chicago.comm <- chicago.comm %>% mutate(vehpcap = AGG.COUNT / POP2010 * 1000) 
+head(chicago.comm)
+```
+
+
+### Final choropleth map {-}
+
+For our final choropleth, we use the same procedure as for the vehicle counts,
+but take **vehpcap** as the variable instead.
+
+```{r}
+tm_shape(chicago.comm) +
+  tm_polygons("vehpcap")
+```
+
+When compared to the total counts, we see quite a different spatial distribution. 
+In particular, the locations of the highest ratios are quite different from those of the highest counts. As a rule, one should *never* create a choropleth map of a spatially extensive variable, unless the size of the areal units is somehow controlled for
+(e.g., equal area grid cells, or equal population zones).
+
+#### Optional - save the community area file as a shape file
+Finally, we can write the community area layer to the working directory. Note that, so far, all operations have been carried out in memory, and when you close the program, everything may be lost (unless you save your workspace).
+
+We can write the community area to a shape file (actually, four files contained
+in a directory) by means of the **sf** command `st_write`. This command has many
+options, but we just use the minimal ones. The **chicago.comm** object will 
+be written to a set of files in the directory **chicago_vehicles** using the 
+**ESRI Shapefile** format.
+
+```{r}
+st_write(chicago.comm,"chicago_vehicles",driver="ESRI Shapefile")
+```
+

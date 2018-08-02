@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+<meta name="author" content="Luc Anselin and Grant Morrison" />
+
+<meta name="date" content="2018-08-01" />
+
+<title>Spatial Data Handling</title>
+
+<script src="1_R_Spatial_Data_Handling_files/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="1_R_Spatial_Data_Handling_files/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="1_R_Spatial_Data_Handling_files/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="1_R_Spatial_Data_Handling_files/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="1_R_Spatial_Data_Handling_files/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="1_R_Spatial_Data_Handling_files/navigation-1.1/tabsets.js"></script>
+<link href="1_R_Spatial_Data_Handling_files/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="1_R_Spatial_Data_Handling_files/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+<link rel="stylesheet" href="tutor.css" type="text/css" />
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Spatial Data Handling</h1>
+<h3 class="subtitle"><em>R Notes</em></h3>
+<h4 class="author"><em>Luc Anselin and Grant Morrison<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></em></h4>
+<h4 class="date"><em>08/01/2018</em></h4>
+
+</div>
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction">Introduction</a><ul>
+<li><a href="#objectives">Objectives</a><ul>
+<li><a href="#r-packages-used">R Packages used</a></li>
+<li><a href="#r-commands-used">R Commands used</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#preliminaries">Preliminaries</a><ul>
+<li><a href="#loading-packages">Loading packages</a></li>
+</ul></li>
+<li><a href="#obtaining-data-from-the-chicago-open-data-portal">Obtaining data from the Chicago Open Data portal</a></li>
+<li><a href="#selecting-observations-for-a-given-time-period">Selecting Observations for a Given Time Period</a><ul>
+<li><a href="#extracting-observations-for-the-desired-time-period">Extracting observations for the desired time period</a></li>
+<li><a href="#selecting-the-variables-for-the-final-table">Selecting the variables for the final table</a></li>
+</ul></li>
+<li><a href="#creating-a-point-layer">Creating a Point Layer</a><ul>
+<li><a href="#creating-a-point-layer-from-coordinates-in-a-table---principle">Creating a point layer from coordinates in a table - principle</a><ul>
+<li><a href="#missing-coordinates">Missing coordinates</a></li>
+</ul></li>
+<li><a href="#creating-a-spatial-points-object">Creating a spatial points object</a></li>
+</ul></li>
+<li><a href="#abandoned-vehicles-by-community-area">Abandoned Vehicles by Community Area</a><ul>
+<li><a href="#community-area-boundary-file">Community Area boundary file</a><ul>
+<li><a href="#changing-projections">Changing projections</a></li>
+</ul></li>
+<li><a href="#spatial-join">Spatial join</a></li>
+<li><a href="#counts-by-community-area">Counts by community area</a></li>
+<li><a href="#mapping-the-vehicle-counts">Mapping the vehicle counts</a><ul>
+<li><a href="#basic-choropleth-map">Basic choropleth map</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#community-area-population-data">Community Area Population Data</a><ul>
+<li><a href="#extracting-a-pdf-file">Extracting a pdf file</a></li>
+<li><a href="#parsing-the-pdf-file">Parsing the pdf file</a></li>
+<li><a href="#extracting-the-population-values">Extracting the population values</a></li>
+<li><a href="#creating-a-data-frame-with-population-values">Creating a data frame with population values</a></li>
+</ul></li>
+<li><a href="#mapping-community-area-abandoned-vehicles-per-capita">Mapping Community Area Abandoned Vehicles Per Capita</a><ul>
+<li><a href="#computing-abandoned-vehicles-per-capita">Computing abandoned vehicles per capita</a></li>
+<li><a href="#final-choropleth-map">Final choropleth map</a><ul>
+<li><a href="#optional---save-the-community-area-file-as-a-shape-file">Optional - save the community area file as a shape file</a></li>
+</ul></li>
+</ul></li>
+</ul>
+</div>
+
+<p><br></p>
+<div id="introduction" class="section level2 unnumbered">
+<h2>Introduction</h2>
+<p>This R notebook covers the functionality of the <a href="http://geodacenter.github.io/workbook/1_datascience/lab1.html">Spatial Data Handling</a> section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.</p>
+<p>The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).</p>
+<p>In this lab, we will use the City of Chicago open data portal to download data on abandoned vehicles. Our end goal is to create a choropleth map with abandoned vehicles per capita for Chicago community areas. Before we can create the maps, we will need to download the information, select observations, aggregate data, join different files and carry out variable transformations in order to obtain a so-called “spatially intensive” variable for mapping (i.e., not just a count of abandoned vehicles, but a per capita ratio).</p>
+<div id="objectives" class="section level3 unnumbered">
+<h3>Objectives</h3>
+<p>After completing the notebook, you should know how to carry out the following tasks:</p>
+<ul>
+<li><p>Download data from any Socrata-driven open data portal, such as the <a href="https://data.cityofchicago.org">City of Chicago open data portal</a></p></li>
+<li><p>Filtering a data frame for specific entries</p></li>
+<li><p>Selecting and renaming columns</p></li>
+<li><p>Creating a simple features spatial object</p></li>
+<li><p>Checking and adding/adjusting projection information</p></li>
+<li><p>Dealing with missing data</p></li>
+<li><p>Spatial join</p></li>
+<li><p>Spatial aggregation</p></li>
+<li><p>Parsing a pdf file</p></li>
+<li><p>Merging data sets</p></li>
+<li><p>Creating new variables</p></li>
+<li><p>Basic choropleth mapping</p></li>
+</ul>
+<div id="r-packages-used" class="section level4 unnumbered">
+<h4>R Packages used</h4>
+<ul>
+<li><p><strong>RSocrata</strong>: to read data directly from a Socrata powered open data portal, such as the Chicago open data portal</p></li>
+<li><p><strong>tidyverse</strong> (includes <strong>dplyr</strong>): to manipulate data frames, such as filtering data, selecting columns, and creating new variables</p></li>
+<li><p><strong>lubridate</strong>: to select information out of the <em>date</em> format when filtering the data</p></li>
+<li><p><strong>sf</strong>: to create and manipulate simple features spatial objects, to read in the boundary file, and perform point in polygon on the data set to fill in missing community area information</p></li>
+<li><p><strong>pdftools</strong>: to read and parse a pdf for chicago community area population information</p></li>
+<li><p><strong>tmap</strong>: to make nice looking choropleth maps</p></li>
+</ul>
+</div>
+<div id="r-commands-used" class="section level4 unnumbered">
+<h4>R Commands used</h4>
+<p>Below follows a list of the commands used in this notebook. For further details and a comprehensive list of options, please consult the <a href="https://www.rdocumentation.org">R documentation</a>.</p>
+<ul>
+<li><p><strong>base R</strong>: <code>install.packages</code>, <code>library</code>, <code>head</code>, <code>dim</code>, <code>class</code>, <code>as.Date</code>, <code>names</code>, <code>!is.na</code>, <code>is.numeric</code>, <code>as.integer</code>, <code>is.integer</code>, <code>length</code>, <code>strsplit</code>, <code>unlist</code>, <code>for</code>, <code>vector</code>, <code>substr</code>, <code>gsub</code>, <code>as.numeric</code>, <code>data.frame</code></p></li>
+<li><p><strong>RSocrata</strong>: <code>read.socrata</code></p></li>
+<li><p><strong>tidyverse</strong>: <code>filter</code>, <code>%&gt;%</code> (pipe), <code>select</code> (with renaming), <code>count</code>, <code>rename</code>, <code>mutate</code></p></li>
+<li><p><strong>lubridate</strong>: <code>year</code>, <code>month</code></p></li>
+<li><p><strong>sf</strong>: <code>st_as_sf</code>, <code>plot</code>, <code>st_crs</code>, <code>read_sf</code>, <code>st_transform</code>, <code>st_join</code>, <code>st_geometry</code>, <code>st_write</code></p></li>
+<li><p><strong>pdftools</strong>: <code>pdf_text</code></p></li>
+<li><p><strong>tmap</strong>: <code>tm_shape</code>, <code>tm_polygons</code></p></li>
+</ul>
+</div>
+</div>
+</div>
+<div id="preliminaries" class="section level2 unnumbered">
+<h2>Preliminaries</h2>
+<p>Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not actually be saving any files.<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a></p>
+<div id="loading-packages" class="section level3 unnumbered">
+<h3>Loading packages</h3>
+<p>First, we load all the required packages using the <code>library</code> command. If you don’t have some of these in your system, make sure to install them first as well as their dependencies.<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a> You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.</p>
+<pre class="r"><code>library(tidyverse)</code></pre>
+<pre><code>## ── Attaching packages ───────────────────────────────────────────────── tidyverse 1.2.1 ──</code></pre>
+<pre><code>## ✔ ggplot2 3.0.0     ✔ purrr   0.2.5
+## ✔ tibble  1.4.2     ✔ dplyr   0.7.6
+## ✔ tidyr   0.8.1     ✔ stringr 1.3.1
+## ✔ readr   1.1.1     ✔ forcats 0.3.0</code></pre>
+<pre><code>## ── Conflicts ──────────────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()</code></pre>
+<pre class="r"><code>library(lubridate)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;lubridate&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:base&#39;:
+## 
+##     date</code></pre>
+<pre class="r"><code>library(sf)</code></pre>
+<pre><code>## Linking to GEOS 3.6.1, GDAL 2.1.3, proj.4 4.9.3</code></pre>
+<pre class="r"><code>library(tmap)
+library(pdftools)
+library(RSocrata)</code></pre>
+</div>
+</div>
+<div id="obtaining-data-from-the-chicago-open-data-portal" class="section level2 unnumbered">
+<h2>Obtaining data from the Chicago Open Data portal</h2>
+<p>We will use the specialized <strong>RSocrata</strong> package to download the file with 311 calls about abandoned vehicles from the <a href="https://data.cityofchicago.org">City of Chicago open data portal</a>. A list of different types of 311 nuisance calls is given by selecting the button for <a href="https://data.cityofchicago.org/browse?category=Service%20Requests">Service Requests</a>. The abandoned vehicles data are contained in the entry for <a href="https://data.cityofchicago.org/Service-Requests/311-Service-Requests-Abandoned-Vehicles/3c9v-pnva">311 Service Requests - Abandoned Vehicles</a>.</p>
+<p>Select the <strong>API</strong> button and copy the <strong>API Endpoint</strong> from the interface. This is the target file that we will download using the <code>read.socrata</code> function from the <strong>RSocrata</strong> package. Note, this is a large file, so it may take a while to download.</p>
+<p>First, we set the target file name to pass to the <code>read.socrata</code> function. Copy the API Endpoint and paste the file path, as shown below.</p>
+<pre class="r"><code>socrata.file &lt;- &quot;https://data.cityofchicago.org/resource/suj7-cg3j.csv&quot;</code></pre>
+<p>Next, download the file using <code>read.socrata</code>. This will turn the data into an R data frame. After the download is completed, we use the <code>head</code> command to get a sense of the contents of the data frame.</p>
+<pre class="r"><code>vehicle.data &lt;- read.socrata(socrata.file)
+head(vehicle.data)</code></pre>
+<pre><code>##   community_area completion_date creation_date current_activity
+## 1             NA      2012-01-05    2012-01-04    FVI - Outcome
+## 2             NA      2013-02-21    2013-01-22    FVI - Outcome
+## 3             38      2013-02-20    2013-01-13    FVI - Outcome
+## 4             NA      2012-02-15    2012-01-24    FVI - Outcome
+## 5             NA      2011-01-28    2011-01-25                 
+## 6             28      2011-02-03    2011-01-28                 
+##   how_many_days_has_the_vehicle_been_reported_as_parked_ latitude
+## 1                                                     45       NA
+## 2                                                     NA       NA
+## 3                                                     10       NA
+## 4                                                     NA       NA
+## 5                                                      7       NA
+## 6                                                     NA       NA
+##   license_plate location location_address location_city location_state
+## 1          NONE                      &lt;NA&gt;          &lt;NA&gt;           &lt;NA&gt;
+## 2                                    &lt;NA&gt;          &lt;NA&gt;           &lt;NA&gt;
+## 3     NO PLATES                      &lt;NA&gt;          &lt;NA&gt;           &lt;NA&gt;
+## 4                                    &lt;NA&gt;          &lt;NA&gt;           &lt;NA&gt;
+## 5       K476451                      &lt;NA&gt;          &lt;NA&gt;           &lt;NA&gt;
+## 6             ?                      &lt;NA&gt;          &lt;NA&gt;           &lt;NA&gt;
+##   location_zip longitude                                most_recent_action
+## 1         &lt;NA&gt;        NA Vehicle was moved from original address requested
+## 2         &lt;NA&gt;        NA Vehicle was moved from original address requested
+## 3         &lt;NA&gt;        NA Vehicle was moved from original address requested
+## 4         &lt;NA&gt;        NA Vehicle was moved from original address requested
+## 5         &lt;NA&gt;        NA                                                  
+## 6         &lt;NA&gt;        NA                                                  
+##   police_district service_request_number ssa          status
+## 1              NA            12-00013378  NA       Completed
+## 2              NA            13-00079210  NA Completed - Dup
+## 3               2            13-00048686  NA       Completed
+## 4              NA            12-00100994  NA       Completed
+## 5              NA            11-00116331  NA       Completed
+## 6              12            11-00139829  NA       Completed
+##                       street_address     type_of_service_request
+## 1                       103 E 8TH ST Abandoned Vehicle Complaint
+## 2                      2030 79 PLACE Abandoned Vehicle Complaint
+## 3 5015 S DR MARTIN LUTHER KING JR SD Abandoned Vehicle Complaint
+## 4                      1325 S ADA ST Abandoned Vehicle Complaint
+## 5                  5804 N MENARD AVE Abandoned Vehicle Complaint
+## 6                116 S JACKSON BL ER Abandoned Vehicle Complaint
+##   vehicle_color vehicle_make_model ward x_coordinate y_coordinate zip_code
+## 1         Beige         Oldsmobile   NA           NA           NA    60605
+## 2                                    NA           NA           NA       NA
+## 3         Black     Legacy Unknown    3           NA           NA    60615
+## 4                                    NA           NA           NA    60607
+## 5         Black              Honda   NA           NA           NA    60630
+## 6        Yellow                       2      1171572      1899604    60661</code></pre>
+<p>A quick glance at the table reveals quite a bit of missing information, something we will have to deal with. We also check the dimension of this data frame using the <code>dim</code> command:</p>
+<pre class="r"><code>dim(vehicle.data)</code></pre>
+<pre><code>## [1] 200657     26</code></pre>
+<p>The table has 200,657 observations on 26 variables (the number of observations may be different as the table is constantly updated).</p>
+<p>In RStudio, the type of the variable in each column is listed under its name. For example, under <strong>creation_date</strong>, we see <strong>S3: POSIXct</strong>. You can also find out the same information by applying a <code>class</code> command to the variable <strong>vehicle.data$creation_date</strong>, as in</p>
+<pre class="r"><code>class(vehicle.data$creation_date)</code></pre>
+<pre><code>## [1] &quot;POSIXct&quot; &quot;POSIXt&quot;</code></pre>
+<p>The result again yields <strong>POSIXct</strong>, which is a common format used for <em>dates</em>.</p>
+<p>Note that <strong>RSocrata</strong> is able to tell the date format from a simple string. In contrast, if we had downloaded the file manually as a csv (comma separated value) file, this would not be the case (see the GeoDa example). In that instance, we would have to convert the <strong>creation_date</strong> to a date format explicitly using <code>as.Date</code>.</p>
+</div>
+<div id="selecting-observations-for-a-given-time-period" class="section level2 unnumbered">
+<h2>Selecting Observations for a Given Time Period</h2>
+<p>As in the GeoDa example, we are not using all the data, but will analyze the abandoned vehicle locations for a given time period, i.e., the month of September 2016.</p>
+<div id="extracting-observations-for-the-desired-time-period" class="section level3 unnumbered">
+<h3>Extracting observations for the desired time period</h3>
+<p>To extract the observations for the selected year (2016) and month (9), we will use the <code>year</code> and <code>month</code> functions from the <strong>lubridate</strong> package. We will embed these expressions in a <code>filter</code> command (from <strong>tidyverse</strong>) to select the rows/observations that match the specified criterion. We will also use the pipe command <code>%&gt;%</code> to move the original data frame through the different filter stages and assign the end result to <strong>vehicle.sept16</strong>.</p>
+<p>We again check the contents with a <code>head</code> command.</p>
+<pre class="r"><code>vehicle.sept16 &lt;- vehicle.data %&gt;% filter(year(creation_date) == 2016) %&gt;%
+                  filter(month(creation_date) == 9)
+head(vehicle.sept16)</code></pre>
+<pre><code>##   community_area completion_date creation_date current_activity
+## 1             22      2016-11-01    2016-09-25    FVI - Outcome
+## 2             32      2016-11-07    2016-09-23    FVI - Outcome
+## 3             64      2016-10-31    2016-09-30    FVI - Outcome
+## 4             49      2016-09-28    2016-09-27                 
+## 5             25      2016-10-14    2016-09-03    FVI - Outcome
+## 6             64      2016-09-29    2016-09-06    FVI - Outcome
+##   how_many_days_has_the_vehicle_been_reported_as_parked_ latitude
+## 1                                                      1       NA
+## 2                                                     21       NA
+## 3                                                      8 41.78189
+## 4                                                     14 41.71969
+## 5                                                      7 41.90927
+## 6                                                     21 41.78164
+##   license_plate                                 location location_address
+## 1          NONE                                                      &lt;NA&gt;
+## 2       X398759                                                      &lt;NA&gt;
+## 3       Q282507 POINT (-87.766910544794 41.781887757489)             &lt;NA&gt;
+## 4        436WLH  POINT (-87.628471073301 41.71969458189)             &lt;NA&gt;
+## 5        U68531 POINT (-87.800436094685 41.909265922613)             &lt;NA&gt;
+## 6      S75 7913 POINT (-87.771883753544 41.781638748788)             &lt;NA&gt;
+##   location_city location_state location_zip longitude
+## 1          &lt;NA&gt;           &lt;NA&gt;         &lt;NA&gt;        NA
+## 2          &lt;NA&gt;           &lt;NA&gt;         &lt;NA&gt;        NA
+## 3          &lt;NA&gt;           &lt;NA&gt;         &lt;NA&gt; -87.76691
+## 4          &lt;NA&gt;           &lt;NA&gt;         &lt;NA&gt; -87.62847
+## 5          &lt;NA&gt;           &lt;NA&gt;         &lt;NA&gt; -87.80044
+## 6          &lt;NA&gt;           &lt;NA&gt;         &lt;NA&gt; -87.77188
+##                                  most_recent_action police_district
+## 1 Vehicle was moved from original address requested              14
+## 2 Vehicle was moved from original address requested               1
+## 3 Vehicle was moved from original address requested               8
+## 4                                                                 5
+## 5 Vehicle was moved from original address requested              25
+## 6                                 Create Work Order               8
+##   service_request_number ssa          status       street_address
+## 1            16-06763758  NA       Completed      2601 W LOGAN SD
+## 2            16-06728705  NA       Completed     1136 S DELANO CT
+## 3            16-06891657  NA       Completed    6052 S MENARD AVE
+## 4            16-06821236  NA Completed - Dup 9603 S WENTWORTH AVE
+## 5            16-06253616  NA       Completed     1608 N SAYRE AVE
+## 6            16-06319591  NA       Completed       6004 W 61ST ST
+##       type_of_service_request vehicle_color vehicle_make_model ward
+## 1 Abandoned Vehicle Complaint          Blue          Chevrolet   32
+## 2 Abandoned Vehicle Complaint           Red             Toyota   25
+## 3 Abandoned Vehicle Complaint         White          Chevrolet   13
+## 4 Abandoned Vehicle Complaint         Black            Hyundai   21
+## 5 Abandoned Vehicle Complaint         White           Mercedes   29
+## 6 Abandoned Vehicle Complaint          Gray              Mazda   13
+##   x_coordinate y_coordinate zip_code
+## 1      1158574      1917279    60647
+## 2      1175169      1895252    60605
+## 3      1138768      1863842    60638
+## 4      1176639      1841268    60628
+## 5      1129346      1909917    60707
+## 6      1137405      1863480    60638</code></pre>
+<p>and the dimension:</p>
+<pre class="r"><code>dim(vehicle.sept16)</code></pre>
+<pre><code>## [1] 2637   26</code></pre>
+<p>The filtered table now only has 2,637 observations.</p>
+</div>
+<div id="selecting-the-variables-for-the-final-table" class="section level3 unnumbered">
+<h3>Selecting the variables for the final table</h3>
+<p>The current data frame contains 26 variables. Several of these are not really of interest to us, since we basically want the locations of the events. We will use the <code>select</code> command from <strong>tidyverse</strong> to pick out the columns that we want to keep. In addition, we will use the rename option in <code>select</code> to give new variable names. While this is not absolutely necessary at this stage (<strong>RSocrata</strong> has turned any <em>weird</em> variable names into proper R names), we may later want to save the data as a point shape file. The data associated with a shape file are store in a separate dBase file, and dBase only allows 10 characters for variable names.</p>
+<p>So, in order to save ourselves some work later on, we will rename the selected variables to strings that do not exceed 10 characters.</p>
+<p>First, we check the variable names using the <code>names</code> command.</p>
+<pre class="r"><code>names(vehicle.sept16)</code></pre>
+<pre><code>##  [1] &quot;community_area&quot;                                        
+##  [2] &quot;completion_date&quot;                                       
+##  [3] &quot;creation_date&quot;                                         
+##  [4] &quot;current_activity&quot;                                      
+##  [5] &quot;how_many_days_has_the_vehicle_been_reported_as_parked_&quot;
+##  [6] &quot;latitude&quot;                                              
+##  [7] &quot;license_plate&quot;                                         
+##  [8] &quot;location&quot;                                              
+##  [9] &quot;location_address&quot;                                      
+## [10] &quot;location_city&quot;                                         
+## [11] &quot;location_state&quot;                                        
+## [12] &quot;location_zip&quot;                                          
+## [13] &quot;longitude&quot;                                             
+## [14] &quot;most_recent_action&quot;                                    
+## [15] &quot;police_district&quot;                                       
+## [16] &quot;service_request_number&quot;                                
+## [17] &quot;ssa&quot;                                                   
+## [18] &quot;status&quot;                                                
+## [19] &quot;street_address&quot;                                        
+## [20] &quot;type_of_service_request&quot;                               
+## [21] &quot;vehicle_color&quot;                                         
+## [22] &quot;vehicle_make_model&quot;                                    
+## [23] &quot;ward&quot;                                                  
+## [24] &quot;x_coordinate&quot;                                          
+## [25] &quot;y_coordinate&quot;                                          
+## [26] &quot;zip_code&quot;</code></pre>
+<p>To keep things simple, we will only keep <strong>community_area</strong>, <strong>latitude</strong> and <strong>longitude</strong>, and turn them into <strong>comm</strong>, <strong>lat</strong> and <strong>lon</strong>. The new data set is <strong>vehicles.final</strong>. Note that to rename a variable, the new name is listed first, on the left hand side of the equal sign, and the old name is on the right hand side. We check the result with the <code>head</code> command.</p>
+<pre class="r"><code>vehicles.final &lt;- vehicle.sept16 %&gt;% select(comm = community_area, 
+                          lat = latitude, lon = longitude)
+head(vehicles.final)</code></pre>
+<pre><code>##   comm      lat       lon
+## 1   22       NA        NA
+## 2   32       NA        NA
+## 3   64 41.78189 -87.76691
+## 4   49 41.71969 -87.62847
+## 5   25 41.90927 -87.80044
+## 6   64 41.78164 -87.77188</code></pre>
+</div>
+</div>
+<div id="creating-a-point-layer" class="section level2 unnumbered">
+<h2>Creating a Point Layer</h2>
+<p>So far, we have only dealt with a regular data frame, without taking advantage of any spatial features. However, the data frame contains fields with coordinates and R can turn these into an explicit spatial points layer that can be saved in a range of GIS formats. To accomplish this, we will use the (new) simple features or <strong>sf</strong> package functionality, which improves upon the older <strong>sp</strong>.</p>
+<p>We will first use the <strong>lat</strong> and <strong>lon</strong> columns in the data frame to create a spatial points object. Note that <strong>lon</strong> is the x-coordinate and <strong>lat</strong> is the y-coordinate.</p>
+<div id="creating-a-point-layer-from-coordinates-in-a-table---principle" class="section level3 unnumbered">
+<h3>Creating a point layer from coordinates in a table - principle</h3>
+<p>In <strong>sf</strong>, a simple features object is constructed by combining a <em>geometry</em> with the actual data (in a data frame). However, this is simplified for <em>point objects</em> when the data frame contains the coordinates as variables. This is the case in our example, where we have latitude and longitude. We also have x and y, but since we are not sure what projection these coordinates correspond with, they are not useful at this stage.</p>
+<p>The advantage of lat-lon is that they are decimal degrees, and thus unprojected. However, we can provide the information on the datum, typically WGS84 (the standard used in most applications for decimal degrees) by passing the coordinate reference system argument (<strong>crs</strong>) set to the <strong>EPSG</strong> code 4326. After that, we can use the built-in projection transformation functionality in <strong>sf</strong> to turn the points into any projection we want.<a href="#fn4" class="footnote-ref" id="fnref4"><sup>4</sup></a></p>
+<div id="missing-coordinates" class="section level4 unnumbered">
+<h4>Missing coordinates</h4>
+<p>In order to create a points layer, we need coordinates for every observation. However, as we can see from the <code>head</code> command above, there are (at least) two observations that do not have lat-lon information. Before we can proceed, we need to remove these from the data frame.</p>
+<p>We again use a <code>filter</code> command, but now combine it with the <code>!is.na</code> expression, i.e., is not missing (na). We take a little short cut by assuming that if one of lat or lon is missing, the other one will be missing as well (although to keep it completely general, we would need to check each variable separately). We assign the result to the <strong>vehicle.coord</strong> data frame.</p>
+<pre class="r"><code>vehicle.coord &lt;- vehicles.final %&gt;% filter(!(is.na(lat)))
+dim(vehicle.coord)</code></pre>
+<pre><code>## [1] 2635    3</code></pre>
+<p>As it turns out, the two rows we noticed above were the only two with missing coordinates (the number of rows went from 2,637 to 2,635).</p>
+</div>
+</div>
+<div id="creating-a-spatial-points-object" class="section level3 unnumbered">
+<h3>Creating a spatial points object</h3>
+<p>The <strong>sf</strong> package turns a non-spatial object like a data frame into a simple features spatial object by means of the <code>st_as_sf</code> function. This function can take a large number of arguments, but for now we will only use a few:</p>
+<ul>
+<li><p>the name of the data frame, i.e., vehicle.coord</p></li>
+<li><p><strong>coords</strong>: the variable names for x and y (given in parentheses)</p></li>
+<li><p><strong>crs</strong>: the coordinate reference system, here using the EPSG code of 4326</p></li>
+<li><p><strong>agr</strong>: the so-called attibute-geometry-relationship which specifies how the attribute information (the data) relate to the geometry (the points); in our example, we will use “constant”</p></li>
+</ul>
+<p>In our example, we create <strong>vehicle.points</strong> and check its class.</p>
+<pre class="r"><code>vehicle.points = st_as_sf(vehicle.coord, coords = c(&quot;lon&quot;, &quot;lat&quot;), crs = 4326, agr = &quot;constant&quot;)
+class(vehicle.points)</code></pre>
+<pre><code>## [1] &quot;sf&quot;         &quot;data.frame&quot;</code></pre>
+<p>Even though it is not that informative at this stage, we can also make a quick <code>plot</code>. Later, we will see how we can refine these plots using the <strong>tmap</strong> package.</p>
+<pre class="r"><code>plot(vehicle.points)</code></pre>
+<p><img src="1_R_Spatial_Data_Handling_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<p>We can also do a quick check of the projection information using the <code>st_crs</code> command.</p>
+<pre class="r"><code>st_crs(vehicle.points)</code></pre>
+<pre><code>## Coordinate Reference System:
+##   EPSG: 4326 
+##   proj4string: &quot;+proj=longlat +datum=WGS84 +no_defs&quot;</code></pre>
+<p>The <strong>proj4string</strong> is a slightly more informative description than the simple EPSG code and confirms the data are not projected (longlat) using the WGS84 datum for the decimal degree coordinates.</p>
+</div>
+</div>
+<div id="abandoned-vehicles-by-community-area" class="section level2 unnumbered">
+<h2>Abandoned Vehicles by Community Area</h2>
+<p>At this point, we will go about things in a slightly different way from how they are illustrated in the GeoDa workbook example. As it turns out, some of the points have missing community area information, which is a critical element to compute the number of abandoned cars at that scale. In GeoDa, we used a visual approach to obtain the missing information. Here, we will exploit some of the GIS functionality in <strong>sf</strong> to carry out a <strong>spatial join</strong>. This boils down to identifying which points belong to each community area (a so-called <em>point in polygon query</em>) and assigning the corresponding community area identifier to each point.</p>
+<p>We proceed in three steps. First, we create a simple features spatial polygon object with the boundaries of the community areas, which we download from the Chicago Open Data portal. Next, we carry out a spatial join between our points object and the polygon object to assing a community area code to each point. Finally, we compute the point count by community area.</p>
+<div id="community-area-boundary-file" class="section level3 unnumbered">
+<h3>Community Area boundary file</h3>
+<p>We resort to the City of Chicago open data portal for the boundary file of the community areas. From the opening screen, select the button for <a href="https://data.cityofchicago.org/browse?category=Facilities+%26+Geographic%20Boundaries">Facilities &amp; Geo Boundaries</a>. This yields a list of different boundary files for a range of geographic areal units. The one for the community areas is <a href="https://data.cityofchicago.org/Facilities-Geographic-Boundaries/Boundaries-Community-Areas-current-/cauq-8yn6">Boundaries - Community Areas (current)</a>. This brings up an overview map of the geography of the community areas of Chicago. Of course, we could simply select one of the export buttons to download the files, but we want to do this programmatically. As it turns out, <strong>sf</strong> can read a <strong>geojson</strong> formatted file directly from the web, and we will exploit that functionality.</p>
+<p>First, we need the name for the file. We can check the Socrata API file name, but that contains a <strong>json</strong> file, and we want a specific <strong>geojson</strong> file. As it turns out, the latter is simply the same file name, but with the <strong>geojson</strong> file extension. We set our variable <strong>comm.file</strong> to this URL and then use <code>sf_read</code> to load the boundary information into <strong>chicago.comm</strong>. As before, we can do a quick check of the class using the <code>class</code> command.</p>
+<pre class="r"><code>comm.file &lt;- &quot;https://data.cityofchicago.org/resource/igwz-8jzy.geojson&quot;
+chicago.comm &lt;- read_sf(comm.file)
+class(chicago.comm)</code></pre>
+<pre><code>## [1] &quot;sf&quot;         &quot;tbl_df&quot;     &quot;tbl&quot;        &quot;data.frame&quot;</code></pre>
+<p>In addition, we check the projection information using <code>st_crs</code>.</p>
+<pre class="r"><code>st_crs(chicago.comm)</code></pre>
+<pre><code>## Coordinate Reference System:
+##   EPSG: 4326 
+##   proj4string: &quot;+proj=longlat +datum=WGS84 +no_defs&quot;</code></pre>
+<p>Again, the layer is unprojected in decimal degrees. Also, a quick <code>plot</code>.</p>
+<pre class="r"><code>plot(chicago.comm)</code></pre>
+<p><img src="1_R_Spatial_Data_Handling_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
+<p>We also use <code>head</code> to check on the types of the variables.</p>
+<pre class="r"><code>head(chicago.comm)</code></pre>
+<pre><code>## Simple feature collection with 6 features and 9 fields
+## geometry type:  MULTIPOLYGON
+## dimension:      XY
+## bbox:           xmin: -87.7069 ymin: 41.79448 xmax: -87.58001 ymax: 41.99076
+## epsg (SRID):    4326
+## proj4string:    +proj=longlat +datum=WGS84 +no_defs
+## # A tibble: 6 x 10
+##   community area  shape_area perimeter area_num_1 area_numbe comarea_id
+##   &lt;chr&gt;     &lt;chr&gt; &lt;chr&gt;      &lt;chr&gt;     &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;     
+## 1 DOUGLAS   0     46004621.… 0         35         35         0         
+## 2 OAKLAND   0     16913961.… 0         36         36         0         
+## 3 FULLER P… 0     19916704.… 0         37         37         0         
+## 4 GRAND BO… 0     48492503.… 0         38         38         0         
+## 5 KENWOOD   0     29071741.… 0         39         39         0         
+## 6 LINCOLN … 0     71352328.… 0         4          4          0         
+## # ... with 3 more variables: comarea &lt;chr&gt;, shape_len &lt;chr&gt;,
+## #   geometry &lt;MULTIPOLYGON [°]&gt;</code></pre>
+<div id="changing-projections" class="section level4 unnumbered">
+<h4>Changing projections</h4>
+<p>Before moving on to the spatial join operation, we will convert both the community area boundaries and the vehicle points to the same projection, using the <code>st_transform</code> command. We assign the UTM (Universal Tranverse Mercator) zone 16N, which the the proper one for Chicago, with an EPSG code of 32616. After the projection transformation, we check the result using <code>st_crs</code>.</p>
+<pre class="r"><code>chicago.comm &lt;- st_transform(chicago.comm,32616)
+st_crs(chicago.comm)</code></pre>
+<pre><code>## Coordinate Reference System:
+##   EPSG: 32616 
+##   proj4string: &quot;+proj=utm +zone=16 +datum=WGS84 +units=m +no_defs&quot;</code></pre>
+<pre class="r"><code>vehicle.points &lt;- st_transform(vehicle.points,32616)
+st_crs(vehicle.points)</code></pre>
+<pre><code>## Coordinate Reference System:
+##   EPSG: 32616 
+##   proj4string: &quot;+proj=utm +zone=16 +datum=WGS84 +units=m +no_defs&quot;</code></pre>
+</div>
+</div>
+<div id="spatial-join" class="section level3 unnumbered">
+<h3>Spatial join</h3>
+<p>In essence, the spatial join operation finds the polygon to which each point belongs. Several points belong to the same polygon, so this is a many-to-one join. Instead of joining all the features of the polygon layer, we specify just <strong>area_num_1</strong>, which is the community area indicator. The command is <code>st_join</code> to which we pass the point layer as the first sf object, and the polygon layer as the second sf object (with only one column designated). We assign the result to the new spatial object <strong>comm.pts</strong>. We check the contents of the new object using a <code>head</code> command.</p>
+<pre class="r"><code>comm.pts &lt;- st_join(vehicle.points,chicago.comm[&quot;area_num_1&quot;])
+head(comm.pts)</code></pre>
+<pre><code>## Simple feature collection with 6 features and 2 fields
+## geometry type:  POINT
+## dimension:      XY
+## bbox:           xmin: 433615.5 ymin: 4618846 xmax: 447723.6 ymax: 4643309
+## epsg (SRID):    32616
+## proj4string:    +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs
+##   comm area_num_1                 geometry
+## 1   64         64 POINT (436269.6 4625844)
+## 2   49         49 POINT (447723.6 4618846)
+## 3   25         25 POINT (433615.5 4640012)
+## 4   64         64 POINT (435856.1 4625820)
+## 5    6          6 POINT (446625.9 4643309)
+## 6   59         59 POINT (444041.8 4630928)</code></pre>
+<p>As we can see, the community area in <strong>comm</strong> matches the entry in <strong>area_num_1</strong>. However, there is one more issue to deal with. Upon closer examination, we find that the <strong>area_num_1</strong> variable is not numeric using the <code>is.numeric</code> check.</p>
+<pre class="r"><code>is.numeric(comm.pts$area_num_1)</code></pre>
+<pre><code>## [1] FALSE</code></pre>
+<p>So, we proceed to turn this variable into a numeric format using <code>as.integer</code> and then do a quick check by means of <code>is.integer</code>.</p>
+<pre class="r"><code>comm.pts$area_num_1 &lt;- as.integer(comm.pts$area_num_1)
+is.integer(comm.pts$area_num_1)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<p>The same problem occurs in the <strong>chicago.comm</strong> data set, which can cause trouble later on when we will join it with other data. Therefore, we turn it into an integer as well.</p>
+<pre class="r"><code>chicago.comm$area_num_1 &lt;- as.integer(chicago.comm$area_num_1)</code></pre>
+</div>
+<div id="counts-by-community-area" class="section level3 unnumbered">
+<h3>Counts by community area</h3>
+<p>We now need to count the number of points in each polygon. We proceed in two steps. First, we illustrate how we can move back from the simple features spatial points object to a simple data frame by stripping the geometry column. This is accomplished by setting <code>st_geometry</code> to <strong>NULL</strong>. We check the class of the new object to make sure it is no longer a simple feature.</p>
+<pre class="r"><code>st_geometry(comm.pts) &lt;- NULL
+class(comm.pts)</code></pre>
+<pre><code>## [1] &quot;data.frame&quot;</code></pre>
+<p>We next take advantage of the <strong>tidyverse</strong> <code>count</code> function to create a new data frame with the identifier of the community area and the number of points contained in each community area.</p>
+<pre class="r"><code>veh.cnts &lt;- comm.pts %&gt;% count(area_num_1)
+head(veh.cnts)</code></pre>
+<pre><code>## # A tibble: 6 x 2
+##   area_num_1     n
+##        &lt;int&gt; &lt;int&gt;
+## 1          1    67
+## 2          2    89
+## 3          3    21
+## 4          4    32
+## 5          5    18
+## 6          6    19</code></pre>
+<p>The new data frame has two fields: the original identifier <strong>area_num_1</strong> and the count as <strong>n</strong>. We can change the variable names for the count to something more meaningful by means of the <strong>tidyverse</strong> <code>rename</code> command and turn it from <strong>n</strong> to <strong>AGG.COUNT</strong> (to use the same variable as in the GeoDa workbook). Similarly, we also shorten <strong>area_num_1</strong> to <strong>comm</strong>. Again, the new name is on the LHS of the equal sign and the old name on the RHS.</p>
+<pre class="r"><code>veh.cnts &lt;- veh.cnts %&gt;% rename(comm = area_num_1, AGG.COUNT = n)
+head(veh.cnts)</code></pre>
+<pre><code>## # A tibble: 6 x 2
+##    comm AGG.COUNT
+##   &lt;int&gt;     &lt;int&gt;
+## 1     1        67
+## 2     2        89
+## 3     3        21
+## 4     4        32
+## 5     5        18
+## 6     6        19</code></pre>
+</div>
+<div id="mapping-the-vehicle-counts" class="section level3 unnumbered">
+<h3>Mapping the vehicle counts</h3>
+<p>At this point, we have a polygon layer with the community area boundaries and some identifiers (<strong>chicago.comm</strong>) and a data frame with the community identifier and the aggregate vehicle count (<strong>veh.cnts</strong>). In order to map the vehicle counts by community area, we need to <code>join</code> the two tables. We use the <code>left_join</code> command and use <strong>area_num_1</strong> as the key for the first table (the community area boundaries), and <strong>comm</strong> as the key for the second table (the vehicle counts). Since we assured that both variables are now integers, the join will work (if one were a character and the other integer, there would be an error message). Note how in the command below, the two keys can be different, which makes for a slightly more complex <code>by</code> statement.</p>
+<pre class="r"><code>chicago.comm &lt;- left_join(chicago.comm,veh.cnts, by = c(&quot;area_num_1&quot; = &quot;comm&quot;))</code></pre>
+<p>We can double check that the vehicle counts were added using the <code>head</code> command.</p>
+<pre class="r"><code>head(chicago.comm)</code></pre>
+<pre><code>## Simple feature collection with 6 features and 10 fields
+## geometry type:  MULTIPOLYGON
+## dimension:      XY
+## bbox:           xmin: 441440.4 ymin: 4627153 xmax: 451817.1 ymax: 4648971
+## epsg (SRID):    32616
+## proj4string:    +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs
+## # A tibble: 6 x 11
+##   community area  shape_area perimeter area_num_1 area_numbe comarea_id
+##   &lt;chr&gt;     &lt;chr&gt; &lt;chr&gt;      &lt;chr&gt;          &lt;int&gt; &lt;chr&gt;      &lt;chr&gt;     
+## 1 DOUGLAS   0     46004621.… 0                 35 35         0         
+## 2 OAKLAND   0     16913961.… 0                 36 36         0         
+## 3 FULLER P… 0     19916704.… 0                 37 37         0         
+## 4 GRAND BO… 0     48492503.… 0                 38 38         0         
+## 5 KENWOOD   0     29071741.… 0                 39 39         0         
+## 6 LINCOLN … 0     71352328.… 0                  4 4          0         
+## # ... with 4 more variables: comarea &lt;chr&gt;, shape_len &lt;chr&gt;,
+## #   AGG.COUNT &lt;int&gt;, geometry &lt;MULTIPOLYGON [m]&gt;</code></pre>
+<div id="basic-choropleth-map" class="section level4 unnumbered">
+<h4>Basic choropleth map</h4>
+<p>As we saw earlier, we can construct rudimentary maps using the <code>plot</code> command in <strong>sf</strong>, but for further control, we will use the <strong>tmap</strong> package. This uses a logic similar to Wilkinson’s <em>grammar of graphics</em>, which is also the basis for the structure of the plot commands in the <strong>ggplot</strong> package.</p>
+<p>We leave a detailed treatment of <strong>tmap</strong> for a future lab and just use the basic defaults in this example. The commands are layered and always start by specifying a layer using the <code>tm_shape</code> command. In our example, this is <strong>chicago.comm</strong>. Next (after the plus sign) follow one of more drawing commands that cover a wide range of geographic shapes. Here, we will just use <code>tm_polygons</code> and specify <strong>AGG.COUNT</strong> as the variable to determine the classification. We leave everything to the default and obtain a map that illustrates the spatial distribution of the abandoned vehicle counts by community area.</p>
+<pre class="r"><code>tm_shape(chicago.comm) +
+  tm_polygons(&quot;AGG.COUNT&quot;)</code></pre>
+<p><img src="1_R_Spatial_Data_Handling_files/figure-html/unnamed-chunk-29-1.png" width="672" /></p>
+<p>However, this map can be highly misleading since it pertains to a so-called <em>spatially extensive</em> variable, such as a count. Even if every area had the same risk of having abandoned vehicles, larger community areas would have higher counts. In other words, since the count is directly related to the size of the area, it does not provide a proper indication of the risk.</p>
+<p>Instead, we should map a <em>spatially intensive</em> variable, which is corrected for the size of the unit. For example, this can be achieved by expressing the variable as a density (counts per area), or as some other ratio, such as the counts per capita. In order to calculate this ratio, we first need to obtain the population for each community area.</p>
+</div>
+</div>
+</div>
+<div id="community-area-population-data" class="section level2 unnumbered">
+<h2>Community Area Population Data</h2>
+<p>The Chicago Community Area 2010 population is contained in a pdf file, available from the <a href="http://www.cityofchicago.org/city/en/depts/dcd/supp_info/community_area_2000and2010censuspopulationcomparisons.html">City of Chicago web site</a>.</p>
+<p>This link is to a pdf file that contains a table with the neighborhood ID, the neighborhood name, the populations for 2010 and 2000, the difference between the two years and the percentage difference. The full path to the pdf file is <a href="https://www.cityofchicago.org/content/dam/city/depts/zlup/Zoning_Main_Page/Publications/Census_2010_Community_Area_Profiles/Census_2010_and_2000_CA_Populations.pdf" class="uri">https://www.cityofchicago.org/content/dam/city/depts/zlup/Zoning_Main_Page/Publications/Census_2010_Community_Area_Profiles/Census_2010_and_2000_CA_Populations.pdf</a></p>
+<div id="extracting-a-pdf-file" class="section level3 unnumbered">
+<h3>Extracting a pdf file</h3>
+<p>A pdf file is difficult to handle as a source of data, since it doesn’t contain tags like an html file. We will use the <strong>pdftools</strong> package that allows us to turn the contents of a pdf file into a list of long character strings.</p>
+<p>The resulting data structure is somewhat complex and not necessarily easy to parse. However, in our case, the table has such a simple structure that we can extract the population values by doing some sleuthing on which columns contain those values. This will illustrate the power of the various parsing and text extraction functions available in R.</p>
+<p>We use the <code>pdf_text</code> function from <strong>pdftools</strong> to turn the pdf file into a list of character strings, one for each page. We specify the URL of the file as the input source.</p>
+<pre class="r"><code>pdf.file &lt;- &quot;https://www.cityofchicago.org/content/dam/city/depts/zlup/Zoning_Main_Page/Publications/Census_2010_Community_Area_Profiles/Census_2010_and_2000_CA_Populations.pdf&quot;
+pop.dat &lt;- pdf_text(pdf.file)
+class(pop.dat)</code></pre>
+<pre><code>## [1] &quot;character&quot;</code></pre>
+<p>We check the length of the data object using the <strong>length</strong> command and find that indeed it has only two elements (one for each page).</p>
+<pre class="r"><code>length(pop.dat)</code></pre>
+<pre><code>## [1] 2</code></pre>
+</div>
+<div id="parsing-the-pdf-file" class="section level3 unnumbered">
+<h3>Parsing the pdf file</h3>
+<p>The <strong>pop.dat</strong> object has two entries, one for each page. Each entry is a string. So, when you check the length of each item, it may be surprising that its <strong>length</strong> is only 1. That is because the underlying structure is unknown, it is simply a collection of characters. For example, the first element, <strong>pop.dat[[1]]</strong>:</p>
+<pre class="r"><code>length(pop.dat[[1]])</code></pre>
+<pre><code>## [1] 1</code></pre>
+<p>We will parse this file by first turning each element into a separate list and then extracting the parts we are interested in.</p>
+<p>First, to illustrate in detail what is going on, we will go through each step one by one, but then, in order to reach some level of efficiency, we turn it into a loop over the two elements, <code>for (i in 1:2)</code>.</p>
+<p>We start by initializing a vector (<strong>nnlist</strong>) with an empty character, and confirm that it is indeed initialized.</p>
+<pre class="r"><code>nnlist &lt;- &quot;&quot;
+nnlist</code></pre>
+<pre><code>## [1] &quot;&quot;</code></pre>
+<p>Next, we create a list of strings, one for each line in the table, by using the <code>strsplit</code> operation. This splits the long string into a list of one string for each line, by using the return character <strong>\n</strong> as the separator (the value for the <strong>split</strong> argument).</p>
+<p>The resulting list, <strong>pop.dat[[1]]</strong>, contains a list of 44 elements, matching the contents of the first page of the pdf file.</p>
+<pre class="r"><code>ppage &lt;- strsplit(pop.dat[[1]],split=&quot;\n&quot;)
+ppage[[1]]</code></pre>
+<pre><code>##  [1] &quot;                          CITY OF CHICAGO&quot;                               
+##  [2] &quot;                        CENSUS 2010 AND 2000&quot;                            
+##  [3] &quot;                                             Population&quot;                 
+##  [4] &quot;Num      Community Area     2010        2,000      Difference Percentage&quot;
+##  [5] &quot; 1  Rogers Park              54,991     63,484        -8,493    -13.4%&quot;  
+##  [6] &quot; 2  West Ridge               71,942     73,199        -1,257     -1.7%&quot;  
+##  [7] &quot; 3  Uptown                   56,362     63,551        -7,189    -11.3%&quot;  
+##  [8] &quot; 4  Lincoln Square           39,493     44,574        -5,081    -11.4%&quot;  
+##  [9] &quot; 5  North Center             31,867     31,895          -28      -0.1%&quot;  
+## [10] &quot; 6  Lake View                94,368     94,817         -449      -0.5%&quot;  
+## [11] &quot; 7  Lincoln Park             64,116     64,320         -204      -0.3%&quot;  
+## [12] &quot; 8  Near North Side          80,484     72,811        7,673      10.5%&quot;  
+## [13] &quot; 9  Edison Park              11,187     11,259          -72      -0.6%&quot;  
+## [14] &quot; 10 Norwood Park             37,023     37,669         -646      -1.7%&quot;  
+## [15] &quot; 11 Jefferson Park           25,448     25,859         -411      -1.6%&quot;  
+## [16] &quot; 12 Forest Glen              18,508     18,165         343       1.9%&quot;   
+## [17] &quot; 13 North Park               17,931     18,514         -583      -3.1%&quot;  
+## [18] &quot; 14 Albany Park              51,542     57,655        -6,113    -10.6%&quot;  
+## [19] &quot; 15 Portage Park             64,124     65,340        -1,216     -1.9%&quot;  
+## [20] &quot; 16 Irving Park              53,359     58,643        -5,284     -9.0%&quot;  
+## [21] &quot; 17 Dunning                  41,932     42,164         -232      -0.6%&quot;  
+## [22] &quot; 18 Montclare                13,426     12,646         780       6.2%&quot;   
+## [23] &quot; 19 Belmont Cragin           78,743     78,144         599       0.8%&quot;   
+## [24] &quot; 20 Hermosa                  25,010     26,908        -1,898     -7.1%&quot;  
+## [25] &quot; 21 Avondale                 39,262     43,083        -3,821     -8.9%&quot;  
+## [26] &quot; 22 Logan Square             73,595     82,715        -9,120    -11.0%&quot;  
+## [27] &quot; 23 Humboldt Park            56,323     65,836        -9,513    -14.4%&quot;  
+## [28] &quot; 24 West Town                81,432     87,435        -6,003     -6.9%&quot;  
+## [29] &quot; 25 Austin                   98,514    117,527       -19,013    -16.2%&quot;  
+## [30] &quot; 26 West Garfield Park       18,001     23,019        -5,018    -21.8%&quot;  
+## [31] &quot; 27 East Garfield Park       20,567     20,881         -314      -1.5%&quot;  
+## [32] &quot; 28 Near West Side           54,881     46,419        8,462      18.2%&quot;  
+## [33] &quot; 29 North Lawndale           35,912     41,768        -5,856    -14.0%&quot;  
+## [34] &quot; 30 South Lawndale           79,288     91,071       -11,783    -12.9%&quot;  
+## [35] &quot; 31 Lower West Side          35,769     44,031        -8,262    -18.8%&quot;  
+## [36] &quot; 32 Loop                     29,283     16,388        12,895     78.7%&quot;  
+## [37] &quot; 33 Near South Side          21,390     9,509         11,881    124.9%&quot;  
+## [38] &quot; 34 Armour Square            13,391     12,032        1,359      11.3%&quot;  
+## [39] &quot; 35 Douglas                  18,238     26,470        -8,232    -31.1%&quot;  
+## [40] &quot; 36 Oakland                    5,918    6,110          -192      -3.1%&quot;  
+## [41] &quot; 37 Fuller Park                2,876    3,420          -544     -15.9%&quot;  
+## [42] &quot; 38 Grand Boulevard          21,929     28,006        -6,077    -21.7%&quot;  
+## [43] &quot; 39 Kenwood                  17,841     18,363         -522      -2.8%&quot;  
+## [44] &quot; 40 Washington Park          11,717     14,146        -2,429    -17.2%&quot;</code></pre>
+<p>Each element is one long string, corresponding to a table row. We remove the first four lines (using the - operation on the list elements 1 through 4).</p>
+<pre class="r"><code>nni &lt;- ppage[[1]]
+nni &lt;- nni[-(1:4)]
+nni</code></pre>
+<pre><code>##  [1] &quot; 1  Rogers Park              54,991     63,484        -8,493    -13.4%&quot;
+##  [2] &quot; 2  West Ridge               71,942     73,199        -1,257     -1.7%&quot;
+##  [3] &quot; 3  Uptown                   56,362     63,551        -7,189    -11.3%&quot;
+##  [4] &quot; 4  Lincoln Square           39,493     44,574        -5,081    -11.4%&quot;
+##  [5] &quot; 5  North Center             31,867     31,895          -28      -0.1%&quot;
+##  [6] &quot; 6  Lake View                94,368     94,817         -449      -0.5%&quot;
+##  [7] &quot; 7  Lincoln Park             64,116     64,320         -204      -0.3%&quot;
+##  [8] &quot; 8  Near North Side          80,484     72,811        7,673      10.5%&quot;
+##  [9] &quot; 9  Edison Park              11,187     11,259          -72      -0.6%&quot;
+## [10] &quot; 10 Norwood Park             37,023     37,669         -646      -1.7%&quot;
+## [11] &quot; 11 Jefferson Park           25,448     25,859         -411      -1.6%&quot;
+## [12] &quot; 12 Forest Glen              18,508     18,165         343       1.9%&quot; 
+## [13] &quot; 13 North Park               17,931     18,514         -583      -3.1%&quot;
+## [14] &quot; 14 Albany Park              51,542     57,655        -6,113    -10.6%&quot;
+## [15] &quot; 15 Portage Park             64,124     65,340        -1,216     -1.9%&quot;
+## [16] &quot; 16 Irving Park              53,359     58,643        -5,284     -9.0%&quot;
+## [17] &quot; 17 Dunning                  41,932     42,164         -232      -0.6%&quot;
+## [18] &quot; 18 Montclare                13,426     12,646         780       6.2%&quot; 
+## [19] &quot; 19 Belmont Cragin           78,743     78,144         599       0.8%&quot; 
+## [20] &quot; 20 Hermosa                  25,010     26,908        -1,898     -7.1%&quot;
+## [21] &quot; 21 Avondale                 39,262     43,083        -3,821     -8.9%&quot;
+## [22] &quot; 22 Logan Square             73,595     82,715        -9,120    -11.0%&quot;
+## [23] &quot; 23 Humboldt Park            56,323     65,836        -9,513    -14.4%&quot;
+## [24] &quot; 24 West Town                81,432     87,435        -6,003     -6.9%&quot;
+## [25] &quot; 25 Austin                   98,514    117,527       -19,013    -16.2%&quot;
+## [26] &quot; 26 West Garfield Park       18,001     23,019        -5,018    -21.8%&quot;
+## [27] &quot; 27 East Garfield Park       20,567     20,881         -314      -1.5%&quot;
+## [28] &quot; 28 Near West Side           54,881     46,419        8,462      18.2%&quot;
+## [29] &quot; 29 North Lawndale           35,912     41,768        -5,856    -14.0%&quot;
+## [30] &quot; 30 South Lawndale           79,288     91,071       -11,783    -12.9%&quot;
+## [31] &quot; 31 Lower West Side          35,769     44,031        -8,262    -18.8%&quot;
+## [32] &quot; 32 Loop                     29,283     16,388        12,895     78.7%&quot;
+## [33] &quot; 33 Near South Side          21,390     9,509         11,881    124.9%&quot;
+## [34] &quot; 34 Armour Square            13,391     12,032        1,359      11.3%&quot;
+## [35] &quot; 35 Douglas                  18,238     26,470        -8,232    -31.1%&quot;
+## [36] &quot; 36 Oakland                    5,918    6,110          -192      -3.1%&quot;
+## [37] &quot; 37 Fuller Park                2,876    3,420          -544     -15.9%&quot;
+## [38] &quot; 38 Grand Boulevard          21,929     28,006        -6,077    -21.7%&quot;
+## [39] &quot; 39 Kenwood                  17,841     18,363         -522      -2.8%&quot;
+## [40] &quot; 40 Washington Park          11,717     14,146        -2,429    -17.2%&quot;</code></pre>
+<p>To streamline the resulting data structure for further operations, we turn it into a simple vector by means of <code>unlist</code>. This then allows us to concatenate the result to the current <strong>nnlist</strong> vector (initially, this contains just a single element with an empty character, after the first step it contains the empty character and the first page).</p>
+<pre class="r"><code>nnu &lt;- unlist(nni)
+nnlist &lt;- c(nnlist,nnu)
+nnlist</code></pre>
+<pre><code>##  [1] &quot;&quot;                                                                      
+##  [2] &quot; 1  Rogers Park              54,991     63,484        -8,493    -13.4%&quot;
+##  [3] &quot; 2  West Ridge               71,942     73,199        -1,257     -1.7%&quot;
+##  [4] &quot; 3  Uptown                   56,362     63,551        -7,189    -11.3%&quot;
+##  [5] &quot; 4  Lincoln Square           39,493     44,574        -5,081    -11.4%&quot;
+##  [6] &quot; 5  North Center             31,867     31,895          -28      -0.1%&quot;
+##  [7] &quot; 6  Lake View                94,368     94,817         -449      -0.5%&quot;
+##  [8] &quot; 7  Lincoln Park             64,116     64,320         -204      -0.3%&quot;
+##  [9] &quot; 8  Near North Side          80,484     72,811        7,673      10.5%&quot;
+## [10] &quot; 9  Edison Park              11,187     11,259          -72      -0.6%&quot;
+## [11] &quot; 10 Norwood Park             37,023     37,669         -646      -1.7%&quot;
+## [12] &quot; 11 Jefferson Park           25,448     25,859         -411      -1.6%&quot;
+## [13] &quot; 12 Forest Glen              18,508     18,165         343       1.9%&quot; 
+## [14] &quot; 13 North Park               17,931     18,514         -583      -3.1%&quot;
+## [15] &quot; 14 Albany Park              51,542     57,655        -6,113    -10.6%&quot;
+## [16] &quot; 15 Portage Park             64,124     65,340        -1,216     -1.9%&quot;
+## [17] &quot; 16 Irving Park              53,359     58,643        -5,284     -9.0%&quot;
+## [18] &quot; 17 Dunning                  41,932     42,164         -232      -0.6%&quot;
+## [19] &quot; 18 Montclare                13,426     12,646         780       6.2%&quot; 
+## [20] &quot; 19 Belmont Cragin           78,743     78,144         599       0.8%&quot; 
+## [21] &quot; 20 Hermosa                  25,010     26,908        -1,898     -7.1%&quot;
+## [22] &quot; 21 Avondale                 39,262     43,083        -3,821     -8.9%&quot;
+## [23] &quot; 22 Logan Square             73,595     82,715        -9,120    -11.0%&quot;
+## [24] &quot; 23 Humboldt Park            56,323     65,836        -9,513    -14.4%&quot;
+## [25] &quot; 24 West Town                81,432     87,435        -6,003     -6.9%&quot;
+## [26] &quot; 25 Austin                   98,514    117,527       -19,013    -16.2%&quot;
+## [27] &quot; 26 West Garfield Park       18,001     23,019        -5,018    -21.8%&quot;
+## [28] &quot; 27 East Garfield Park       20,567     20,881         -314      -1.5%&quot;
+## [29] &quot; 28 Near West Side           54,881     46,419        8,462      18.2%&quot;
+## [30] &quot; 29 North Lawndale           35,912     41,768        -5,856    -14.0%&quot;
+## [31] &quot; 30 South Lawndale           79,288     91,071       -11,783    -12.9%&quot;
+## [32] &quot; 31 Lower West Side          35,769     44,031        -8,262    -18.8%&quot;
+## [33] &quot; 32 Loop                     29,283     16,388        12,895     78.7%&quot;
+## [34] &quot; 33 Near South Side          21,390     9,509         11,881    124.9%&quot;
+## [35] &quot; 34 Armour Square            13,391     12,032        1,359      11.3%&quot;
+## [36] &quot; 35 Douglas                  18,238     26,470        -8,232    -31.1%&quot;
+## [37] &quot; 36 Oakland                    5,918    6,110          -192      -3.1%&quot;
+## [38] &quot; 37 Fuller Park                2,876    3,420          -544     -15.9%&quot;
+## [39] &quot; 38 Grand Boulevard          21,929     28,006        -6,077    -21.7%&quot;
+## [40] &quot; 39 Kenwood                  17,841     18,363         -522      -2.8%&quot;
+## [41] &quot; 40 Washington Park          11,717     14,146        -2,429    -17.2%&quot;</code></pre>
+<p>We now repeat this operation for <strong>pop.dat[[2]]</strong>. More efficiently, we implement it as a loop, replacing <strong>i</strong> in turn by 1 and 2. This yields:</p>
+<pre class="r"><code>nnlist &lt;- &quot;&quot;
+for (i in 1:2) {
+  ppage &lt;- strsplit(pop.dat[[i]],split=&quot;\n&quot;)
+  nni &lt;- ppage[[1]]
+  nni &lt;- nni[-(1:4)]
+  nnu &lt;- unlist(nni)
+  nnlist &lt;- c(nnlist,nnu)
+}</code></pre>
+<p>At the end of the loop, we check the contents of the vector <strong>nnlist</strong>.</p>
+<pre class="r"><code>nnlist</code></pre>
+<pre><code>##  [1] &quot;&quot;                                                                          
+##  [2] &quot; 1  Rogers Park              54,991     63,484        -8,493    -13.4%&quot;    
+##  [3] &quot; 2  West Ridge               71,942     73,199        -1,257     -1.7%&quot;    
+##  [4] &quot; 3  Uptown                   56,362     63,551        -7,189    -11.3%&quot;    
+##  [5] &quot; 4  Lincoln Square           39,493     44,574        -5,081    -11.4%&quot;    
+##  [6] &quot; 5  North Center             31,867     31,895          -28      -0.1%&quot;    
+##  [7] &quot; 6  Lake View                94,368     94,817         -449      -0.5%&quot;    
+##  [8] &quot; 7  Lincoln Park             64,116     64,320         -204      -0.3%&quot;    
+##  [9] &quot; 8  Near North Side          80,484     72,811        7,673      10.5%&quot;    
+## [10] &quot; 9  Edison Park              11,187     11,259          -72      -0.6%&quot;    
+## [11] &quot; 10 Norwood Park             37,023     37,669         -646      -1.7%&quot;    
+## [12] &quot; 11 Jefferson Park           25,448     25,859         -411      -1.6%&quot;    
+## [13] &quot; 12 Forest Glen              18,508     18,165         343       1.9%&quot;     
+## [14] &quot; 13 North Park               17,931     18,514         -583      -3.1%&quot;    
+## [15] &quot; 14 Albany Park              51,542     57,655        -6,113    -10.6%&quot;    
+## [16] &quot; 15 Portage Park             64,124     65,340        -1,216     -1.9%&quot;    
+## [17] &quot; 16 Irving Park              53,359     58,643        -5,284     -9.0%&quot;    
+## [18] &quot; 17 Dunning                  41,932     42,164         -232      -0.6%&quot;    
+## [19] &quot; 18 Montclare                13,426     12,646         780       6.2%&quot;     
+## [20] &quot; 19 Belmont Cragin           78,743     78,144         599       0.8%&quot;     
+## [21] &quot; 20 Hermosa                  25,010     26,908        -1,898     -7.1%&quot;    
+## [22] &quot; 21 Avondale                 39,262     43,083        -3,821     -8.9%&quot;    
+## [23] &quot; 22 Logan Square             73,595     82,715        -9,120    -11.0%&quot;    
+## [24] &quot; 23 Humboldt Park            56,323     65,836        -9,513    -14.4%&quot;    
+## [25] &quot; 24 West Town                81,432     87,435        -6,003     -6.9%&quot;    
+## [26] &quot; 25 Austin                   98,514    117,527       -19,013    -16.2%&quot;    
+## [27] &quot; 26 West Garfield Park       18,001     23,019        -5,018    -21.8%&quot;    
+## [28] &quot; 27 East Garfield Park       20,567     20,881         -314      -1.5%&quot;    
+## [29] &quot; 28 Near West Side           54,881     46,419        8,462      18.2%&quot;    
+## [30] &quot; 29 North Lawndale           35,912     41,768        -5,856    -14.0%&quot;    
+## [31] &quot; 30 South Lawndale           79,288     91,071       -11,783    -12.9%&quot;    
+## [32] &quot; 31 Lower West Side          35,769     44,031        -8,262    -18.8%&quot;    
+## [33] &quot; 32 Loop                     29,283     16,388        12,895     78.7%&quot;    
+## [34] &quot; 33 Near South Side          21,390     9,509         11,881    124.9%&quot;    
+## [35] &quot; 34 Armour Square            13,391     12,032        1,359      11.3%&quot;    
+## [36] &quot; 35 Douglas                  18,238     26,470        -8,232    -31.1%&quot;    
+## [37] &quot; 36 Oakland                    5,918    6,110          -192      -3.1%&quot;    
+## [38] &quot; 37 Fuller Park                2,876    3,420          -544     -15.9%&quot;    
+## [39] &quot; 38 Grand Boulevard          21,929     28,006        -6,077    -21.7%&quot;    
+## [40] &quot; 39 Kenwood                  17,841     18,363         -522      -2.8%&quot;    
+## [41] &quot; 40 Washington Park          11,717     14,146        -2,429    -17.2%&quot;    
+## [42] &quot; 41 Hyde Park                    25,681     29,920         -4,239   -14.2%&quot;
+## [43] &quot; 42 Woodlawn                     25,983     27,086         -1,103    -4.1%&quot;
+## [44] &quot; 43 South Shore                  49,767     61,556        -11,789   -19.2%&quot;
+## [45] &quot; 44 Chatham                      31,028     37,275         -6,247   -16.8%&quot;
+## [46] &quot; 45 Avalon Park                  10,185     11,147          -962     -8.6%&quot;
+## [47] &quot; 46 South Chicago                31,198     38,596         -7,398   -19.2%&quot;
+## [48] &quot; 47 Burnside                      2,916     3,294           -378    -11.5%&quot;
+## [49] &quot; 48 Calumet Heights              13,812     15,974         -2,162   -13.5%&quot;
+## [50] &quot; 49 Roseland                     44,619     52,723         -8,104   -15.4%&quot;
+## [51] &quot; 50 Pullman                       7,325     8,921          -1,596   -17.9%&quot;
+## [52] &quot; 51 South Deering                15,109     16,990         -1,881   -11.1%&quot;
+## [53] &quot; 52 East Side                    23,042     23,653          -611     -2.6%&quot;
+## [54] &quot; 53 West Pullman                 29,651     36,649         -6,998   -19.1%&quot;
+## [55] &quot; 54 Riverdale                     6,482     9,809          -3,327   -33.9%&quot;
+## [56] &quot; 55 Hegewisch                     9,426     9,781           -355     -3.6%&quot;
+## [57] &quot; 56 Garfield Ridge               34,513     36,101         -1,588    -4.4%&quot;
+## [58] &quot; 57 Archer Heights               13,393     12,644          749      5.9%&quot; 
+## [59] &quot; 58 Brighton Park                45,368     44,912          456      1.0%&quot; 
+## [60] &quot; 59 McKinley Park                15,612     15,962          -350     -2.2%&quot;
+## [61] &quot; 60 Bridgeport                   31,977     33,694         -1,717    -5.1%&quot;
+## [62] &quot; 61 New City                     44,377     51,721         -7,344   -14.2%&quot;
+## [63] &quot; 62 West Elsdon                  18,109     15,921         2,188    13.7%&quot; 
+## [64] &quot; 63 Gage Park                    39,894     39,193          701      1.8%&quot; 
+## [65] &quot; 64 Clearing                     23,139     22,331          808      3.6%&quot; 
+## [66] &quot; 65 West Lawn                    33,355     29,235         4,120    14.1%&quot; 
+## [67] &quot; 66 Chicago Lawn                 55,628     61,412         -5,784    -9.4%&quot;
+## [68] &quot; 67 West Englewood               35,505     45,282         -9,777   -21.6%&quot;
+## [69] &quot; 68 Englewood                    30,654     40,222         -9,568   -23.8%&quot;
+## [70] &quot; 69 Greater Grand Crossing       32,602     38,619         -6,017   -15.6%&quot;
+## [71] &quot; 70 Ashburn                      41,081     39,584         1,497     3.8%&quot; 
+## [72] &quot; 71 Auburn Gresham               48,743     55,928         -7,185   -12.8%&quot;
+## [73] &quot; 72 Beverly                      20,034     21,992         -1,958    -8.9%&quot;
+## [74] &quot; 73 Washington Heights           26,493     29,843         -3,350   -11.2%&quot;
+## [75] &quot; 74 Mount Greenwood              19,093     18,820          273      1.5%&quot; 
+## [76] &quot; 75 Morgan Park                  22,544     25,226         -2,682   -10.6%&quot;
+## [77] &quot; 76 O&#39;Hare                       12,756     11,956          800      6.7%&quot; 
+## [78] &quot; 77 Edgewater                    56,521     62,198         -5,677    -9.1%&quot;
+## [79] &quot;    Total                     2,695,598   2,896,016      -200,418    -6.9%&quot;</code></pre>
+<p>This is now a vector of 79 elements, each of which is a string. To clean things up, strip the first (empty) element, and the last element, which is nothing but the totals. We thus extract the elements from <strong>2</strong> to <strong>length - 1</strong>.</p>
+<pre class="r"><code>nnlist &lt;- nnlist[2:(length(nnlist)-1)]</code></pre>
+</div>
+<div id="extracting-the-population-values" class="section level3">
+<h3>Extracting the population values</h3>
+<p>We first initialize a vector of zeros to hold the population values. It is the preferred approach to initialize a vector first if one knows its size, rather than having it grow by appending rows or columns. We use the <code>vector</code> command and specify the <strong>mode</strong> to <strong>numeric</strong> and give the <strong>length</strong> as the length of the list.</p>
+<pre class="r"><code>nnpop &lt;- vector(mode=&quot;numeric&quot;,length=length(nnlist))</code></pre>
+<p>We again will use a loop to process each element of the list (each line of the table) one by one. We use the <code>substr</code> command to extract the characters between position 27 and 39 (these values were determined after taking a careful look at the structure of the table). However, there is still a problem, since the population values contain commas. We now do two things in one line of code. First, we use <code>gsub</code> to substitute the comma character by an empty <strong>“”</strong>. We turn the result into a numeric value by means of <code>as.numeric</code>. We then assign this number to position <strong>i</strong> of the vector. The resulting vector <strong>nnpop</strong> contains the population for each of the community areas.</p>
+<pre class="r"><code>for (i in (1:length(nnlist))) {
+     popchar &lt;- substr(nnlist[i],start=27,stop=39)
+     popval &lt;- as.numeric(gsub(&quot;,&quot;,&quot;&quot;,popchar))
+     nnpop[i] &lt;- popval
+}
+nnpop</code></pre>
+<pre><code>##  [1] 54991 71942 56362 39493 31867 94368 64116 80484 11187 37023 25448
+## [12] 18508 17931 51542 64124 53359 41932 13426 78743 25010 39262 73595
+## [23] 56323 81432 98514 18001 20567 54881 35912 79288 35769 29283 21390
+## [34] 13391 18238  5918  2876 21929 17841 11717 25681 25983 49767 31028
+## [45] 10185 31198  2916 13812 44619  7325 15109 23042 29651  6482  9426
+## [56] 34513 13393 45368 15612 31977 44377 18109 39894 23139 33355 55628
+## [67] 35505 30654 32602 41081 48743 20034 26493 19093 22544 12756 56521</code></pre>
+</div>
+<div id="creating-a-data-frame-with-population-values" class="section level3 unnumbered">
+<h3>Creating a data frame with population values</h3>
+<p>As a final step in the process of collecting the community area population information, we combine the vector with the population counts and a vector with community ID information into a data frame.</p>
+<p>Since the community area indicators are simple sequence numbers, we create such a vector to serve as the ID, again using the length of the vector to determine the extent.</p>
+<pre class="r"><code>nnid &lt;- (1:length(nnlist))
+nnid</code></pre>
+<pre><code>##  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+## [24] 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46
+## [47] 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69
+## [70] 70 71 72 73 74 75 76 77</code></pre>
+<p>We turn the vectors <strong>nnid</strong> and <strong>nnpop</strong> into a data frame using the <code>data.frame</code> command. Since the variable names assigned automatically are not that informative, we next force them to <strong>NID</strong> and <strong>POP2010</strong> using the <code>names</code> command. Also, as we did before, we make sure the ID variable is an integer (for merging in GeoDa) by means of <code>as.integer</code>.</p>
+<pre class="r"><code>neighpop &lt;- data.frame(as.integer(nnid),nnpop)
+names(neighpop) &lt;- c(&quot;NID&quot;,&quot;POP2010&quot;)
+head(neighpop)</code></pre>
+<pre><code>##   NID POP2010
+## 1   1   54991
+## 2   2   71942
+## 3   3   56362
+## 4   4   39493
+## 5   5   31867
+## 6   6   94368</code></pre>
+</div>
+</div>
+<div id="mapping-community-area-abandoned-vehicles-per-capita" class="section level2 unnumbered">
+<h2>Mapping Community Area Abandoned Vehicles Per Capita</h2>
+<div id="computing-abandoned-vehicles-per-capita" class="section level3 unnumbered">
+<h3>Computing abandoned vehicles per capita</h3>
+<p>Before proceeding further, we <code>left_join</code> the community population data to the community area layer, in the same way as we did for the vehicle counts.</p>
+<pre class="r"><code>chicago.comm &lt;- left_join(chicago.comm,neighpop, by = c(&quot;area_num_1&quot; = &quot;NID&quot;))
+head(chicago.comm)</code></pre>
+<pre><code>## Simple feature collection with 6 features and 11 fields
+## geometry type:  MULTIPOLYGON
+## dimension:      XY
+## bbox:           xmin: 441440.4 ymin: 4627153 xmax: 451817.1 ymax: 4648971
+## epsg (SRID):    32616
+## proj4string:    +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs
+## # A tibble: 6 x 12
+##   community area  shape_area perimeter area_num_1 area_numbe comarea_id
+##   &lt;chr&gt;     &lt;chr&gt; &lt;chr&gt;      &lt;chr&gt;          &lt;int&gt; &lt;chr&gt;      &lt;chr&gt;     
+## 1 DOUGLAS   0     46004621.… 0                 35 35         0         
+## 2 OAKLAND   0     16913961.… 0                 36 36         0         
+## 3 FULLER P… 0     19916704.… 0                 37 37         0         
+## 4 GRAND BO… 0     48492503.… 0                 38 38         0         
+## 5 KENWOOD   0     29071741.… 0                 39 39         0         
+## 6 LINCOLN … 0     71352328.… 0                  4 4          0         
+## # ... with 5 more variables: comarea &lt;chr&gt;, shape_len &lt;chr&gt;,
+## #   AGG.COUNT &lt;int&gt;, POP2010 &lt;dbl&gt;, geometry &lt;MULTIPOLYGON [m]&gt;</code></pre>
+<p>We will now create a new variable using the <strong>tidyverse</strong> <code>mutate</code> command as the ratio of vehicle counts per 1000 population.</p>
+<pre class="r"><code>chicago.comm &lt;- chicago.comm %&gt;% mutate(vehpcap = AGG.COUNT / POP2010 * 1000) 
+head(chicago.comm)</code></pre>
+<pre><code>## Simple feature collection with 6 features and 12 fields
+## geometry type:  MULTIPOLYGON
+## dimension:      XY
+## bbox:           xmin: 441440.4 ymin: 4627153 xmax: 451817.1 ymax: 4648971
+## epsg (SRID):    32616
+## proj4string:    +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs
+## # A tibble: 6 x 13
+##   community area  shape_area perimeter area_num_1 area_numbe comarea_id
+##   &lt;chr&gt;     &lt;chr&gt; &lt;chr&gt;      &lt;chr&gt;          &lt;int&gt; &lt;chr&gt;      &lt;chr&gt;     
+## 1 DOUGLAS   0     46004621.… 0                 35 35         0         
+## 2 OAKLAND   0     16913961.… 0                 36 36         0         
+## 3 FULLER P… 0     19916704.… 0                 37 37         0         
+## 4 GRAND BO… 0     48492503.… 0                 38 38         0         
+## 5 KENWOOD   0     29071741.… 0                 39 39         0         
+## 6 LINCOLN … 0     71352328.… 0                  4 4          0         
+## # ... with 6 more variables: comarea &lt;chr&gt;, shape_len &lt;chr&gt;,
+## #   AGG.COUNT &lt;int&gt;, POP2010 &lt;dbl&gt;, vehpcap &lt;dbl&gt;, geometry &lt;MULTIPOLYGON
+## #   [m]&gt;</code></pre>
+</div>
+<div id="final-choropleth-map" class="section level3 unnumbered">
+<h3>Final choropleth map</h3>
+<p>For our final choropleth, we use the same procedure as for the vehicle counts, but take <strong>vehpcap</strong> as the variable instead.</p>
+<pre class="r"><code>tm_shape(chicago.comm) +
+  tm_polygons(&quot;vehpcap&quot;)</code></pre>
+<p><img src="1_R_Spatial_Data_Handling_files/figure-html/unnamed-chunk-46-1.png" width="672" /></p>
+<p>When compared to the total counts, we see quite a different spatial distribution. In particular, the locations of the highest ratios are quite different from those of the highest counts. As a rule, one should <em>never</em> create a choropleth map of a spatially extensive variable, unless the size of the areal units is somehow controlled for (e.g., equal area grid cells, or equal population zones).</p>
+<div id="optional---save-the-community-area-file-as-a-shape-file" class="section level4">
+<h4>Optional - save the community area file as a shape file</h4>
+<p>Finally, we can write the community area layer to the working directory. Note that, so far, all operations have been carried out in memory, and when you close the program, everything may be lost (unless you save your workspace).</p>
+<p>We can write the community area to a shape file (actually, four files contained in a directory) by means of the <strong>sf</strong> command <code>st_write</code>. This command has many options, but we just use the minimal ones. The <strong>chicago.comm</strong> object will be written to a set of files in the directory <strong>chicago_vehicles</strong> using the <strong>ESRI Shapefile</strong> format.</p>
+<pre class="r"><code>st_write(chicago.comm,&quot;chicago_vehicles&quot;,driver=&quot;ESRI Shapefile&quot;)</code></pre>
+<pre><code>## Writing layer `chicago_vehicles&#39; to data source `chicago_vehicles&#39; using driver `ESRI Shapefile&#39;
+## features:       77
+## fields:         12
+## geometry type:  Multi Polygon</code></pre>
+</div>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>University of Chicago, Center for Spatial Data Science – <a href="mailto:anselin@uchicago.edu">anselin@uchicago.edu</a>,<a href="mailto:morrisonge@uchicago.edu">morrisonge@uchicago.edu</a><a href="#fnref1" class="footnote-back">↩</a></p></li>
+<li id="fn2"><p>Use <code>setwd(directorypath)</code> to specify the working directory.<a href="#fnref2" class="footnote-back">↩</a></p></li>
+<li id="fn3"><p>Use <code>install.packages(packagename)</code>.<a href="#fnref3" class="footnote-back">↩</a></p></li>
+<li id="fn4"><p>A good resource on coordinate reference systems is the <a href="http://spatialreference.org">spatialreference.org</a> site, which contains thousands of references in a variety of commonly used formats.<a href="#fnref4" class="footnote-back">↩</a></p></li>
+</ol>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
