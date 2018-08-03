@@ -1,0 +1,256 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+setwd("~/Downloads/lab_tutorials/Exploratory_Data_Analysis1")
+```
+
+
+
+
+
+For this notebook we will be using the libraries: foreign, sf, ggplot2, plotly, and shiny for exploratory data analysis. foreign will be used to read our data in from the .dbf format. ggplot2 will be used to create the statistical plots. The plots will include data analysis of one, two, and three variables. We will be using sf to read in the shapefile and for its functionality in the interactive maps and plots later in the notebook. The plotly and shiny libraries will be used to create linked maps and plots and allow us to work with scatterplot brushing and examine cursory spatial heterogeniety in the data.
+
+```{r}
+library(foreign)
+library(sf)
+library(ggplot2)
+library(shiny)
+library(plotly)
+library(gap)
+library(RSocrata)
+```
+
+```{r}
+
+```
+
+
+
+
+To read in the data we need the foreign library because our data is in .dbf format. The foreign library gives the read.dbf() function, which we will use to get the data.
+```{r}
+
+nyc_data <- read.dbf("nyc/nyc.dbf")
+
+#nyc.d <- read.socrata("http://s3.amazonaws.com/geoda/data/nyc.csv")
+
+head(nyc_data)
+```
+
+
+Now that we have the data, we will go through and make plots with ggplot2 functionality. We will start will univariate analysis with histograms and box plots. 
+
+
+```{r}
+ggplot(data = nyc_data, aes(x = "", y = kids2009)) +
+  geom_boxplot() 
+
+
+
+summary(nyc_data$kids2009)
+
+```
+
+
+
+
+```{r}
+
+ggplot(data = nyc_data, aes(kids2009)) +
+  geom_histogram() 
+
+
+summary(nyc_data$kids2009)
+```
+
+
+
+
+
+
+
+Now we will move on to bivariate data analysis. We will start with a basic scatter plot and will move on to move adavanced applications of our regression analysis as we progress down the notebook code. Below is a basic scatterplot of percent households with children under the age of 18 and percent households receiving government assistence.
+
+```{r}
+ggplot(data = nyc_data, aes(x=kids2000, y=pubast00)) +
+    geom_point(shape=1) 
+```
+
+
+
+Now we add a linear regression line to the plot with geom_smooth(). The shaded area is a 95% confidence interval for the regression line.
+```{r}
+ggplot(data = nyc_data, aes(x=kids2000, y=pubast00)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm)
+```
+
+
+
+
+
+
+Setting se=FALSE in geom_smooth gives us a regression line without the shaded confidence region.
+```{r}
+ggplot(data = nyc_data, aes(x=kids2000, y=pubast00)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm,se=FALSE)
+```
+
+
+ggplot2 doesn't have functionality to show the regression statistics with the plot without finding them with another package and annnotating the plot. We will just get these statistics separately and pair them with the plot. We will do this with base R functionality.
+```{r}
+linear_mod <- lm(pubast00 ~ kids2000, data=nyc_data)
+
+print(linear_mod)
+```
+
+
+
+
+
+Now we will do some nonparametric regression. We will first do the loess method which is a local polynomial regression. To do this we just change the method from lm to loess
+```{r}
+ggplot(data = nyc_data, aes(x=kids2000, y=pubast00)) +
+  geom_point(shape=1) +
+  geom_smooth(method=loess)
+```
+
+
+Now we will do a plot for a lowess smoother. ggplot2 doesn't have this method, so we will be using base R. The lowess is a locally weighted scatter plot smoother and is slightly different than the loess method.
+
+
+
+
+```{r}
+plot(nyc_data$kids2000, nyc_data$pubast00, main="lowess(nyc_data)")
+lines(lowess(nyc_data$kids2000, nyc_data$pubast00), col=2)
+lines(lowess(nyc_data$kids2000, nyc_data$pubast00, f=.2), col=3)
+```
+
+
+
+
+
+
+
+
+This is the first of three parts of a shiny app. The three parts are the server, the user interface or ui, and the command that launches the app. The app we are making will allow scatter plot brushing and will output chow test statistics. The first part of the app is the ui. This will be relatively simple for this app, as we only need to specify two things: the plot and the text that will contain our chow test statistic. 
+```{r}
+ui <- fluidPage(
+  plotlyOutput("plot"),
+  verbatimTextOutput("brush")
+)
+```
+
+
+This is the second part of a shiny app: the server. This will be the hardest part of the code to navigate. For this app, it consists of 2 parts: rendering the plot and rendering the text. Rendering the plot is relativey simple, we just need to use the plot_ly() funstion and specify our x, y, key variables. The key variable is important in identifying which observations have been select and which have not for the chow test.
+
+```{r}
+server <- function(input, output, session) {
+
+  output$plot <- renderPlotly({
+    # use the key aesthetic/argument to help uniquely identify selected observations
+    d <- event_data("plotly_selected")
+    m <- nyc_data
+    #this loop gives us a data frame with the nonselected observations
+    for(x in d$key){
+      m <- m %>% filter(subborough != x)
+    }
+    
+    
+    #below is making the 3 regression lines, still havent quite got it yet
+    if(is.null(d)){
+    p <- ggplot(data = nyc_data, aes(x=kids2000, y=pubast00)) + 
+      geom_point(shape=1) +
+      geom_smooth(method=lm,se=FALSE)
+    ggplotly(p)
+    
+    } 
+    else 
+      {
+    p <-  ggplot(data = nyc_data, aes(x=kids2000, y=pubast00), key = subborough) + 
+      geom_point(shape=1) +
+      geom_smooth(method=lm,se=FALSE) +
+      geom_smooth(method=lm,se=FALSE,data = m, formula = m$pubast00 ~ m$kids2000) +
+      geom_smooth(method=lm,se=FALSE,data = d, formula = y ~ x)
+    ggplotly(p)
+      }
+    ########################
+    
+    #Below just outputs the chow test stats and plot without any regression lines, but works
+      #plot_ly(nyc_data, x = ~kids2000, y = ~pubast00, key = ~subborough) %>%
+       # layout(dragmode = "select")
+    
+    
+   
+  })
+
+  
+
+  output$brush <- renderPrint({
+    # d is event data, gained from selecting points on the plot
+    d <- event_data("plotly_selected")
+    m <- nyc_data
+    #this loop gives us a data frame with the nonselected observations
+    for(x in d$key){
+      m <- m %>% filter(subborough != x)
+    }
+    if (is.null(d)) "Select data for the Chow Test" 
+    
+    #runs the chow test on the selected data
+    else {
+      chow.test(m$pubast00,m$kids2000,d$y,d$x,x=NULL)
+    }
+  })
+
+  
+
+}
+```
+
+
+
+
+
+
+The thrid part of the app is the shinyApp() command. This launches the app. If everything is inorder with the server and ui portions of the code the app should work.
+```{r}
+shinyApp(ui, server)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
