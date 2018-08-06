@@ -42,10 +42,7 @@ After completing the notebook, you should know how to carry out the following ta
 
 - Taking advantage of shiny functionality for more advanced interactions with the data
 
-- 
-```{r}
-setwd("~/Downloads/lab_tutorials/Exploratory_Data_Analysis1")
-```
+
 
 #### R Packages used
 
@@ -254,7 +251,7 @@ server <- function(input, output, session) {
   output$brush <- renderPrint({
     # d is event data, gained from selecting points on the plot
     d <- event_data("plotly_selected")
-    m <- nyc_data
+    m <- nyc.data
     #this loop gives us a data frame with the nonselected observations
     for(x in d$key){
       m <- m %>% filter(subborough != x)
@@ -280,7 +277,9 @@ server <- function(input, output, session) {
 The third part of the app is the `shinyApp` command. This launches the app. If everything is inorder with the server and ui portions of the code the app should work.
 ```{r}
 shinyApp(ui, server)
+
 ```
+
 
 
 
