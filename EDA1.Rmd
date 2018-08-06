@@ -1,30 +1,95 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: "Exploratory Data Analysis 1"
+subtitle: "R Notes"
+author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
+date: "08/06/2018"
+output:
+  html_document:
+    fig_caption: yes
+    self_contained: no
+    toc: yes
+    toc_depth: 4
+    css: tutor.css
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+<br>
 
+## Introduction
+
+This notebook cover the functionality of the [Exploratory Data Analysis 1](https://geodacenter.github.io/workbook/2a_eda/lab2a.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.
+
+The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments
+on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).
+
+For this notebook, we will use socioeconomic data about NYC from the GeoDa website. Our goal in this lab is show how to implement exploratory data analysis methods with one and two variables. 
+
+
+### Objectives
+
+After completing the notebook, you should know how to carry out the following tasks:
+
+- Creating basic univariate plots
+
+- Creating Scatterplots
+
+- Implementing different regression methods(linear, loess, and lowess)
+
+- Interactive Plots
+
+- Taking advantage of shiny functionality for more advanced interactions with the data
+
+- 
 ```{r}
 setwd("~/Downloads/lab_tutorials/Exploratory_Data_Analysis1")
 ```
 
+#### R Packages used
 
+- **ggplot2**: To make statistical plots. We use this rather than base R for increased functionality and more aesthetically pleasing plots.
 
+- **gap**: To run the chow test in our shiny application.
 
+- **plotly**: This is used to make our scatterplot interactive, so we can select data directly from the scatterplot for the chow test.
 
-For this notebook we will be using the libraries: foreign, sf, ggplot2, plotly, and shiny for exploratory data analysis. foreign will be used to read our data in from the .dbf format. ggplot2 will be used to create the statistical plots. The plots will include data analysis of one, two, and three variables. We will be using sf to read in the shapefile and for its functionality in the interactive maps and plots later in the notebook. The plotly and shiny libraries will be used to create linked maps and plots and allow us to work with scatterplot brushing and examine cursory spatial heterogeniety in the data.
+- **shiny**: To make a reactive application for the chow test.
+
+#### R Commands used
+
+Below follows a list of the commands used in this notebook. For further details
+and a comprehensive list of options, please consult the 
+[R documentation](https://www.rdocumentation.org).
+
+- **Base R**: `install.packages`, `library`, `head`, `summary`, `print`, `lm`, `lines`, `plot`, `read.csv`, `lowess`
+
+- **ggplot2**: `ggplot`, `geom_boxplot`, `geom_histogram`, `geom_point`, `geom_smooth`
+
+- **gap**: `chow.test`
+
+- **plotly**: `plot_ly`
+
+- **shiny**: `renderPlotly`, `renderPrint`, `shinyApp`, `fluidPage`, `plotlyOutput`, `verbatimTextOutput`
+
+## Preliminaries
+
+Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not
+actually be saving any files.^[Use `setwd(directorypath)` to specify the working directory.]
+
+### Load packages
+
+First, we load all the required packages using the `library` command. If you don't have some of these in your system, make sure to install them first as well as
+their dependencies.^[Use 
+`install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
+
 
 ```{r}
-library(foreign)
-library(sf)
 library(ggplot2)
 library(shiny)
 library(plotly)
 library(gap)
-library(RSocrata)
 ```
 
 ```{r}
@@ -32,117 +97,134 @@ library(RSocrata)
 ```
 
 
+## Obtaining the Data from the GeoDa website
 
-
-To read in the data we need the foreign library because our data is in .dbf format. The foreign library gives the read.dbf() function, which we will use to get the data.
+To get the data for this notebook, you will and to go to [NYC Data](https://geodacenter.github.io/data-and-lab/nyc/) The download format is a zipfile, so you will need to unzip it by double clicking on the file in your file finder. From there move the resulting folder titled: nyc into your working directory to continue. Once that is done, you can use the base R function: `read.csv` to read the data into your R environment. There are faster table reading functions, but for small datasets such as ours, `read.csv` is sufficient. 
 ```{r}
 
-nyc_data <- read.dbf("nyc/nyc.dbf")
+nyc.data <- read.csv("nyc/nyc.csv")
 
-#nyc.d <- read.socrata("http://s3.amazonaws.com/geoda/data/nyc.csv")
 
-head(nyc_data)
+
+head(nyc.data)
 ```
 
 
-Now that we have the data, we will go through and make plots with ggplot2 functionality. We will start will univariate analysis with histograms and box plots. 
+## Univariate Data Exploration
 
+
+
+
+Before we begin using **ggplot2**, it is important to get a sense of how the plots are built with this library. All **ggplot2** plots are built starting with the `ggplot` function, where the dataset is specified and the axises are set. All plots start with this base layer and then you can add on to the with **+** following the command. You can add points, lines, and many other layers to this base layer. This approach is both intuitive and makes the code easier too read. 
+
+### Box Plot
+
+Our first plot will be a histogram. We start with the base specifications, then add `geom_boxplot`. Inside of the `ggplot` function we speficy the data with `data =` and the axis of the plot with `aes`. We set the y axis to our choosen variable for the boxplot, to get a vertical boxplot. 
+
+There is not a convenient way to get summary statistics put on to our plot. We use Base R functionality in conjunction with our plot. The `summary` command gives us summary stats of our chosen variable.
 
 ```{r}
-ggplot(data = nyc_data, aes(x = "", y = kids2009)) +
+ggplot(data = nyc.data, aes(x = "", y = kids2009)) +
   geom_boxplot() 
 
 
 
-summary(nyc_data$kids2009)
+summary(nyc.data$kids2009)
 
 ```
 
 
+### Histogram
 
+We willl now make a histogram. It follows the same form as the command to get a boxplot, with a few differences. We still specify the dataset and the axis. In this case we dont do an x and y, we can just entered our chosen variable into the `aes`. I'm not completely sure why this is, but as you will find with a lot of R, things are often fickle and will require a google search. 
 
 ```{r}
 
-ggplot(data = nyc_data, aes(kids2009)) +
+ggplot(data = nyc.data, aes(kids2009)) +
   geom_histogram() 
 
 
-summary(nyc_data$kids2009)
+summary(nyc.data$kids2009)
 ```
 
 
 
 
+## Bivariate Data Exploration
 
 
+In this section we will do some bivariate data exploration. This will done through scatterplots and regression. We will implement **lm**, **loess**, and **lowess** regression in this section. **lm** is just the line of best fit and comes with an r value. **loess** is a local polynomial regression. **lowess** is a locally weighted scatterplot smoother.
 
-Now we will move on to bivariate data analysis. We will start with a basic scatter plot and will move on to move adavanced applications of our regression analysis as we progress down the notebook code. Below is a basic scatterplot of percent households with children under the age of 18 and percent households receiving government assistence.
+We begin with the `ggplot` function with a specification of the dataset and choose the x and y variables. For the x axis we choose **kids2000** which is percentage of households with kids under the age of 18. For the y axis we choose **pubast00**, the percentage of households receiving public assisstance. We then add `geom_point` to get a scatterplot of our two variables.
 
 ```{r}
-ggplot(data = nyc_data, aes(x=kids2000, y=pubast00)) +
+ggplot(data = nyc.data, aes(x=kids2000, y=pubast00)) +
     geom_point(shape=1) 
 ```
 
 
+### lm regression
 
-Now we add a linear regression line to the plot with geom_smooth(). The shaded area is a 95% confidence interval for the regression line.
+Adding a regression line to our scatterplot is very simple. We just add the `geo_smooth` function to our command from above. This gives us a line of best fit with a shaded region that indicates a 95% confidence interval for the line.
 ```{r}
-ggplot(data = nyc_data, aes(x=kids2000, y=pubast00)) +
+ggplot(data = nyc.data, aes(x=kids2000, y=pubast00)) +
   geom_point(shape=1) +
   geom_smooth(method=lm)
 ```
 
 
 
-
-
-
-Setting se=FALSE in geom_smooth gives us a regression line without the shaded confidence region.
+To turn off the shaded region, we just set se=FALSE in `geom_smooth`
 ```{r}
-ggplot(data = nyc_data, aes(x=kids2000, y=pubast00)) +
+ggplot(data = nyc.data, aes(x=kids2000, y=pubast00)) +
   geom_point(shape=1) +
   geom_smooth(method=lm,se=FALSE)
 ```
 
 
-ggplot2 doesn't have functionality to show the regression statistics with the plot without finding them with another package and annnotating the plot. We will just get these statistics separately and pair them with the plot. We will do this with base R functionality.
+**ggplot2** doesnt have a convenient way to put the regression statistics in our plot, so we will use Base R to get these stats separately. To do this we need `lm` command. In here we need to specify the dataset and the two variables for the regression. 
 ```{r}
-linear_mod <- lm(pubast00 ~ kids2000, data=nyc_data)
+linear_mod <- lm(pubast00 ~ kids2000, data=nyc.data)
 
 print(linear_mod)
 ```
 
 
 
+###loess regression
 
-
-Now we will do some nonparametric regression. We will first do the loess method which is a local polynomial regression. To do this we just change the method from lm to loess
+Now we will implement a nonparametric regression. This is simple to do. We just change the method from lm to loess in `geom_smooth`
 ```{r}
-ggplot(data = nyc_data, aes(x=kids2000, y=pubast00)) +
+ggplot(data = nyc.data, aes(x=kids2000, y=pubast00)) +
   geom_point(shape=1) +
   geom_smooth(method=loess)
 ```
 
+### lowess regression
 
-Now we will do a plot for a lowess smoother. ggplot2 doesn't have this method, so we will be using base R. The lowess is a locally weighted scatter plot smoother and is slightly different than the loess method.
 
+**ggplot2** doesn't have lowess regression. We will use base R to do this instead. It is less aesthically pleasing, but still gets the job done. To do this, we start with `plot` command and the add lines with `lines` commmand. For `plot`, we specify the xm then y variable and the use `main =` to give it a title.  
 
 
 
 ```{r}
-plot(nyc_data$kids2000, nyc_data$pubast00, main="lowess(nyc_data)")
-lines(lowess(nyc_data$kids2000, nyc_data$pubast00), col=2)
-lines(lowess(nyc_data$kids2000, nyc_data$pubast00, f=.2), col=3)
+plot(nyc.data$kids2000, nyc.data$pubast00, main="lowess(nyc_data)")
+lines(lowess(nyc.data$kids2000, nyc.data$pubast00), col=2)
+lines(lowess(nyc.data$kids2000, nyc.data$pubast00, f=.2), col=3)
 ```
 
 
 
 
+## shiny applications
 
+In this section we will implement an interactive plot that outputs chow test statistics. We will be taking advantage of **shiny** reactive expressions to make this application. This won't be a complete guide on **shiny** aplications, as there is far too much to show for that to be feasible. A **shiny** can be useful in situations where you want to show aspects of data through interactive visuals on the web. Otherwise, it is normally easier to use other software. For instance, we are building an app here that allows the user to select points from the scatterplot and outputs chow test stats. This is implemented in GeoDa software already. Instead of building a whole app, you can just download the software and have the functionality at your fingertips instantly.
 
+**shiny** apps consist of three parts: a user interface, a server, and the command that launches the app by using the server and ui as arguments.
 
+### user interface
 
-This is the first of three parts of a shiny app. The three parts are the server, the user interface or ui, and the command that launches the app. The app we are making will allow scatter plot brushing and will output chow test statistics. The first part of the app is the ui. This will be relatively simple for this app, as we only need to specify two things: the plot and the text that will contain our chow test statistic. 
+The user interface is where you structure the layout of your application. In our case, it is fairly simple as we just need some text output and a plot.
 ```{r}
 ui <- fluidPage(
   plotlyOutput("plot"),
@@ -151,43 +233,17 @@ ui <- fluidPage(
 ```
 
 
-This is the second part of a shiny app: the server. This will be the hardest part of the code to navigate. For this app, it consists of 2 parts: rendering the plot and rendering the text. Rendering the plot is relativey simple, we just need to use the plot_ly() funstion and specify our x, y, key variables. The key variable is important in identifying which observations have been select and which have not for the chow test.
+### server
+
+This is the second part of a shiny app: the server. This will be the hardest part of the code to navigate. For this app, it consists of 2 parts: rendering the plot and rendering the text. Rendering the plot is relativey simple, we just need to use the `plot_ly` function and specify our x, y, key variables. The key variable is important in identifying which observations have been select and which have not for the chow test.
 
 ```{r}
 server <- function(input, output, session) {
 
   output$plot <- renderPlotly({
     # use the key aesthetic/argument to help uniquely identify selected observations
-    d <- event_data("plotly_selected")
-    m <- nyc_data
-    #this loop gives us a data frame with the nonselected observations
-    for(x in d$key){
-      m <- m %>% filter(subborough != x)
-    }
     
-    
-    #below is making the 3 regression lines, still havent quite got it yet
-    if(is.null(d)){
-    p <- ggplot(data = nyc_data, aes(x=kids2000, y=pubast00)) + 
-      geom_point(shape=1) +
-      geom_smooth(method=lm,se=FALSE)
-    ggplotly(p)
-    
-    } 
-    else 
-      {
-    p <-  ggplot(data = nyc_data, aes(x=kids2000, y=pubast00), key = subborough) + 
-      geom_point(shape=1) +
-      geom_smooth(method=lm,se=FALSE) +
-      geom_smooth(method=lm,se=FALSE,data = m, formula = m$pubast00 ~ m$kids2000) +
-      geom_smooth(method=lm,se=FALSE,data = d, formula = y ~ x)
-    ggplotly(p)
-      }
-    ########################
-    
-    #Below just outputs the chow test stats and plot without any regression lines, but works
-      #plot_ly(nyc_data, x = ~kids2000, y = ~pubast00, key = ~subborough) %>%
-       # layout(dragmode = "select")
+      plot_ly(nyc.data, x = ~kids2000, y = ~pubast00, key = ~subborough) %>% layout(dragmode = "select")
     
     
    
@@ -221,7 +277,7 @@ server <- function(input, output, session) {
 
 
 
-The thrid part of the app is the shinyApp() command. This launches the app. If everything is inorder with the server and ui portions of the code the app should work.
+The third part of the app is the `shinyApp` command. This launches the app. If everything is inorder with the server and ui portions of the code the app should work.
 ```{r}
 shinyApp(ui, server)
 ```
