@@ -1,0 +1,345 @@
+---
+title: "Exploratory Data Analysis 2"
+subtitle: "R Notes"
+author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
+date: "08/08/2018"
+output:
+  html_document:
+    fig_caption: yes
+    self_contained: no
+    toc: yes
+    toc_depth: 4
+    css: tutor.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br>
+
+## Introduction
+
+This notebook cover the functionality of the [Exploratory Data Analysis 2](https://geodacenter.github.io/workbook/2b_eda_multi/lab2b.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.
+
+The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments
+on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).
+
+For this notebook, we will use socioeconomic data about NYC from the GeoDa website. Our goal in this lab is show how to implement exploratory data analysis methods with three or more variables. 
+
+
+### Objectives
+
+After completing the notebook, you should know how to carry out the following tasks:
+
+- make a scatterplot matrix
+
+- add different types of regression to a plot
+
+- make a bubble plot
+
+- make a 3d scatterplot
+
+- make a parallel coordinates plot
+
+- make conditional plots based off categorical variables
+
+#### R Packages used
+
+- **ggplot2**: To make statistical plots. We use this rather than base R for increased functionality and more aesthetically pleasing plots.
+
+- **GGally**: To make a scatterplot matrix.
+
+- **plotly**: Used to make an interactive 3d plot and a parallel coordinates plot.
+
+
+#### R Commands used
+
+Below follows a list of the commands used in this notebook. For further details
+and a comprehensive list of options, please consult the 
+[R documentation](https://www.rdocumentation.org).
+
+- **Base R**: `install.packages`, `library`, `read.csv`, `setwd`, `head`
+
+- **ggplot2**: `ggplot`, `qplot`, `geom_point`, `ggtitle`, `labs`, `scale_x_continuous`, `geom_smooth`, `geom_histogram`
+
+- **GGally**: `ggpairs`
+
+- **plotly**: `plot_ly`, `add_markers`, `layout`
+`
+
+
+
+## Preliminaries
+
+Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not
+actually be saving any files.^[Use `setwd(directorypath)` to specify the working directory.]
+
+### Load packages
+
+First, we load all the required packages using the `library` command. If you don't have some of these in your system, make sure to install them first as well as
+their dependencies.^[Use 
+`install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
+
+
+
+
+```{r}
+library(foreign)
+library(ggplot2)
+library(GGally)
+library(plotly)
+```
+
+
+
+## Obtaining the Data from the GeoDa website
+
+To get the data for this notebook, you will and to go to [NYC Data](https://geodacenter.github.io/data-and-lab/nyc/) The download format is a zipfile, so you will need to unzip it by double clicking on the file in your file finder. From there move the resulting folder titled: nyc into your working directory to continue. Once that is done, you can use the base R function: `read.csv` to read the data into your R environment. There are faster table reading functions, but for small datasets such as ours, `read.csv` is sufficient. 
+
+
+
+```{r}
+nyc.data <- read.csv("nyc.csv")
+
+head(nyc.data)
+```
+
+## Scatterplot Matrix
+
+
+The first multivariate data plot we will be making is a scatterplot matrix. A scatterplot matrix is a plot that shows many scatterplots with different variables and typically will show the distribution of the data in some form along the diagonal of the matrix. To build this, we use the `GGally` library, which builds on the `ggplot2` library to make more intricate plots. We use the `ggpairs()` function to build our scatterplot matrices. The key inputs for this function are the dataset, the desired variables, and specifications for the upper and lower parts of the matrix. With the `upper =` and `lower =` specifications we can tell the function what types of regression we want and wheter the display should be a regresssion plot or a correlation statistic. We first do a line of best for the bottom part of the matrix and allow the default correlation statistic for the top part. In our `lower =` we use a `list()` because there are more specifications that can be give to `lower =` 
+
+```{r}
+ggpairs(nyc.data[, c("kids2000", "pubast00", "hhsiz00")], lower = list(continuous = "smooth"))
+```
+
+
+
+
+No we provide the specification for the `upper =` as well as `lower =` to get a matrix full of regression plots, rather than the default correlation statistic. Both `upper =` and `lower =` follow the same form. `continuous = "smooth"` gives us a line of best fit in our scatterplots.
+
+
+
+
+```{r}
+ggpairs(nyc.data[, c("kids2000", "pubast00", "hhsiz00")], lower = list(continuous = "smooth"), upper = list(continuous = "smooth"))
+```
+
+
+We can also add a loess regression line to our plots too. The only change is instead of `continuous = "smooth"`, we input `continuous = "smooth_loess"`
+
+
+
+```{r}
+ggpairs(nyc.data[, c("kids2000", "pubast00", "hhsiz00")], lower = list(continuous = "smooth_loess"), upper = list(continuous = "smooth_loess"))
+```
+
+
+## Bubble Plots
+
+A bubble plot is a scatterplot where the size of the bubble is a measure of a third variable. It is a way of exploring relationships between 3 variables and can be done for 4 if you add a fill color to the bubbles.
+
+
+### Three variables
+
+We will use the `ggplot2` library to make this plot. We first start with the `ggplot()` function and specified the dataset. We then specify the axis and bubble size using `aes()`. For a bubble plot we need to input a variable for the bubble size measure with `size =` inside of `aes()`. Now need use `geom_point()` to add the points to the plot. `ggtitle()` adds a title to the plot. `labs()` allows us to label the x and y axises for increases readability.
+
+
+```{r}
+ggplot(data = nyc.data, aes(x = kids2000, y = pubast00, size = rent2002)) +
+        geom_point(shape = 21) +
+        ggtitle("NYC socioeconomic plot") +
+        labs(x = "% households with kids under 18", y = "% households receiving gov. assisstence") 
+```
+
+### Four variables
+
+We can add a fill color to our plot to show relationships between 4 variables on our bubble plot. This is simple to add, we just set `fill =` to and variable inside of `aes()`
+
+
+
+```{r}
+ggplot(data = nyc.data, aes(x = kids2000, y = pubast00, size = rent2002, fill = rentpct02)) +
+        geom_point(shape = 21) +
+        ggtitle("NYC socioeconomic plot") +
+        labs(x = "% households with kids under 18", y = "% households receiving gov. assisstence") 
+        
+```
+
+
+## 3D Scatterplot
+
+Our next plot is a 3D scatterplot. A 3D scatterplot is a scatterplot that shows relationships between 3 variables rather than 2 through 3D graphics. We will use the `plotly` library to make this plot. We are using plotly to gain user interactivity on the plot. This makes it much easier to observe relationships between the data when you can rotate the plot and loook at it from different angles. You can also get information about each individual point by hovering the mouse over it.
+
+
+### Three Variables
+
+
+We begin with the `plot_ly()` function, which like the `ggplot()` function, we specify our dataset and the variables for the axises. We then use other functions from the `plotly` library to make the plot more readable. A key difference between the code format of `plotly` and `ggplot2` is that we use the pipe operator `%>%` in the additional add ons to our plot. This operator makes the preceding statement an argument in the following statement which is very useful in code readability. We use `layout()` to label our axises.
+
+
+```{r}
+plot_ly(nyc.data, x = ~kids2000, y = ~pubast00, z = ~rent2002) %>%
+  add_markers() %>%
+  layout(scene = list(xaxis = list(title = '% household kids'),
+                     yaxis = list(title = '% gov. asssistence'),
+                     zaxis = list(title = 'rent2002')))
+```
+
+#### Four Variables
+
+We can examine an additional variable with this visual. All we have to do is pick a variable for `color =` in the `plot_ly()` function. 
+
+```{r}
+plot_ly(nyc.data, x = ~kids2000, y = ~pubast00, z = ~rent2002, color = ~rentpct02) %>%
+  add_markers() %>%
+  layout(scene = list(xaxis = list(title = '% household kids'),
+                     yaxis = list(title = '% gov. asssistence'),
+                     zaxis = list(title = 'rent2002')))
+```
+
+
+
+## Parallel Coordinates Plot
+
+A Parallel Coordinates Plot or PCP takes to or more variables where each variable has a line and each observation has a point on each line. The points coresponding to an observation are connected by a line. These plots can be useful in identifying clusters, which are groups of lines that follow similar paths. These plots can be used to show relationships between many variables unlike the plots we have demonstrated up until now.
+
+To make our PCP, we will use the `plotly` library. This will give PCP useful interactivity. We can select portions of each variables line to highlight the connecting lines. We can also move the variable lines to the right and left. This is useful when many of the lines are bunched up and patterns aren't quite visual. For this plot, we just need the `plotly()` function. We need to specify the dataset, the type of plot, and the dimensions. The most difficult to understand part of this code is the `dimension =` part as we have to use nested lists to everything together. This consist of a list of variables, then a list of specifications for each variables. in our case it is not too much, just the name of the axis and the variable specification.
+
+
+```{r}
+plot_ly(nyc.data,type = 'parcoords',
+          
+                      
+          dimensions = list(
+            list(
+                 label = '% kids', values = ~kids2000),
+            list(
+                 label = '% gov. assisstence', values = ~pubast00),
+            list(
+                 label = 'rent2002', values = ~rent2002),
+            list(
+                 label = 'rent %', values = ~rentpct02)
+            )
+          )
+```
+
+
+
+
+
+## Conditional Plots
+
+Conditional plots allow us the assess relationships between two or more variables. Multiple graphs are made based on the conditioning results of one or two variables. 
+
+For our exploratory analysis in R we need a categorical variable in order for the function to work. GeoDa supports an option that automatically assess the distribution of the data and uses it for means of conditioning in the conditional plots. So in other words it can a quantitative variables. Functionality such as this can be gain in R, but you will need to build a function that assigns a category to values of a given observation based on their position relative to the mean or distribution.
+
+We will be doing something more simple. We will make a conditional plots based on a categories I have assigned to our dataset below. These are made up and only have the purpose of demonstrating how these plots are made. **cond1** is our first conditioning variable and **cond2** is our second.
+
+
+
+```{r}
+nyc.data$cond1 <- "lower"
+nyc.data$cond2 <- "first"
+
+
+nyc.data$cond1[27:55] <- "upper"
+nyc.data$cond2[0:12] <- "second"
+nyc.data$cond2[42:55] <- "second"
+
+```
+
+
+### Conditional Scatterplot
+
+#### Linear Regression
+
+To make our conditional scatterplot, we will use the `qplot()` function, which is apart of the `ggplot2` library. `qplot` stands for quick plot and we will be using for the `facet =` specification. `qplot()` also acts like `ggplot()` in that we can add layers to the plot with the `+` operator. To build our plot, we specify the dataset, the variables we want ploted in our scatterplots and our conditioning variables. This will output 4 scatterplot. One where cond1 is "lower" and cond2 is "first", one where cond1 is "lower" and cond2 is "second", one where cond1 is "upper" and cond2 first, and one where cond1 is "upper" and cond2 is "second". This functionality lets use examine scatterplots under different categories. We then add regression lines with `geom_smooth()`
+
+
+```{r}
+qplot(kids2000, pubast00, data = nyc.data, facets = cond1 ~ cond2) +
+  geom_smooth(method = "lm")
+```
+
+
+#### loess regression
+
+Here we just change `method =` to "loess" to get a loess regression instead of a line of best fit
+
+
+```{r}
+qplot(kids2000, pubast00, data = nyc.data, facets = cond1 ~ cond2) +
+  geom_smooth(method = "loess")
+```
+
+
+
+### Conditional Histogram
+
+The format for making a conditional histogram is similar to that for a conditional scatterplot. The only changes are that we list one variable instead of two in the case of the scatterplot and instead of `geom_smooth()`, we use `geom_histogram()`
+
+
+```{r}
+qplot(kids2000, data = nyc.data, facets = cond1 ~ cond2) +
+  geom_histogram()
+```
+
+
+For our histograms, you can change the number of bins by specifying `binwidth =` inside of the `geom_histogram()` function
+
+```{r}
+qplot(kids2000, data = nyc.data, facets = cond1 ~ cond2) +
+  geom_histogram(binwidth = 20)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
