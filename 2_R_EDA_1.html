@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+<meta name="author" content="Luc Anselin and Grant Morrison" />
+
+<meta name="date" content="2018-08-08" />
+
+<title>Exploratory Data Analysis 1</title>
+
+<script src="2_R_EDA_1_files/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="2_R_EDA_1_files/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="2_R_EDA_1_files/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="2_R_EDA_1_files/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="2_R_EDA_1_files/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="2_R_EDA_1_files/navigation-1.1/tabsets.js"></script>
+<link href="2_R_EDA_1_files/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="2_R_EDA_1_files/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+<link rel="stylesheet" href="tutor.css" type="text/css" />
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Exploratory Data Analysis 1</h1>
+<h3 class="subtitle"><em>R Notes</em></h3>
+<h4 class="author"><em>Luc Anselin and Grant Morrison<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></em></h4>
+<h4 class="date"><em>08/08/2018</em></h4>
+
+</div>
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction">Introduction</a><ul>
+<li><a href="#objectives">Objectives</a><ul>
+<li><a href="#r-packages-used">R Packages used</a></li>
+<li><a href="#r-commands-used">R Commands used</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#preliminaries">Preliminaries</a><ul>
+<li><a href="#load-packages">Load packages</a></li>
+<li><a href="#obtaining-the-data">Obtaining the data</a><ul>
+<li><a href="#creating-an-initial-data-frame">Creating an initial data frame</a></li>
+<li><a href="#making-the-variable-names-compatible">Making the variable names compatible</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#analyzing-the-distribution-of-a-single-variable">Analyzing the Distribution of a Single Variable</a><ul>
+<li><a href="#a-quick-introduction-to-ggplot">A quick introduction to <strong>ggplot</strong></a></li>
+<li><a href="#histogram">Histogram</a><ul>
+<li><a href="#selecting-the-number-of-histogram-bins">Selecting the number of histogram bins</a></li>
+<li><a href="#spiffing-up-the-graph">Spiffing up the graph</a></li>
+<li><a href="#histogram-summary-statistics">Histogram summary statistics</a></li>
+<li><a href="#assigning-part-of-a-graph-to-an-object">Assigning (part of) a graph to an object</a></li>
+<li><a href="#other-descriptive-statistics">Other descriptive statistics</a></li>
+<li><a href="#writing-the-graph-to-a-file">Writing the graph to a file</a></li>
+<li><a href="#saving-the-graph-object">Saving the graph object</a></li>
+</ul></li>
+<li><a href="#box-plot">Box plot</a><ul>
+<li><a href="#default-settings">Default settings</a></li>
+<li><a href="#box-plot-statistics">Box plot statistics</a></li>
+<li><a href="#changing-the-fence">Changing the fence</a></li>
+<li><a href="#fancier-options">Fancier options</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#bivariate-analysis-the-scatter-plot">Bivariate Analysis: The Scatter Plot</a><ul>
+<li><a href="#smoothing-the-scatter-plot">Smoothing the scatter plot</a><ul>
+<li><a href="#linear-smoother">Linear smoother</a></li>
+<li><a href="#extracting-the-linear-regression-results">Extracting the linear regression results</a></li>
+<li><a href="#loess-smoother">Loess smoother</a></li>
+<li><a href="#lowess-smoother">LOWESS smoother</a></li>
+<li><a href="#putting-it-all-together">Putting it all together</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#spatial-heterogeneity">Spatial heterogeneity</a><ul>
+<li><a href="#structural-breaks-in-the-scatter-plot">Structural breaks in the scatter plot</a></li>
+<li><a href="#chow-test">Chow test</a></li>
+</ul></li>
+</ul>
+</div>
+
+<p><br></p>
+<div id="introduction" class="section level2 unnumbered">
+<h2>Introduction</h2>
+<p>This notebook covers the functionality of the <a href="https://geodacenter.github.io/workbook/2a_eda/lab2a.html">Exploratory Data Analysis 1</a> section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.</p>
+<p>The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).</p>
+<p>For this notebook, we will use socioeconomic data for 55 New York City sub-boroughs from the GeoDa website. Our goal in this lab is show how to implement exploratory data analysis methods that deal with one (univariate) and two (bivariate) variables.</p>
+<div id="objectives" class="section level3 unnumbered">
+<h3>Objectives</h3>
+<p>After completing the notebook, you should know how to carry out the following tasks:</p>
+<ul>
+<li><p>Creating basic univariate plots, such as histogram and box plot</p></li>
+<li><p>Creating a scatter plot</p></li>
+<li><p>Implementing different smoothing methods in a scatter plot (linear, loess, and lowess)</p></li>
+<li><p>Showing linear fits for different subsets of the data (spatial heterogeneity)</p></li>
+<li><p>Testing the constancy of a regression slope (Chow test)</p></li>
+</ul>
+<div id="r-packages-used" class="section level4 unnumbered">
+<h4>R Packages used</h4>
+<ul>
+<li><p><strong>tidyverse</strong>: for general data wrangling (includes <strong>readr</strong> and <strong>dplyr</strong>)</p></li>
+<li><p><strong>ggplot2</strong>: to make statistical plots; we use this rather than base R for increased functionality and more aesthetically pleasing plots (also part of <strong>tidyverse</strong>)</p></li>
+<li><p><strong>ggthemes</strong>: additional themes for use with <strong>ggplot</strong></p></li>
+<li><p><strong>Hmisc</strong>: contains a LOWESS smoother for <strong>ggplot</strong></p></li>
+<li><p><strong>gap</strong>: to run the chow test</p></li>
+</ul>
+</div>
+<div id="r-commands-used" class="section level4 unnumbered">
+<h4>R Commands used</h4>
+<p>Below follows a list of the commands used in this notebook. For further details and a comprehensive list of options, please consult the <a href="https://www.rdocumentation.org">R documentation</a>.</p>
+<ul>
+<li><p><strong>Base R</strong>: <code>install.packages</code>, <code>library</code>, <code>head</code>, <code>names</code>, <code>summary</code>, <code>range</code>, <code>var</code>, <code>sd</code>,<code>pdf</code>,<code>dev.off</code>,<code>saveRDS</code>,<code>readRDS</code>, <code>function</code>, <code>lm</code>, <code>str</code>, <code>dim</code></p></li>
+<li><p><strong>tidyverse</strong>: <code>read_csv</code>, <code>rename</code>, <code>mutate</code>, <code>if_else</code>, <code>filter</code></p></li>
+<li><p><strong>ggplot2</strong>: <code>ggplot</code>, <code>geom_histogram</code>, <code>bins</code>, <code>theme_classic</code>, <code>theme_minimal</code>, <code>xlab</code>, <code>ylab</code>, <code>ggtitle</code>, <code>theme</code>, <code>layer_data</code>, <code>ggsave</code>, <code>geom_boxplot</code>, <code>stat_boxplot</code>, <code>geom_point</code>, <code>coord_fixed</code>, <code>geom_smooth</code>, <code>stat_smooth</code>, <code>labs</code>, <code>scale_color_manual</code></p></li>
+<li><p><strong>ggthemes</strong>: <code>theme_tufte</code></p></li>
+<li><p><strong>Hmisc</strong>: <code>stat_plsmo</code></p></li>
+<li><p><strong>gap</strong>: <code>chow.test</code></p></li>
+</ul>
+</div>
+</div>
+</div>
+<div id="preliminaries" class="section level2 unnumbered">
+<h2>Preliminaries</h2>
+<p>Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, make sure to set a working directory.<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a> We will use a relative path to the working directory to read the data set.</p>
+<div id="load-packages" class="section level3 unnumbered">
+<h3>Load packages</h3>
+<p>First, we load all the required packages using the <code>library</code> command. If you don’t have some of these in your system, make sure to install them first as well as their dependencies.<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a> You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that. Note that <strong>ggplot2</strong> does not need to be loaded separately since it is included in the <strong>tidyverse</strong> package collection.</p>
+<pre class="r"><code>library(tidyverse)</code></pre>
+<pre><code>## ── Attaching packages ───────────────────────────────────────────────── tidyverse 1.2.1 ──</code></pre>
+<pre><code>## ✔ ggplot2 3.0.0     ✔ purrr   0.2.5
+## ✔ tibble  1.4.2     ✔ dplyr   0.7.6
+## ✔ tidyr   0.8.1     ✔ stringr 1.3.1
+## ✔ readr   1.1.1     ✔ forcats 0.3.0</code></pre>
+<pre><code>## ── Conflicts ──────────────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()</code></pre>
+<pre class="r"><code>library(ggthemes)
+library(Hmisc)</code></pre>
+<pre><code>## Loading required package: lattice</code></pre>
+<pre><code>## Loading required package: survival</code></pre>
+<pre><code>## Loading required package: Formula</code></pre>
+<pre><code>## 
+## Attaching package: &#39;Hmisc&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:dplyr&#39;:
+## 
+##     src, summarize</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
+## 
+##     format.pval, units</code></pre>
+<pre class="r"><code>library(shiny)
+library(plotly)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;plotly&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:Hmisc&#39;:
+## 
+##     subplot</code></pre>
+<pre><code>## The following object is masked from &#39;package:ggplot2&#39;:
+## 
+##     last_plot</code></pre>
+<pre><code>## The following object is masked from &#39;package:stats&#39;:
+## 
+##     filter</code></pre>
+<pre><code>## The following object is masked from &#39;package:graphics&#39;:
+## 
+##     layout</code></pre>
+<pre class="r"><code>library(gap)</code></pre>
+<pre><code>## gap version 1.1-22</code></pre>
+<pre><code>## 
+## Attaching package: &#39;gap&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:shiny&#39;:
+## 
+##     h2</code></pre>
+</div>
+<div id="obtaining-the-data" class="section level3 unnumbered">
+<h3>Obtaining the data</h3>
+<p>The data to implement the operations in this workbook are contained in <a href="https://geodacenter.github.io/data-and-lab/nyc/">NYC Data</a> on the GeoDa support web site. After the file is downloaded, it must be unzipped (e.g., double click on the file). The <strong>nyc</strong> folder should be moved to the current working directory for the path names we use below to work correctly.</p>
+<div id="creating-an-initial-data-frame" class="section level4 unnumbered">
+<h4>Creating an initial data frame</h4>
+<p>We use the <strong>tidyverse</strong> function <code>read_csv</code> to read the data into a data frame <strong>nyc.data</strong>. We could also have used the base R <code>read.csv</code>, but <code>read_csv</code> is a bit more robust and creates a <strong>tibble</strong>, a data frame with some additional information. As usual, we check the contents of the data frame with a <code>head</code> command.</p>
+<pre class="r"><code>nyc.data &lt;- read_csv(&quot;nyc/nyc.csv&quot;)</code></pre>
+<pre><code>## Parsed with column specification:
+## cols(
+##   .default = col_double(),
+##   bor_subb = col_integer(),
+##   NAME = col_character(),
+##   CODE = col_integer(),
+##   SUBBOROUGH = col_character(),
+##   RENT2002 = col_integer(),
+##   RENT2005 = col_integer(),
+##   RENT2008 = col_integer()
+## )</code></pre>
+<pre><code>## See spec(...) for full column specifications.</code></pre>
+<pre class="r"><code>head(nyc.data)</code></pre>
+<pre><code>## # A tibble: 6 x 34
+##   bor_subb NAME   CODE SUBBOROUGH FORHIS06 FORHIS07 FORHIS08 FORHIS09
+##      &lt;int&gt; &lt;chr&gt; &lt;int&gt; &lt;chr&gt;         &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
+## 1      501 Nort…   501 North Sho…     37.1     34.0    27.4      29.3
+## 2      502 Mid-…   502 Mid-Island     28.0     18.1    24.0      31.2
+## 3      503 Sout…   503 South Sho…     10.7     12.1     9.69     14.7
+## 4      401 Asto…   401 Astoria        52.1     54.0    54.7      47.8
+## 5      402 Sunn…   402 Sunnyside…     62.7     69.4    67.1      58.3
+## 6      403 Jack…   403 Jackson H…     68.5     68.5    66.5      69.2
+## # ... with 26 more variables: FORWH06 &lt;dbl&gt;, FORWH07 &lt;dbl&gt;, FORWH08 &lt;dbl&gt;,
+## #   FORWH09 &lt;dbl&gt;, HHSIZ1990 &lt;dbl&gt;, HHSIZ00 &lt;dbl&gt;, HHSIZ02 &lt;dbl&gt;,
+## #   HHSIZ05 &lt;dbl&gt;, HHSIZ08 &lt;dbl&gt;, KIDS2000 &lt;dbl&gt;, KIDS2005 &lt;dbl&gt;,
+## #   KIDS2006 &lt;dbl&gt;, KIDS2007 &lt;dbl&gt;, KIDS2008 &lt;dbl&gt;, KIDS2009 &lt;dbl&gt;,
+## #   RENT2002 &lt;int&gt;, RENT2005 &lt;int&gt;, RENT2008 &lt;int&gt;, RENTPCT02 &lt;dbl&gt;,
+## #   RENTPCT05 &lt;dbl&gt;, RENTPCT08 &lt;dbl&gt;, PUBAST90 &lt;dbl&gt;, PUBAST00 &lt;dbl&gt;,
+## #   YRHOM02 &lt;dbl&gt;, YRHOM05 &lt;dbl&gt;, YRHOM08 &lt;dbl&gt;</code></pre>
+</div>
+<div id="making-the-variable-names-compatible" class="section level4 unnumbered">
+<h4>Making the variable names compatible</h4>
+<p>Note, that in contrast to GeoDa (where the dbf file is read), reading the csv file into a data frame results in almost all the variable names being in caps. We confirm this with a <code>names</code> command:</p>
+<pre class="r"><code>names(nyc.data)</code></pre>
+<pre><code>##  [1] &quot;bor_subb&quot;   &quot;NAME&quot;       &quot;CODE&quot;       &quot;SUBBOROUGH&quot; &quot;FORHIS06&quot;  
+##  [6] &quot;FORHIS07&quot;   &quot;FORHIS08&quot;   &quot;FORHIS09&quot;   &quot;FORWH06&quot;    &quot;FORWH07&quot;   
+## [11] &quot;FORWH08&quot;    &quot;FORWH09&quot;    &quot;HHSIZ1990&quot;  &quot;HHSIZ00&quot;    &quot;HHSIZ02&quot;   
+## [16] &quot;HHSIZ05&quot;    &quot;HHSIZ08&quot;    &quot;KIDS2000&quot;   &quot;KIDS2005&quot;   &quot;KIDS2006&quot;  
+## [21] &quot;KIDS2007&quot;   &quot;KIDS2008&quot;   &quot;KIDS2009&quot;   &quot;RENT2002&quot;   &quot;RENT2005&quot;  
+## [26] &quot;RENT2008&quot;   &quot;RENTPCT02&quot;  &quot;RENTPCT05&quot;  &quot;RENTPCT08&quot;  &quot;PUBAST90&quot;  
+## [31] &quot;PUBAST00&quot;   &quot;YRHOM02&quot;    &quot;YRHOM05&quot;    &quot;YRHOM08&quot;</code></pre>
+<p>We now use the <strong>tidyverse</strong> <code>rename</code> function to turn the all-caps variables into lower case for the examples we will use. As in the GeoDa workbook, we only use three variables, <strong>kids2009</strong>, <strong>kids2000</strong>, and <strong>pubast00</strong>.</p>
+<pre class="r"><code>nyc.data &lt;- nyc.data %&gt;% rename(&quot;kids2009&quot; = &quot;KIDS2009&quot;, &quot;kids2000&quot; = &quot;KIDS2000&quot;,
+                                &quot;pubast00&quot; = &quot;PUBAST00&quot;)
+names(nyc.data)</code></pre>
+<pre><code>##  [1] &quot;bor_subb&quot;   &quot;NAME&quot;       &quot;CODE&quot;       &quot;SUBBOROUGH&quot; &quot;FORHIS06&quot;  
+##  [6] &quot;FORHIS07&quot;   &quot;FORHIS08&quot;   &quot;FORHIS09&quot;   &quot;FORWH06&quot;    &quot;FORWH07&quot;   
+## [11] &quot;FORWH08&quot;    &quot;FORWH09&quot;    &quot;HHSIZ1990&quot;  &quot;HHSIZ00&quot;    &quot;HHSIZ02&quot;   
+## [16] &quot;HHSIZ05&quot;    &quot;HHSIZ08&quot;    &quot;kids2000&quot;   &quot;KIDS2005&quot;   &quot;KIDS2006&quot;  
+## [21] &quot;KIDS2007&quot;   &quot;KIDS2008&quot;   &quot;kids2009&quot;   &quot;RENT2002&quot;   &quot;RENT2005&quot;  
+## [26] &quot;RENT2008&quot;   &quot;RENTPCT02&quot;  &quot;RENTPCT05&quot;  &quot;RENTPCT08&quot;  &quot;PUBAST90&quot;  
+## [31] &quot;pubast00&quot;   &quot;YRHOM02&quot;    &quot;YRHOM05&quot;    &quot;YRHOM08&quot;</code></pre>
+</div>
+</div>
+</div>
+<div id="analyzing-the-distribution-of-a-single-variable" class="section level2 unnumbered">
+<h2>Analyzing the Distribution of a Single Variable</h2>
+<p>We follow the discussion in the GeoDa workbook and start with the common univariate descriptive graphs, the histogram and box plot. Before covering the specifics, we provide a brief overview of the principles behind the <strong>ggplot</strong> operations.</p>
+<p>Note that linking and brushing between a plot and a map is not (yet) readily implemented in R, so that our discussion will focus primarily on static graphs.</p>
+<div id="a-quick-introduction-to-ggplot" class="section level3 unnumbered">
+<h3>A quick introduction to <strong>ggplot</strong></h3>
+<p>We will be using the commands in the <strong>ggplot2</strong> package for the descriptive statistics plots. There are many options to create nice looking graphs in R, including the functionality in base R, but we chose <strong>ggplot2</strong> for its clean logic and its similarity to the <strong>tmap</strong> package that we already encountered (in fact, <strong>tmap</strong> uses the same layered logic as <strong>ggplot</strong>).<a href="#fn4" class="footnote-ref" id="fnref4"><sup>4</sup></a></p>
+<p>An in-depth introduction to <strong>ggplot</strong> is beyond our scope, but a quick overview can be found in the <a href="http://r4ds.had.co.nz/data-visualisation.html">Data Visualization</a> chapter of Wickham and Grolemund’s <em>R for Data Science</em> book, and full details are covered in Wickham’s <em>ggplot2: elegant graphics for data analysis (2nd Edition)</em> (Springer Verlag, 2016).</p>
+<p>The logic behind <strong>ggplot</strong> is an implementation of Wilkinson’s <em>grammar for graphics</em>, using the concept of <em>layers</em>. These are the components that make up a plot, such as a <em>data set</em>, <em>aesthetic mappings</em> (variables for different aspects of the graph, such as the x and y-axes, colors, shapes, etc.), <em>statistical transformations</em>, a <em>geometric object</em> and position adjustments. Several layers can be drawn on top of each other, providing the ability to create incredibly complext graphs.</p>
+<p>For now, the main parts to concentrate on are the data set and the aesthetics, or <code>aes</code>. The latter are typically (at least) the variables to be plotted. These are usually declared in the main <strong>ggplot</strong> command, e.g., <code>ggplot(dataset,aes(x=var1,y=var2))</code> and apply to all the following layers. However, they can also be specified for each layer individually.</p>
+<p>Next follow one or more geometric objects, <code>geom_*</code> and various adjustments, added to the first command by means of a plus sign, just as we saw how a <strong>tmap</strong> choropleth map was constructed.</p>
+<p>The terminology may seem a little unfamiliar at first, but as long as you remember that <code>aes</code> are the variables and the <code>geom_*</code> are the plot types, you will be on your way.</p>
+</div>
+<div id="histogram" class="section level3 unnumbered">
+<h3>Histogram</h3>
+<p>We start with the simple histogram command. As in the GeoDa workbook, we will use the <strong>kids2009</strong> variable.</p>
+<p>The <code>geom</code> for a histogram is <code>geom_histogram</code>. In contrast to most plots in <strong>ggplot</strong>, only one variable needs to be passed. The general setup for <strong>ggplot</strong> is to think of the graph as a two-dimensional representation, with the x variable for the x axis and the y variable for the y-axis. In a histogram, the vertical axis is by default taken to be the <strong>count</strong> of the observations in each bin.<a href="#fn5" class="footnote-ref" id="fnref5"><sup>5</sup></a></p>
+<p>The three pieces we need to create the plot are the data set (<code>data</code>), <strong>nyc.data</strong>, the aesthetic (<code>aes</code>), <strong>kids2009</strong>, and the geom, <code>geom_histogram</code>. The command is as follows, with all the other settings left to their default:</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(kids2009)) +
+  geom_histogram()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<p>The resulting histogram is not very informative, and the first thing we will do is heed the warning to pick a better bin width.</p>
+<div id="selecting-the-number-of-histogram-bins" class="section level4 unnumbered">
+<h4>Selecting the number of histogram bins</h4>
+<p>The standard way in <strong>ggplot</strong> is to adjust the number of bins indirectly, by means of the <code>binwidth</code> option, i.e., the range of values that make up a bin, in the units of the variable under consideration. To keep the parallel with the GeoDa workbook, we instead use the option <code>bins</code>, which sets the number of bins directly. The resulting histogram now matches the one in GeoDa (except for the lack of color, which is immaterial).</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(kids2009)) +
+  geom_histogram(bins=7)</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<p>As in the GeoDa workbook, we can now change the number of bins to 5, which yields the following histogram.</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(kids2009)) +
+  geom_histogram(bins=5)</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+</div>
+<div id="spiffing-up-the-graph" class="section level4 unnumbered">
+<h4>Spiffing up the graph</h4>
+<p>The graph as shown is just rudimentary. There are many options in <strong>ggplot</strong> to change the appearance of the graph, too many to cover here. But to illustrate some basic features, below, we add a label for the x and y axes using <code>xlab</code> and <code>ylab</code>, and a title for the graph with <code>ggtitle</code>. An unfortunate aspect of the latter is that it left aligns the text, whereas we would typically want it to be centered over the graph.</p>
+<p>We can adjust this using the very powerful <code>theme</code> option. But first the basics. Every graph has a theme, which sets the main parameters for its appearance. For example, the default theme with the grey grids, separated by white lines is <code>theme_grey( )</code>. If we want to change this, we can specify one of the other themes. For example, a classic graph a la base R plot, without background shading or grid lines is <code>theme_classic( )</code>. In order to obtain this specialized <em>look</em>, we set the associated <code>theme</code> command. Our histogram in this theme looks as follows, with a label on the x and y axis, and a title (and back to 7 bins).</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(kids2009)) +
+  geom_histogram(bins=7) +
+  xlab(&quot;Percent kids in 2009&quot;) +
+  ylab(&quot;Frequency&quot;) +
+  ggtitle(&quot;Example Histogram&quot;) +
+  theme_classic()</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p>There are seven built-in themes as well as several contributed ones. Another built-in example is <code>theme_minimal( )</code>, shown next.</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(kids2009)) +
+  geom_histogram(bins=7) +
+  xlab(&quot;Percent kids in 2009&quot;) +
+  ylab(&quot;Frequency&quot;) +
+  ggtitle(&quot;Example Histogram&quot;) +
+  theme_minimal()</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<p>In addition, the package <strong>ggthemes</strong> contains several additional themes that look extremely professional. For example, <code>theme_tufte( )</code>.</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(kids2009)) +
+  geom_histogram(bins=7) +
+  xlab(&quot;Percent kids in 2009&quot;) +
+  ylab(&quot;Frequency&quot;) +
+  ggtitle(&quot;Example Histogram&quot;) +
+  theme_tufte()</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<p>Besides selecting a different default <code>theme</code>, we can also override the basic settings associated with the current theme. For example, we adjust the <code>plot.title</code> (of course, you need to know what everything is called). Specifically, we set the <code>element_text</code> property’s horizontal justification (<code>hjust</code>) to 0.5. This centers the title. The number of other refinements is near infinite. Again, using the default <code>theme_grey( )</code>:</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(kids2009)) +
+  geom_histogram(bins=7) +
+  xlab(&quot;Percent kids in 2009&quot;) +
+  ylab(&quot;Frequency&quot;) +
+  ggtitle(&quot;Example Histogram&quot;) +
+  theme(plot.title = element_text(hjust = 0.5))</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+</div>
+<div id="histogram-summary-statistics" class="section level4 unnumbered">
+<h4>Histogram summary statistics</h4>
+<p>The histogram in GeoDa has an option to display the contents of each bin as well as some descriptive statistics.</p>
+<p>As anything in R, the plot created by <strong>ggplot</strong> is nothing but an object. When we enter the commands as above, starting with <strong>ggplot</strong>, the result is drawn directly to the screen. But we can also assign the plot object to a variable. This variable will then contain all the information needed to draw the graph, which includes the <code>count</code> of observations in each bin, the min and max values for each bin, etc. For example, we can assign our histogram plot to the <strong>plot.data</strong> object, and then extract the information using the <code>layer_data</code> function.</p>
+<pre class="r"><code>plot.data &lt;- ggplot(data=nyc.data,aes(kids2009)) +
+  geom_histogram(bins=7) +
+  xlab(&quot;Percent kids in 2009&quot;) +
+  ylab(&quot;Frequency&quot;) +
+  ggtitle(&quot;Example Histogram&quot;) +
+  theme(plot.title = element_text(hjust = 0.5))
+layer_data(plot.data)</code></pre>
+<pre><code>##    y count       x    xmin    xmax     density     ncount   ndensity PANEL
+## 1  1     1  0.0000 -4.0109  4.0109 0.002266551 0.05555556 0.05555556     1
+## 2  2     2  8.0218  4.0109 12.0327 0.004533102 0.11111111 0.11111111     1
+## 3  4     4 16.0436 12.0327 20.0545 0.009066204 0.22222222 0.22222222     1
+## 4  8     8 24.0654 20.0545 28.0763 0.018132407 0.44444444 0.44444444     1
+## 5 18    18 32.0872 28.0763 36.0981 0.040797917 1.00000000 1.00000000     1
+## 6 17    17 40.1090 36.0981 44.1199 0.038531366 0.94444444 0.94444444     1
+## 7  5     5 48.1308 44.1199 52.1417 0.011332755 0.27777778 0.27777778     1
+##   group ymin ymax colour   fill size linetype alpha
+## 1    -1    0    1     NA grey35  0.5        1    NA
+## 2    -1    0    2     NA grey35  0.5        1    NA
+## 3    -1    0    4     NA grey35  0.5        1    NA
+## 4    -1    0    8     NA grey35  0.5        1    NA
+## 5    -1    0   18     NA grey35  0.5        1    NA
+## 6    -1    0   17     NA grey35  0.5        1    NA
+## 7    -1    0    5     NA grey35  0.5        1    NA</code></pre>
+<p>The convention used to create the histogram in <strong>ggplot</strong> is slightly different from that in GeoDa, hence small differences in the bounds of the bins. The summary statistics give the number of observations in each bin (<strong>count</strong>), the mid-point of the bin (<strong>x</strong>), and the lower and upper bound for the bin (<strong>xmin</strong> and <strong>xmax</strong>). Unlike GeoDa, where the histogram starts at the minimum value and ends at the maximum value, the histogram in <strong>ggplot</strong> starts with the minimum value at the <em>mid-point</em> of the lowest bin, and the maximum value at the <em>mid-point</em> of the upper bin.</p>
+</div>
+<div id="assigning-part-of-a-graph-to-an-object" class="section level4 unnumbered">
+<h4>Assigning (part of) a graph to an object</h4>
+<p>Any subset of <strong>ggplot</strong> commands can be assigned to an object, which can save on some typing if the same data set and variables are used for several plots. For example, we assign the main <strong>ggplot</strong> command with the <code>geom_histogram</code> to the object <strong>baseplt</strong>. As such, this does not draw anything. Next, we add the different options to the <strong>baseplt</strong> object, and the graph appears.</p>
+<pre class="r"><code>baseplt &lt;- ggplot(data=nyc.data,aes(kids2009)) +
+  geom_histogram(bins=7) 
+baseplt +
+  xlab(&quot;Percent kids in 2009&quot;) +
+  ylab(&quot;Frequency&quot;) +
+  ggtitle(&quot;Example Histogram&quot;) +
+  theme(plot.title = element_text(hjust = 0.5))</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
+</div>
+<div id="other-descriptive-statistics" class="section level4 unnumbered">
+<h4>Other descriptive statistics</h4>
+<p>The usual descriptive statistics can be displayed by means of the base R <code>summary</code> command. In principle, we could assign these to an object and then add them to the plot using the <code>geom_text</code> geom, but that is beyond the current scope. We can easily obtain the descriptive statistics provided by GeoDa that are not contained in the R <code>summary</code> command, by means of <code>range</code>, <code>var</code>, and <code>sd</code>, for the range, variance and standard deviation.</p>
+<pre class="r"><code>summary(nyc.data$kids2009)</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##    0.00   26.69   33.53   32.07   39.68   48.13</code></pre>
+<pre class="r"><code>range(nyc.data$kids2009)</code></pre>
+<pre><code>## [1]  0.0000 48.1308</code></pre>
+<pre class="r"><code>var(nyc.data$kids2009)</code></pre>
+<pre><code>## [1] 107.535</code></pre>
+<pre class="r"><code>sd(nyc.data$kids2009)</code></pre>
+<pre><code>## [1] 10.36991</code></pre>
+</div>
+<div id="writing-the-graph-to-a-file" class="section level4 unnumbered">
+<h4>Writing the graph to a file</h4>
+<p>In our discussion so far, the graphs are drawn to the screen and then disappear. To save a <strong>ggplot</strong> graph to a file for publication, there are two ways to proceed. One is the classic R approach, in which first a <strong>device</strong> is opened, e.g., by means of a <code>pdf</code> command, then the plot commands are entered, and finally the device is turned off by means of <code>dev.off()</code>.</p>
+<p>Note that it is always a good idea to specify the dimension of the graph (in inches). If not, the results can be unexpected.</p>
+<pre class="r"><code>pdf(&quot;hist.pdf&quot;,height=3,width=3)
+ggplot(data=nyc.data,aes(kids2009)) +
+  geom_histogram(bins=7) +
+  xlab(&quot;Percent kids in 2009&quot;) +
+  ylab(&quot;Frequency&quot;) +
+  ggtitle(&quot;Example Histogram&quot;) +
+  theme(plot.title = element_text(hjust = 0.5))
+dev.off()</code></pre>
+<pre><code>## quartz_off_screen 
+##                 2</code></pre>
+<p>In addiiton to the standard R approach, <strong>ggplot</strong> also has the <code>ggsave</code> command, which does the same thing. It requires the name for the output file, but derives the proper format from the file extension. For example, an output file with a <strong>png</strong> file extension will create a png file, and similarly for pdf, etc.</p>
+<p>The second argument specifies the <strong>plot</strong>. It is optional, and when not specified, the last plot is saved. Again, it is a good idea to specify the <code>width</code> and <code>height</code> (in inches). In addition, for raster files, the dots per inch (<code>dpi</code>) can be set as well. The default is 300, which is fine for most use cases, but for high resolution graphs, one can set the dpi to 600, as in the example below.</p>
+<pre class="r"><code>hist.plot &lt;- ggplot(data=nyc.data,aes(kids2009)) +
+  geom_histogram(bins=7) +
+  xlab(&quot;Percent kids in 2009&quot;) +
+  ylab(&quot;Frequency&quot;) +
+  ggtitle(&quot;Example Histogram&quot;) +
+  theme(plot.title = element_text(hjust = 0.5))
+ggsave(&quot;hist.png&quot;,plot=hist.plot,width=3,height=3,dpi=600)</code></pre>
+</div>
+<div id="saving-the-graph-object" class="section level4 unnumbered">
+<h4>Saving the graph object</h4>
+<p>An alternative approach to keep a plot object is to assign the plot commands to a variable and then save this to disk, using the standard R command <code>saveRDS</code>. This can later be brought back into an R session using <code>readRDS</code>. To save the plot, we need to specify a file name with an <strong>.rds</strong> file extension.</p>
+<pre class="r"><code>saveRDS(hist.plot,&quot;hist.rds&quot;)</code></pre>
+<p>At some later point (or in a different R session), we can then read the object and plot it. Note that we do not need to assign it to the same variable name as before. For example, here we call the graph object <strong>newplot</strong>.</p>
+<pre class="r"><code>newplot &lt;- readRDS(&quot;hist.rds&quot;)
+newplot</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-18-1.png" width="672" /></p>
+</div>
+</div>
+<div id="box-plot" class="section level3 unnumbered">
+<h3>Box plot</h3>
+<p>The box plot, also referred to as Tukey’s box and whisker plot, is an alternative way to visualize the distribution of a single variable, with a focus on descriptive statistics such as quartiles and the median.<a href="#fn6" class="footnote-ref" id="fnref6"><sup>6</sup></a> We continue our example using the <strong>kids2009</strong> variable. We first consider the default option, then move on to various optional settings.</p>
+<div id="default-settings" class="section level4 unnumbered">
+<h4>Default settings</h4>
+<p>The minimal arguments to create a boxplot are the <code>data</code> set and the x and y variables passed to <code>aes</code>. As mentioned above, the logic behind the graphs in <strong>ggplot</strong> is two-dimensional, so both x and y need to be specified. The x variable is used to create separate box plots for different subsets of the data. In our simple example, we don’t need this feature, so we set the x variable to empty, i.e., &quot; “. The y variable is the actual variable of interest, <strong>kids2009</strong>. The resulting graph is shown below.</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=&quot;&quot;,y=kids2009)) +
+  geom_boxplot()</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-19-1.png" width="672" /></p>
+<p>The box encloses the first and third quartile and shows the median as a thick horizontal bar. The vertical lines show the range of data, not the extent of the fences, as is the case in GeoDa. The single dot at value 0 is the lower outlier.</p>
+</div>
+<div id="box-plot-statistics" class="section level4 unnumbered">
+<h4>Box plot statistics</h4>
+<p>Unlike what is the case in GeoDa, there is no straightforward way to show the descriptive statistics on the graph. However, we can access the statistics, extract them, and then use text labeling techniques to add them to the plot. We will not pursue that here, but we will illustrate the type of statistics associated with the box plot.</p>
+<p>As we did for the histogram, we will assign the <strong>ggplot</strong> object to a variable and then use the <code>layer_data</code> function to extract the information.</p>
+<pre class="r"><code>box.plt &lt;- ggplot(data=nyc.data,aes(x=&quot;&quot;,y=kids2009)) +
+  geom_boxplot()
+box.dta &lt;- layer_data(box.plt)
+box.dta</code></pre>
+<pre><code>##     ymin    lower  middle   upper    ymax outliers notchupper notchlower x
+## 1 8.6623 26.69425 33.5284 39.6773 48.1308        0    36.2944    30.7624 1
+##   PANEL group ymin_final ymax_final  xmin  xmax xid newx new_width weight
+## 1     1     1          0    48.1308 0.625 1.375   1    1      0.75      1
+##   colour  fill size alpha shape linetype
+## 1 grey20 white  0.5    NA    19    solid</code></pre>
+<p>The result is a data frame that contains all the information needed to create the graph.</p>
+<p>The descriptive statistics require a little clarification. The values for <strong>lower</strong> and <strong>upper</strong> are, respectively, the values for the first and third quartile, and <strong>middle</strong> is the median. <strong>ymin</strong> (8.6623) and <strong>ymax</strong> (48.1308) are <em>not</em> the smallest and largest values overall, but the smallest and largest values that fall <em>inside</em> the fences.<a href="#fn7" class="footnote-ref" id="fnref7"><sup>7</sup></a> They are the begin and end points of the vertical lines in the plot. <strong>outliers</strong> contains a list with the outlier values. In our example, there is just one, the value 0 (compare to Figure 18 in the GeoDa workbook). The fences, also sometimes called whiskers, are not contained among the statistics, but they can be easily computed.</p>
+<p>We illustrate a simple function to accomplish this (note that this function does not implement any error checking and is purely illustrative of the concepts involved). As anything else in R, a function is an object that is assigned to a name. It takes arguments and returns the result. For example, the function <code>box.desc</code> given below takes the layer_data object as the argument <strong>box.lyr</strong>, extracts the quartiles to compute the interquartile range and to calculate the fences. We also pass the multiplier as <strong>mult</strong>, with a default value of 1.5 (the default value is set by the equal sign).</p>
+<pre class="r"><code>box.desc &lt;- function(box.lyr,mult=1.5) {
+  # function to computer lower and upper fence in a box plot
+  # box.lyr: a box plot layer_data object
+  # mult: the multiplier for the fence calculation, default = 1.5
+  iqr &lt;- box.lyr$upper - box.lyr$lower # inter-quartile range
+  upfence &lt;- box.lyr$upper + mult * iqr  # upper fence
+  lofence &lt;- box.lyr$lower - mult * iqr  # lower fence
+  return(c(lofence,upfence))
+}</code></pre>
+<p>We can now pass the <strong>box.dta</strong> results to this function to obtain the lower and upper fences.</p>
+<pre class="r"><code>box.desc(box.dta)</code></pre>
+<pre><code>## [1]  7.219675 59.151875</code></pre>
+<p>These results match the values in the GeoDa workbook.</p>
+</div>
+<div id="changing-the-fence" class="section level4 unnumbered">
+<h4>Changing the fence</h4>
+<p>As we did in the GeoDa workbook, we can change the multiplier value to compute the fences. The default is 1.5, but we can set this to 3.0 by means of the <code>coef</code> option. We again assign the plot to an object to both illustrate the graph and the associated statistics.</p>
+<pre class="r"><code>box.plt3 &lt;- ggplot(data=nyc.data,aes(x=&quot;&quot;,y=kids2009)) +
+  geom_boxplot(coef=3)
+box.plt3</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-23-1.png" width="672" /></p>
+<p>As in the GeoDa example, there are no longer any outliers. In the graph, the lowest point on the vertical line now corresponds with the value of 0.</p>
+<p>We extract the statistics as before.</p>
+<pre class="r"><code>box.dta3 &lt;- layer_data(box.plt3)
+box.dta3</code></pre>
+<pre><code>##   ymin    lower  middle   upper    ymax outliers notchupper notchlower x
+## 1    0 26.69425 33.5284 39.6773 48.1308             36.2944    30.7624 1
+##   PANEL group ymin_final ymax_final  xmin  xmax xid newx new_width weight
+## 1     1     1          0    48.1308 0.625 1.375   1    1      0.75      1
+##   colour  fill size alpha shape linetype
+## 1 grey20 white  0.5    NA    19    solid</code></pre>
+<p>The statistics are the same, except that the value for <strong>ymin</strong> is now 0. We double check the results for the fences using our function <strong>box.desc</strong>, but now pass <strong>box.dta3</strong> and set <strong>mult=3.0</strong>.</p>
+<pre class="r"><code>box.desc(box.dta3,mult=3.0)</code></pre>
+<pre><code>## [1] -12.25490  78.62645</code></pre>
+<p>Since the lower fence is negative, the value of 0 is no longer an outlier.</p>
+</div>
+<div id="fancier-options" class="section level4 unnumbered">
+<h4>Fancier options</h4>
+<p>As is, the default box plot is pretty rudimentary. We will illustrate the power of <strong>ggplot</strong> by adding a number of features to the plot in order to mimic the visual representation given in GeoDa. First, we will remove the label for the x-axis by setting it to “”, and add a title using <code>ggtitle</code>. As we did for the histogram, we will center the title over the graph. To save on some typing, we will assign the <strong>ggplot</strong> command with its arguments to the variable <strong>base.plt</strong> and then build the graph by adding layers. First, just the labels.</p>
+<pre class="r"><code>base.plt &lt;- ggplot(data=nyc.data,aes(x=&quot;&quot;,y=kids2009))
+base.plt + geom_boxplot() +
+  xlab(&quot;&quot;) +
+  ggtitle(&quot;Example Box Plot&quot;) +
+  theme(plot.title = element_text(hjust=0.5))</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-26-1.png" width="672" /></p>
+<p>Next, we want to give the box plot a color, as in GeoDa. This is accomplished with the <code>color</code> (for the outlines) and <code>fill</code> (for the inside of the box) options to <code>geom_boxplot</code>. In addition, we can give the outlier point a different color by means of <code>outlier.color</code>. For example, setting the <code>color</code> to <strong>black</strong>, with the <code>fill</code> to <strong>purple</strong> (if we set both to the same color, we can no longer distinguish the median), and the <code>outlier.color</code> to <strong>red</strong>, we obtain:</p>
+<pre class="r"><code>base.plt + 
+  geom_boxplot(color=&quot;black&quot;,fill=&quot;purple&quot;,outlier.color=&quot;red&quot;) +
+  xlab(&quot;&quot;) +
+  ggtitle(&quot;Example Box Plot&quot;) +
+  theme(plot.title = element_text(hjust=0.5))</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-27-1.png" width="672" /></p>
+<p>So far, the box plots do not show the fences, the way they do in GeoDa. This can be remedied, but not quite in the same way as in GeoDa. In <strong>ggplot</strong>, the fences are drawn at the location of the extreme values, the <strong>ymin</strong> and <strong>ymax</strong> we saw before, and not at the location of the fence cut-off values, as in GeoDa. The fences are obtained from the <code>stat_boxplot</code> function, by passing the <code>geom</code> as <code>errorbar</code>. The result is as shown below.</p>
+<pre class="r"><code>base.plt + 
+  geom_boxplot(color=&quot;black&quot;,fill=&quot;purple&quot;,outlier.color=&quot;red&quot;) +
+  stat_boxplot(geom=&quot;errorbar&quot;) +
+  xlab(&quot;&quot;) +
+  ggtitle(&quot;Example Box Plot&quot;) +
+  theme(plot.title = element_text(hjust=0.5))</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-28-1.png" width="672" /></p>
+<p>One final refinement. In GeoDa, the box plot also shows the locations of the actual observations as points on the central axis. We obtain the same effect by adding <code>geom_point</code> with <code>color</code> <strong>blue</strong>. We draw the points first, and the box plot on top of it, using the layers logic. However, we want to make sure that the central box doesn’t mask the points, which it does when the <em>transparency</em> is kept as the default. To accomplish this, we set the <code>alpha</code> level for both points and box plot at <strong>0.5</strong>.</p>
+<p>The result comes as close to the GeoDa visualization as we can get without going overboard.</p>
+<pre class="r"><code>base.plt + 
+  geom_point(color=&quot;blue&quot;,alpha=0.5) +
+  geom_boxplot(color=&quot;black&quot;,fill=&quot;purple&quot;,outlier.color=&quot;red&quot;,alpha=0.5) +
+  stat_boxplot(geom=&quot;errorbar&quot;) +
+  xlab(&quot;&quot;) +
+  ggtitle(&quot;Example Box Plot&quot;) +
+  theme(plot.title = element_text(hjust=0.5))</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-29-1.png" width="672" /></p>
+<p>As before, we can write this plot to a file using <code>ggsave</code>, or save the object for future use with <code>saveRDS</code>.</p>
+</div>
+</div>
+</div>
+<div id="bivariate-analysis-the-scatter-plot" class="section level2 unnumbered">
+<h2>Bivariate Analysis: The Scatter Plot</h2>
+<p>The scatter plot shows the relationship between two variables as points with (x, y) coordinates matching the value for each variable, one on the x-axis, the other on the y-axis. In <strong>ggplot</strong> the scatter plot is constructed by means of a <code>geom_point</code>. The aesthetics are mapped to the variables for the x and y axis.</p>
+<p>We mimic the example in the GeoDa workbook and use <strong>kids2000</strong> for <code>x</code>, and <strong>pubast00</strong> for <code>y</code>. The bare bones scatter plot is obtained as follows:</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
+   geom_point()</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-30-1.png" width="672" /></p>
+<p>The graph looks slightly different from the one in GeoDa because of a different aspect ratio (the ratio between the scale used for the y-axis to that for the x-axis). In <strong>ggplot</strong>, the aspect ratio is set as an argument to the <code>coord_fixed</code> command. We can obtain a scatter plot that more closely mimics the shape of the one in GeoDa by setting the aspect <code>ratio</code> to 55/25, i.e., the ratio of the range on the x-axis over the range of the y-axis in the example in the GeoDa workbook (Figure 24).</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
+   geom_point() +
+   coord_fixed(ratio=55.0/25.0)</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-31-1.png" width="672" /></p>
+<p>As we saw before, we can customize the graph further with a title and labels, but we will not pursue that here. The main interest is in bringing out the overall pattern of bivariate association by means of a scatter plot <em>smoother</em>, to which we turn next.</p>
+<div id="smoothing-the-scatter-plot" class="section level3 unnumbered">
+<h3>Smoothing the scatter plot</h3>
+<p>Scatter plot smoothers are implemented through the <code>geom_smooth</code> command in <strong>ggplot</strong>. Options include a linear smoother, as <code>method = lm</code>, and a nonlinear <em>loess</em> smoother, as <code>method = loess</code>. Note that the loess smoother is not quite the same as the LOWESS smoother implemented in GeoDa. The latter is not included in <strong>ggplot</strong>, but can be implemented by means of the <code>stat_plsmo</code> function from the <strong>Hmisc</strong> package. We consider each smoother in turn.</p>
+<div id="linear-smoother" class="section level4 unnumbered">
+<h4>Linear smoother</h4>
+<p>The linear smoother is added to the plot by including the <code>geom_smooth</code> command after the <code>geom_point</code> call. The <code>method</code> is set as <strong>lm</strong>. In order to better distinguish the fitted line from the points, we set its <code>color</code> to <strong>blue</strong>, and add a centered title to specify the smoothing algorithm using <code>ggtitle</code> (also, in what follows, we ignore the aspect ratio issue).</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
+   geom_point() +
+   geom_smooth(method=lm, color=&quot;blue&quot;) +
+   ggtitle(&quot;Linear Smoother&quot;) +
+   theme(plot.title = element_text(hjust=0.5))</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-32-1.png" width="672" /></p>
+<p>By default, the linear smoother includes a 95% confidence interval band (the grey band around the blue line). To turn this off, we need to set the option <code>se</code> to <strong>FALSE</strong>, as below.</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
+   geom_point() +
+   geom_smooth(method=lm, color=&quot;blue&quot;,se=FALSE) +
+   ggtitle(&quot;Linear Smoother&quot;) +
+   theme(plot.title = element_text(hjust=0.5))</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-33-1.png" width="672" /></p>
+</div>
+<div id="extracting-the-linear-regression-results" class="section level4 unnumbered">
+<h4>Extracting the linear regression results</h4>
+<p>In GeoDa, a linear fit to the scatter plot also yields the results of the regression, such as the coefficients, their standard errors, p-values and an R<sup>2</sup> measure of fit. This is not the case in <strong>ggplot</strong> (by design).</p>
+<p>However, we can readily obtain these results from the <code>lm</code> function in base R. In its bare minimum, this function takes as arguments a <code>formula</code> and a data set (actually, the latter is not absolutely necessary, depending on how the variables are referred to). In our example, we specify the regression formula as <strong>pubast00 ~ kids2000</strong> and the data set as <strong>nyc.data</strong>.<a href="#fn8" class="footnote-ref" id="fnref8"><sup>8</sup></a></p>
+<p>Rather than just printing the results of the regression, we assign it to an object, <strong>reg1</strong> in our example below. We then apply the <code>summary</code> command to this object, which we assign to yet another object (<strong>reg1.sum</strong>). When we list the latter, we see a summary of the regression results.</p>
+<pre class="r"><code>reg1 &lt;- lm(pubast00 ~ kids2000, data=nyc.data)
+reg1.sum &lt;- summary(reg1)
+reg1.sum</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = pubast00 ~ kids2000, data = nyc.data)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -8.5284 -3.7925 -0.2762  3.6696  9.2054 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept) -5.61829    2.13013  -2.638   0.0109 *  
+## kids2000     0.39000    0.05645   6.909 6.32e-09 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 4.682 on 53 degrees of freedom
+## Multiple R-squared:  0.4739, Adjusted R-squared:  0.4639 
+## F-statistic: 47.73 on 1 and 53 DF,  p-value: 6.322e-09</code></pre>
+<p>The reason for taking what may seem like a circuitous route is that the summary object is simply a list of elements that correspond to aspects of the regression result. Of course, one needs to know what these are called, but, in doubt, a <code>str</code> command will reveal the full <em>structure</em>.</p>
+<pre class="r"><code>str(reg1.sum)</code></pre>
+<pre><code>## List of 11
+##  $ call         : language lm(formula = pubast00 ~ kids2000, data = nyc.data)
+##  $ terms        :Classes &#39;terms&#39;, &#39;formula&#39;  language pubast00 ~ kids2000
+##   .. ..- attr(*, &quot;variables&quot;)= language list(pubast00, kids2000)
+##   .. ..- attr(*, &quot;factors&quot;)= int [1:2, 1] 0 1
+##   .. .. ..- attr(*, &quot;dimnames&quot;)=List of 2
+##   .. .. .. ..$ : chr [1:2] &quot;pubast00&quot; &quot;kids2000&quot;
+##   .. .. .. ..$ : chr &quot;kids2000&quot;
+##   .. ..- attr(*, &quot;term.labels&quot;)= chr &quot;kids2000&quot;
+##   .. ..- attr(*, &quot;order&quot;)= int 1
+##   .. ..- attr(*, &quot;intercept&quot;)= int 1
+##   .. ..- attr(*, &quot;response&quot;)= int 1
+##   .. ..- attr(*, &quot;.Environment&quot;)=&lt;environment: R_GlobalEnv&gt; 
+##   .. ..- attr(*, &quot;predvars&quot;)= language list(pubast00, kids2000)
+##   .. ..- attr(*, &quot;dataClasses&quot;)= Named chr [1:2] &quot;numeric&quot; &quot;numeric&quot;
+##   .. .. ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;pubast00&quot; &quot;kids2000&quot;
+##  $ residuals    : Named num [1:55] -3.703 -6.222 -8.528 -0.276 -3.061 ...
+##   ..- attr(*, &quot;names&quot;)= chr [1:55] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...
+##  $ coefficients : num [1:2, 1:4] -5.6183 0.39 2.1301 0.0564 -2.6375 ...
+##   ..- attr(*, &quot;dimnames&quot;)=List of 2
+##   .. ..$ : chr [1:2] &quot;(Intercept)&quot; &quot;kids2000&quot;
+##   .. ..$ : chr [1:4] &quot;Estimate&quot; &quot;Std. Error&quot; &quot;t value&quot; &quot;Pr(&gt;|t|)&quot;
+##  $ aliased      : Named logi [1:2] FALSE FALSE
+##   ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;(Intercept)&quot; &quot;kids2000&quot;
+##  $ sigma        : num 4.68
+##  $ df           : int [1:3] 2 53 2
+##  $ r.squared    : num 0.474
+##  $ adj.r.squared: num 0.464
+##  $ fstatistic   : Named num [1:3] 47.7 1 53
+##   ..- attr(*, &quot;names&quot;)= chr [1:3] &quot;value&quot; &quot;numdf&quot; &quot;dendf&quot;
+##  $ cov.unscaled : num [1:2, 1:2] 0.206953 -0.005238 -0.005238 0.000145
+##   ..- attr(*, &quot;dimnames&quot;)=List of 2
+##   .. ..$ : chr [1:2] &quot;(Intercept)&quot; &quot;kids2000&quot;
+##   .. ..$ : chr [1:2] &quot;(Intercept)&quot; &quot;kids2000&quot;
+##  - attr(*, &quot;class&quot;)= chr &quot;summary.lm&quot;</code></pre>
+<p>For example, we see that the coefficients are in the list element <code>coefficients</code>. They can be extracted by means of the standard <code>$</code> notation.</p>
+<pre class="r"><code>reg1.sum$coefficients</code></pre>
+<pre><code>##               Estimate Std. Error   t value     Pr(&gt;|t|)
+## (Intercept) -5.6182932 2.13013007 -2.637535 1.093595e-02
+## kids2000     0.3899956 0.05644857  6.908866 6.322337e-09</code></pre>
+<p>Similarly, we can extract the R<sup>2</sup> and adjusted R<sup>2</sup>.</p>
+<pre class="r"><code>c(reg1.sum$r.squared,reg1.sum$adj.r.squared)</code></pre>
+<pre><code>## [1] 0.4738536 0.4639263</code></pre>
+<p>We can now use the text and labeling functionality of <strong>ggplot</strong> to place these results on the graph. We don’t pursue this any further.</p>
+</div>
+<div id="loess-smoother" class="section level4 unnumbered">
+<h4>Loess smoother</h4>
+<p>The default nonlinear smoother in <strong>ggplot</strong> uses the <strong>loess</strong> algorithm as a locally weighted regression model. This is similar in spirit to the <strong>LOWESS</strong> method used in GeoDa, but not the same.<a href="#fn9" class="footnote-ref" id="fnref9"><sup>9</sup></a> The implementation is along the same lines as the linear smoother, using <code>geom_smooth</code>, with the only difference that the <code>method</code> is now <code>loess</code>, as shown below.</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
+   geom_point() +
+   geom_smooth(method=loess, color=&quot;blue&quot;) +
+   ggtitle(&quot;Loess Smoother&quot;) +
+   theme(plot.title = element_text(hjust=0.5))</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-38-1.png" width="672" /></p>
+<p>As in any local regression method, an important parameter is how much of the data is used in the local fit, the so-called <code>span</code>. This is typically set to 2/3 of the data by default. A narrower span will yield a smoother that emphasizes local changes. In order to set the <code>span</code> parameter, we use the <code>stat_smooth</code> command. It is in all respects equivalent to <code>geom_smooth</code>, but allows for somewhat more flexibility.</p>
+<p>For example, we see the difference between the default and a smoother with a <code>span = 0.4</code>. We also turn off the confidence interval by setting <code>se = FALSE</code>.</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
+   stat_smooth(method=&quot;loess&quot;,span=0.4,color=&quot;blue&quot;,se=FALSE) +
+   geom_point() +
+   ggtitle(&quot;Loess Smoother - Span=0.4&quot;) +
+   theme(plot.title = element_text(hjust=0.5))</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-39-1.png" width="672" /></p>
+<p>And even more with a <code>span = 0.2</code>.</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
+   stat_smooth(method=&quot;loess&quot;,span=0.2,color=&quot;blue&quot;,se=FALSE) +
+   geom_point() +
+   ggtitle(&quot;Loess Smoother - Span=0.2&quot;) +
+   theme(plot.title = element_text(hjust=0.5))</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-40-1.png" width="672" /></p>
+</div>
+<div id="lowess-smoother" class="section level4 unnumbered">
+<h4>LOWESS smoother</h4>
+<p>The LOWESS smoother is not implemented in <strong>ggplot</strong>, but can be found in the <strong>Hmisc</strong> package. The approach taken illustrates an alternative way to compute a smoother, similar to the <code>stat_smooth</code> function in <strong>ggplot</strong>. The latter is equivalent to <code>geom_smooth</code>, but allows for non-standard geoms to visualize the results. We won’t pursue that here, but want to point out that this is the spirit in which the function <code>stat_plsmo</code> is implemented. The default is to use a span of 2/3 of the observations (the <code>stat_plsmo</code> command does not have a confidence interval option, so that we do not need to set <code>se</code>).</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
+   stat_plsmo(color=&quot;blue&quot;) +
+   geom_point() +
+   ggtitle(&quot;LOWESS Smoother&quot;) +
+   theme(plot.title = element_text(hjust=0.5))</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-41-1.png" width="672" /></p>
+<p>When compared to the <code>loess</code> results, we can distinguish minor differences. These become more pronounced when setting the <code>span=0.4</code>.</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
+   stat_plsmo(span=0.4,color=&quot;blue&quot;) +
+   geom_point() +
+   ggtitle(&quot;LOWESS Smoother - Span=0.4&quot;) +
+   theme(plot.title = element_text(hjust=0.5))</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-42-1.png" width="672" /></p>
+<p>And even more when setting the <code>span=0.2</code>.</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
+   stat_plsmo(span=0.2,color=&quot;blue&quot;) +
+   geom_point() +
+   ggtitle(&quot;LOWESS Smoother - Span=0.2&quot;) +
+   theme(plot.title = element_text(hjust=0.5))</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-43-1.png" width="672" /></p>
+</div>
+<div id="putting-it-all-together" class="section level4 unnumbered">
+<h4>Putting it all together</h4>
+<p>In GeoDa, it is easy to show both the linear and LOWESS smoother on the same plot. In order to accomplish the same in <strong>ggplot</strong>, we will use some of the really powerful customization options to create a graph that contains all three smoothing methods. We distinguish between them by setting the <code>color</code> argument in <code>aes</code> to the method. In other words, the color argument is not set to a variable, but to a constant. This will yield a different color for each of the methods. In order to highlight the curves themselves, we turn off <code>se</code> for <code>lm</code> and <code>loess</code>. The plot will include a legend by default, showing the color with the name of the method. The default title of the legend will be <code>color</code>, i.e., the argument used to reflect the categories. We override this by means of the <code>labs</code> command, and set <code>color=&quot;Method&quot;</code>. The result is as shown below.</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
+   stat_plsmo(aes(color=&quot;lowess&quot;)) +
+   geom_point() +
+   geom_smooth(aes(color=&quot;lm&quot;),method=lm,se=FALSE) +
+   geom_smooth(aes(color=&quot;loess&quot;),method=loess,se=FALSE) +
+   ggtitle(&quot;Comparison of Smoothing Methods&quot;) +
+   theme(plot.title = element_text(hjust=0.5)) +
+   labs(color=&quot;Method&quot;)</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-44-1.png" width="672" /></p>
+</div>
+</div>
+</div>
+<div id="spatial-heterogeneity" class="section level2 unnumbered">
+<h2>Spatial heterogeneity</h2>
+<p>In GeoDa, it is relatively straightforward to assess the structural stability of the regression coefficients across selected and unselected observations. The selection can be carried out interactively, from the scatter plot or from any other open view, through linking and brushing. The corresponding regression lines and coefficient information are updated dynamically. In R, this is not (yet) quite possible.</p>
+<p>To illustrate the visualization and assessment of spatial heterogeneity, we will assume we have a way to express the selection as a logical statement. As it turns out, the sub-boroughs in Manhattan have a <strong>CODE</strong> from 301 to 310, and the sub-boroughs in the Bronx have a <strong>CODE</strong> from 101 to 110. While this is not exactly the example given in the GeoDa workbook, it is easy enough to replicate.</p>
+<p>We will proceed by using the <code>mutate</code> command to create a new variable <strong>manbronx</strong> that matches this selection. For all practical purposes, this gives the same result as if we had selected these observations in a map. Then we will use this classification to create a scatterplot with a separate regression line for the selected and unselected observations, as well as for all the observations, mimicking the behavior of GeoDa (but in a static fashion).</p>
+<div id="structural-breaks-in-the-scatter-plot" class="section level3 unnumbered">
+<h3>Structural breaks in the scatter plot</h3>
+<p>The first step in our process is to create the new variable <strong>manbronx</strong> using <code>mutate</code>. We also use the <code>if_else</code> command from <strong>dplyr</strong> to create values for the new variable of <strong>Select</strong> when the condition is true, and <strong>Rest</strong> when the condition is false. The condition checks whether the values for <strong>CODE</strong> are between 300 and 311 (using the symbol <code>&amp;</code> for the logical <strong>and</strong>), <strong>or</strong> (using the symbol <code>|</code>) between 100 and 111, the codes for Manhattan and the Bronx. As a check, we list the values for our new variable (since there are only 55 observations, this is not too onerous).</p>
+<pre class="r"><code>nyc.data &lt;- nyc.data %&gt;% mutate(manbronx = if_else((CODE &gt; 300 &amp; CODE &lt; 311) | (CODE &gt; 100 &amp; CODE &lt; 111),&quot;Select&quot;,&quot;Rest&quot;))
+nyc.data$manbronx</code></pre>
+<pre><code>##  [1] &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;  
+##  [8] &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;  
+## [15] &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Select&quot; &quot;Select&quot; &quot;Select&quot; &quot;Select&quot;
+## [22] &quot;Select&quot; &quot;Select&quot; &quot;Select&quot; &quot;Select&quot; &quot;Select&quot; &quot;Select&quot; &quot;Select&quot;
+## [29] &quot;Select&quot; &quot;Select&quot; &quot;Select&quot; &quot;Select&quot; &quot;Select&quot; &quot;Select&quot; &quot;Select&quot;
+## [36] &quot;Select&quot; &quot;Select&quot; &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;  
+## [43] &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;  
+## [50] &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;   &quot;Rest&quot;</code></pre>
+<p>Next, we create the plot. There are several new elements that we introduce, highlighting the flexibility of <strong>ggplot</strong>. First, we set the color of the points to correspond with the two categories in the <strong>manbronx</strong> variable by specifying <code>aes(color=manbronx)</code> for <code>geom_point</code> (i.e., the aesthetic <strong>color</strong> is mapped to the values of the variable <strong>manbronx</strong>). Then, we create two separate linear regression lines, one for each category, again by setting <code>aes(color=manbronx)</code> in the <code>geom_smooth</code> command. In order not to overwhelm the graph, we turn the confidence band off (<code>se=FALSE</code>). To construct a regression line for the full sample, we again use <code>geom_smooth</code>, but now we set the color explicitly to <strong>black</strong>. Since this is outside the <code>aes</code> setting, the regression line is for the full sample. We next set the colors for selected and unselected observations to <strong>red</strong> and <strong>blue</strong>, to match the color code in GeoDa (the default setting will have <strong>Rest</strong> colored red, and <strong>Select</strong> blue, which is the opposite of the behavior in GeoDa). To accomplish this, we use <code>scale_color_manual</code> to set the <strong>values</strong> to <strong>blue</strong> and <strong>red</strong>, in this order (unselected comes first, since it matches FALSE in the logical statement). Finally, we use <code>labs</code> as before to specify the title for the legend to <strong>Selection</strong>, and add a centered title.</p>
+<p>Except for the aspect ratio, the result looks like what one would obtain in GeoDa.</p>
+<pre class="r"><code>ggplot(nyc.data,aes(x=kids2000,y=pubast00)) +
+  geom_point(aes(color=manbronx)) +
+  geom_smooth(aes(color=manbronx),method=lm,se=FALSE) +
+  geom_smooth(method=lm,se=FALSE,color=&quot;black&quot;) +
+  scale_color_manual(values=c(&quot;blue&quot;,&quot;red&quot;)) +
+  ggtitle(&quot;Spatial Heterogeneity&quot;) +
+  theme(plot.title = element_text(hjust=0.5)) +
+  labs(color=&quot;Selection&quot;)</code></pre>
+<p><img src="2_R_EDA_1_files/figure-html/unnamed-chunk-46-1.png" width="672" /></p>
+</div>
+<div id="chow-test" class="section level3 unnumbered">
+<h3>Chow test</h3>
+<p>In GeoDa, a Chow test on the equality of the regression coefficients between the selected and unselected observations is calculated on the fly and shown at the bottom of the scatter plot. This is not supported by <strong>ggplot</strong>, but we can run separate regressions for each subset using <code>lm</code>. We can also run the Chow test itself, using the <code>chow.test</code> command from the <strong>gap</strong> package.</p>
+<p>First, we create two subsets from the <strong>nyc.data</strong> by means of <code>filter</code>, based on the value of the <strong>manbronx</strong> variable. We call the two resulting subsets <strong>nyc.select</strong> and <strong>nyc.rest</strong>. We double check their size (there should be 20 selected observations and 35 unselected ones) using the <code>dim</code> command.</p>
+<pre class="r"><code>nyc.select &lt;- nyc.data %&gt;% filter(manbronx == &quot;Select&quot;)
+nyc.rest &lt;- nyc.data %&gt;% filter(manbronx == &quot;Rest&quot;)
+dim(nyc.select)</code></pre>
+<pre><code>## [1] 20 35</code></pre>
+<pre class="r"><code>dim(nyc.rest)</code></pre>
+<pre><code>## [1] 35 35</code></pre>
+<p>Next, we carry out two separate regressions, one for each subset, and list the results.</p>
+<pre class="r"><code>reg.select &lt;- lm(pubast00 ~ kids2000,data=nyc.select)
+reg.rest &lt;- lm(pubast00 ~ kids2000,data=nyc.rest)
+summary(reg.select)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = pubast00 ~ kids2000, data = nyc.select)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -7.0486 -1.4829  0.3248  2.0625  4.7156 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept) -4.74763    1.84198  -2.577    0.019 *  
+## kids2000     0.47225    0.05071   9.313 2.64e-08 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 3.406 on 18 degrees of freedom
+## Multiple R-squared:  0.8281, Adjusted R-squared:  0.8186 
+## F-statistic: 86.73 on 1 and 18 DF,  p-value: 2.639e-08</code></pre>
+<pre class="r"><code>summary(reg.rest)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = pubast00 ~ kids2000, data = nyc.rest)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -6.4415 -2.8231 -0.3905  1.9686  8.2359 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept) -7.01398    3.33123  -2.106 0.042939 *  
+## kids2000     0.37260    0.08648   4.308 0.000139 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 3.957 on 33 degrees of freedom
+## Multiple R-squared:   0.36,  Adjusted R-squared:  0.3406 
+## F-statistic: 18.56 on 1 and 33 DF,  p-value: 0.0001391</code></pre>
+<p>These values match what we would have obtained in GeoDa with the same observations selected.</p>
+<p>Finally, we implement the Chow test as <code>chow.test</code>. We pass the y and x variables for each subset, in turn. Again, the results are the same as what one would have obtained in GeoDa.</p>
+<pre class="r"><code>chow &lt;- chow.test(nyc.select$pubast00,nyc.select$kids2000,
+                  nyc.rest$pubast00,nyc.rest$kids2000)
+chow</code></pre>
+<pre><code>##      F value        d.f.1        d.f.2      P value 
+## 1.534013e+01 2.000000e+00 5.100000e+01 6.082099e-06</code></pre>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>University of Chicago, Center for Spatial Data Science – <a href="mailto:anselin@uchicago.edu">anselin@uchicago.edu</a>,<a href="mailto:morrisonge@uchicago.edu">morrisonge@uchicago.edu</a><a href="#fnref1" class="footnote-back">↩</a></p></li>
+<li id="fn2"><p>Use <code>setwd(directorypath)</code> to specify the working directory.<a href="#fnref2" class="footnote-back">↩</a></p></li>
+<li id="fn3"><p>Use <code>install.packages(packagename)</code>.<a href="#fnref3" class="footnote-back">↩</a></p></li>
+<li id="fn4"><p>Note that, strictly speaking, the package is <strong>ggplot2</strong>, i.e., the second iteration of the <strong>ggplot</strong> package, but the commands use <strong>ggplot</strong>. From now on, we will use <strong>ggplot</strong> to refer to both.<a href="#fnref4" class="footnote-back">↩</a></p></li>
+<li id="fn5"><p>In order to obtain the frequency on the vertical axis, the y variable needs to be set to <code>..density..</code>, as in <code>aes(y = ..density..)</code>.<a href="#fnref5" class="footnote-back">↩</a></p></li>
+<li id="fn6"><p>For a fuller technical description, see the GeoDa workbook.<a href="#fnref6" class="footnote-back">↩</a></p></li>
+<li id="fn7"><p>This can be checked in GeoDa by selecting the corresponding points and checking their value in the Table.<a href="#fnref7" class="footnote-back">↩</a></p></li>
+<li id="fn8"><p>A <strong>formula</strong> in R is the generic way to specify a functional relationship. The dependent variable is on the left hand side of the <strong>~</strong> sign, with an expression for the explanatory variables on the right hand side. The latter are typically separated by <strong>+</strong>, but in our example, we only have a bivariate relationship. Also, a constant term is included by default.<a href="#fnref8" class="footnote-back">↩</a></p></li>
+<li id="fn9"><p>See the GeoDa workbook for further discussion<a href="#fnref9" class="footnote-back">↩</a></p></li>
+</ol>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
