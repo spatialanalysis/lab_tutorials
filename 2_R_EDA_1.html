@@ -11,7 +11,7 @@
 
 <meta name="author" content="Luc Anselin and Grant Morrison" />
 
-<meta name="date" content="2018-08-08" />
+<meta name="date" content="2018-08-09" />
 
 <title>Exploratory Data Analysis 1</title>
 
@@ -126,7 +126,7 @@ $(document).ready(function () {
 <h1 class="title toc-ignore">Exploratory Data Analysis 1</h1>
 <h3 class="subtitle"><em>R Notes</em></h3>
 <h4 class="author"><em>Luc Anselin and Grant Morrison<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></em></h4>
-<h4 class="date"><em>08/08/2018</em></h4>
+<h4 class="date"><em>08/09/2018</em></h4>
 
 </div>
 
@@ -189,7 +189,7 @@ $(document).ready(function () {
 <h3>Objectives</h3>
 <p>After completing the notebook, you should know how to carry out the following tasks:</p>
 <ul>
-<li><p>Creating basic univariate plots, such as histogram and box plot</p></li>
+<li><p>Creating basic univariate plots, i.e., histogram and box plot</p></li>
 <li><p>Creating a scatter plot</p></li>
 <li><p>Implementing different smoothing methods in a scatter plot (linear, loess, and lowess)</p></li>
 <li><p>Showing linear fits for different subsets of the data (spatial heterogeneity)</p></li>
@@ -247,29 +247,8 @@ library(Hmisc)</code></pre>
 <pre><code>## The following objects are masked from &#39;package:base&#39;:
 ## 
 ##     format.pval, units</code></pre>
-<pre class="r"><code>library(shiny)
-library(plotly)</code></pre>
-<pre><code>## 
-## Attaching package: &#39;plotly&#39;</code></pre>
-<pre><code>## The following object is masked from &#39;package:Hmisc&#39;:
-## 
-##     subplot</code></pre>
-<pre><code>## The following object is masked from &#39;package:ggplot2&#39;:
-## 
-##     last_plot</code></pre>
-<pre><code>## The following object is masked from &#39;package:stats&#39;:
-## 
-##     filter</code></pre>
-<pre><code>## The following object is masked from &#39;package:graphics&#39;:
-## 
-##     layout</code></pre>
 <pre class="r"><code>library(gap)</code></pre>
 <pre><code>## gap version 1.1-22</code></pre>
-<pre><code>## 
-## Attaching package: &#39;gap&#39;</code></pre>
-<pre><code>## The following object is masked from &#39;package:shiny&#39;:
-## 
-##     h2</code></pre>
 </div>
 <div id="obtaining-the-data" class="section level3 unnumbered">
 <h3>Obtaining the data</h3>
@@ -370,7 +349,7 @@ names(nyc.data)</code></pre>
 <div id="spiffing-up-the-graph" class="section level4 unnumbered">
 <h4>Spiffing up the graph</h4>
 <p>The graph as shown is just rudimentary. There are many options in <strong>ggplot</strong> to change the appearance of the graph, too many to cover here. But to illustrate some basic features, below, we add a label for the x and y axes using <code>xlab</code> and <code>ylab</code>, and a title for the graph with <code>ggtitle</code>. An unfortunate aspect of the latter is that it left aligns the text, whereas we would typically want it to be centered over the graph.</p>
-<p>We can adjust this using the very powerful <code>theme</code> option. But first the basics. Every graph has a theme, which sets the main parameters for its appearance. For example, the default theme with the grey grids, separated by white lines is <code>theme_grey( )</code>. If we want to change this, we can specify one of the other themes. For example, a classic graph a la base R plot, without background shading or grid lines is <code>theme_classic( )</code>. In order to obtain this specialized <em>look</em>, we set the associated <code>theme</code> command. Our histogram in this theme looks as follows, with a label on the x and y axis, and a title (and back to 7 bins).</p>
+<p>We can adjust this using the very powerful <code>theme</code> option. But first the basics. Every graph has a theme, which sets the main parameters for its appearance. The default theme with the grey grids, separated by white lines is <code>theme_grey( )</code>. If we want to change this, we can specify one of the other themes. For example, a classic graph a la base R plot, without background shading or grid lines is <code>theme_classic( )</code>. In order to obtain this specialized <em>look</em>, we set the associated <code>theme</code> command. Our histogram in this theme looks as follows, with a label on the x and y axis, and a title (and back to 7 bins).</p>
 <pre class="r"><code>ggplot(data=nyc.data,aes(kids2009)) +
   geom_histogram(bins=7) +
   xlab(&quot;Percent kids in 2009&quot;) +
@@ -406,7 +385,7 @@ names(nyc.data)</code></pre>
 <div id="histogram-summary-statistics" class="section level4 unnumbered">
 <h4>Histogram summary statistics</h4>
 <p>The histogram in GeoDa has an option to display the contents of each bin as well as some descriptive statistics.</p>
-<p>As anything in R, the plot created by <strong>ggplot</strong> is nothing but an object. When we enter the commands as above, starting with <strong>ggplot</strong>, the result is drawn directly to the screen. But we can also assign the plot object to a variable. This variable will then contain all the information needed to draw the graph, which includes the <code>count</code> of observations in each bin, the min and max values for each bin, etc. For example, we can assign our histogram plot to the <strong>plot.data</strong> object, and then extract the information using the <code>layer_data</code> function.</p>
+<p>As anything in R, the plot created by <strong>ggplot</strong> is nothing but an object. When we enter the commands as above, starting with <strong>ggplot</strong>, the result is drawn directly to the screen. But we can also assign the plot object to a variable. This variable will then contain all the information needed to draw the graph, which includes the <code>count</code> of observations in each bin, the min and max values for each bin, etc. For example, we can assign our histogram plot to the <strong>plot.data</strong> object, and then extract the information using the <code>layer_data</code> function. The result is a data frame.</p>
 <pre class="r"><code>plot.data &lt;- ggplot(data=nyc.data,aes(kids2009)) +
   geom_histogram(bins=7) +
   xlab(&quot;Percent kids in 2009&quot;) +
@@ -750,7 +729,8 @@ reg1.sum</code></pre>
 </div>
 <div id="putting-it-all-together" class="section level4 unnumbered">
 <h4>Putting it all together</h4>
-<p>In GeoDa, it is easy to show both the linear and LOWESS smoother on the same plot. In order to accomplish the same in <strong>ggplot</strong>, we will use some of the really powerful customization options to create a graph that contains all three smoothing methods. We distinguish between them by setting the <code>color</code> argument in <code>aes</code> to the method. In other words, the color argument is not set to a variable, but to a constant. This will yield a different color for each of the methods. In order to highlight the curves themselves, we turn off <code>se</code> for <code>lm</code> and <code>loess</code>. The plot will include a legend by default, showing the color with the name of the method. The default title of the legend will be <code>color</code>, i.e., the argument used to reflect the categories. We override this by means of the <code>labs</code> command, and set <code>color=&quot;Method&quot;</code>. The result is as shown below.</p>
+<p>In GeoDa, it is easy to show both the linear and LOWESS smoother on the same plot. In order to accomplish the same in <strong>ggplot</strong>, we will use some of the really powerful customization options to create a graph that contains all three smoothing methods. We distinguish between them by setting the <code>color</code> argument in <code>aes</code> to the name of the method, in essence a constant (not a variable).</p>
+<p>In other words, the color argument to <code>aes</code> is not set to a variable, where it would take a different color depending on the value of that variable, but to a constant, where the color is fixed. This will yield a different color for each of the methods. In order to highlight the curves themselves, we turn off <code>se</code> for <code>lm</code> and <code>loess</code>. The plot will include a legend by default, showing the color with the name of the method. The default title of the legend will be <code>color</code>, i.e., the argument used to reflect the categories. We override this by means of the <code>labs</code> command (for legend labeling), and set <code>color=&quot;Method&quot;</code>. The result is as shown below.</p>
 <pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
    stat_plsmo(aes(color=&quot;lowess&quot;)) +
    geom_point() +
@@ -845,7 +825,7 @@ summary(reg.select)</code></pre>
 ## Multiple R-squared:   0.36,  Adjusted R-squared:  0.3406 
 ## F-statistic: 18.56 on 1 and 33 DF,  p-value: 0.0001391</code></pre>
 <p>These values match what we would have obtained in GeoDa with the same observations selected.</p>
-<p>Finally, we implement the Chow test as <code>chow.test</code>. We pass the y and x variables for each subset, in turn. Again, the results are the same as what one would have obtained in GeoDa.</p>
+<p>Finally, we implement the Chow test as <code>chow.test</code>. We pass the y and x variables for each subset, in turn. Again, the results are the same as what one would have obtained in GeoDa and suggest a significant difference between the slopes of the two regression lines.</p>
 <pre class="r"><code>chow &lt;- chow.test(nyc.select$pubast00,nyc.select$kids2000,
                   nyc.rest$pubast00,nyc.rest$kids2000)
 chow</code></pre>

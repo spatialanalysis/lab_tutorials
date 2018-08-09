@@ -2,7 +2,7 @@
 title: "Exploratory Data Analysis 1"
 subtitle: "R Notes"
 author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
-date: "08/08/2018"
+date: "08/09/2018"
 output:
   html_document:
     fig_caption: yes
@@ -28,12 +28,11 @@ on data structures and other R particulars. Also, as always in R, there are typi
 For this notebook, we will use socioeconomic data for 55 New York City sub-boroughs from the GeoDa website. Our goal in this lab is show how to implement exploratory data analysis methods that
 deal with one (univariate) and two (bivariate) variables. 
 
-
 ### Objectives {-}
 
 After completing the notebook, you should know how to carry out the following tasks:
 
-- Creating basic univariate plots, such as histogram and box plot
+- Creating basic univariate plots, i.e., histogram and box plot
 
 - Creating a scatter plot
 
@@ -92,8 +91,6 @@ in the **tidyverse** package collection.
 library(tidyverse)
 library(ggthemes)
 library(Hmisc)
-library(shiny)
-library(plotly)
 library(gap)
 ```
 
@@ -219,7 +216,7 @@ of the latter is that it left aligns the text, whereas we would typically want i
 
 We can adjust this using the very powerful `theme`
 option. But first the basics. Every graph has a theme, which sets the main parameters for its appearance.
-For example, the default theme with the grey grids, separated by white lines is
+The default theme with the grey grids, separated by white lines is
 `theme_grey( )`. If we want to change this, we can specify one of the other
 themes. For example, a classic graph a la base R plot, without background
 shading or grid lines is `theme_classic( )`. In order to obtain this specialized *look*, we set the associated `theme` command.
@@ -288,7 +285,7 @@ The histogram in GeoDa has an option to display the contents of
 each bin as well as some descriptive statistics.
 
 As anything in R, the plot created by **ggplot** is nothing but an object. When we enter the commands as above, starting with **ggplot**, the result is drawn directly to the screen. But we can also assign the plot object to a variable. This variable will then contain all the information needed to draw the graph, which includes the `count` of observations in each bin, the min and max values for each bin, etc. For example, we can assign our histogram plot to the **plot.data** object, and then extract the
-information using the `layer_data` function.
+information using the `layer_data` function. The result is a data frame.
 
 ```{r}
 plot.data <- ggplot(data=nyc.data,aes(kids2009)) +
@@ -747,13 +744,14 @@ In GeoDa, it is easy to show both the linear and LOWESS smoother on the
 same plot. In order to accomplish the same in **ggplot**, we 
 will use some of the really powerful customization options to 
 create a graph that contains all three smoothing methods. We distinguish
-between them by setting the `color` argument in `aes` to the method.
-In other words, the color argument is not set to a variable, but to a constant.
+between them by setting the `color` argument in `aes` to the name of the method, in essence a constant (not a variable).
+
+In other words, the color argument to `aes` is not set to a variable, where it would take a different color depending on the value of that variable, but to a constant, where the color is fixed.
 This will yield a different color for each of the methods. In order to 
 highlight the curves themselves, we turn off `se` for `lm` and `loess`.
 The plot will include a legend by default, showing the color with the name
 of the method. The default title of the legend will be `color`, i.e., the
-argument used to reflect the categories. We override this by means of the `labs` command, and set `color="Method"`. The result is as shown below.
+argument used to reflect the categories. We override this by means of the `labs` command (for legend labeling), and set `color="Method"`. The result is as shown below.
 
 ```{r}
 ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
@@ -845,7 +843,7 @@ summary(reg.rest)
 
 These values match what we would have obtained in GeoDa with the same observations selected.
 
-Finally, we implement the Chow test as `chow.test`. We pass the y and x variables for each subset, in turn. Again, the results are the same as what one would have obtained in GeoDa.
+Finally, we implement the Chow test as `chow.test`. We pass the y and x variables for each subset, in turn. Again, the results are the same as what one would have obtained in GeoDa and suggest a significant difference between the slopes of the two regression lines.
 
 ```{r}
 chow <- chow.test(nyc.select$pubast00,nyc.select$kids2000,
