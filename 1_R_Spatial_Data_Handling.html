@@ -11,7 +11,7 @@
 
 <meta name="author" content="Luc Anselin and Grant Morrison" />
 
-<meta name="date" content="2018-08-01" />
+<meta name="date" content="2018-08-07" />
 
 <title>Spatial Data Handling</title>
 
@@ -126,7 +126,7 @@ $(document).ready(function () {
 <h1 class="title toc-ignore">Spatial Data Handling</h1>
 <h3 class="subtitle"><em>R Notes</em></h3>
 <h4 class="author"><em>Luc Anselin and Grant Morrison<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></em></h4>
-<h4 class="date"><em>08/01/2018</em></h4>
+<h4 class="date"><em>08/07/2018</em></h4>
 
 </div>
 
@@ -314,7 +314,7 @@ head(vehicle.data)</code></pre>
 ## 6        Yellow                       2      1171572      1899604    60661</code></pre>
 <p>A quick glance at the table reveals quite a bit of missing information, something we will have to deal with. We also check the dimension of this data frame using the <code>dim</code> command:</p>
 <pre class="r"><code>dim(vehicle.data)</code></pre>
-<pre><code>## [1] 200657     26</code></pre>
+<pre><code>## [1] 201299     26</code></pre>
 <p>The table has 200,657 observations on 26 variables (the number of observations may be different as the table is constantly updated).</p>
 <p>In RStudio, the type of the variable in each column is listed under its name. For example, under <strong>creation_date</strong>, we see <strong>S3: POSIXct</strong>. You can also find out the same information by applying a <code>class</code> command to the variable <strong>vehicle.data$creation_date</strong>, as in</p>
 <pre class="r"><code>class(vehicle.data$creation_date)</code></pre>
@@ -445,7 +445,7 @@ head(vehicles.final)</code></pre>
 <div id="creating-a-point-layer-from-coordinates-in-a-table---principle" class="section level3 unnumbered">
 <h3>Creating a point layer from coordinates in a table - principle</h3>
 <p>In <strong>sf</strong>, a simple features object is constructed by combining a <em>geometry</em> with the actual data (in a data frame). However, this is simplified for <em>point objects</em> when the data frame contains the coordinates as variables. This is the case in our example, where we have latitude and longitude. We also have x and y, but since we are not sure what projection these coordinates correspond with, they are not useful at this stage.</p>
-<p>The advantage of lat-lon is that they are decimal degrees, and thus unprojected. However, we can provide the information on the datum, typically WGS84 (the standard used in most applications for decimal degrees) by passing the coordinate reference system argument (<strong>crs</strong>) set to the <strong>EPSG</strong> code 4326. After that, we can use the built-in projection transformation functionality in <strong>sf</strong> to turn the points into any projection we want.<a href="#fn4" class="footnote-ref" id="fnref4"><sup>4</sup></a></p>
+<p>The advantage of lat-lon is that they are decimal degrees, and thus unprojected. However, we can provide the information on the datum, typically WGS84 (the standard used in most applications for decimal degrees) by passing the coordinate reference system argument (<code>crs</code>) set to the <strong>EPSG</strong> code 4326. After that, we can use the built-in projection transformation functionality in <strong>sf</strong> to turn the points into any projection we want.<a href="#fn4" class="footnote-ref" id="fnref4"><sup>4</sup></a></p>
 <div id="missing-coordinates" class="section level4 unnumbered">
 <h4>Missing coordinates</h4>
 <p>In order to create a points layer, we need coordinates for every observation. However, as we can see from the <code>head</code> command above, there are (at least) two observations that do not have lat-lon information. Before we can proceed, we need to remove these from the data frame.</p>
@@ -461,9 +461,9 @@ dim(vehicle.coord)</code></pre>
 <p>The <strong>sf</strong> package turns a non-spatial object like a data frame into a simple features spatial object by means of the <code>st_as_sf</code> function. This function can take a large number of arguments, but for now we will only use a few:</p>
 <ul>
 <li><p>the name of the data frame, i.e., vehicle.coord</p></li>
-<li><p><strong>coords</strong>: the variable names for x and y (given in parentheses)</p></li>
-<li><p><strong>crs</strong>: the coordinate reference system, here using the EPSG code of 4326</p></li>
-<li><p><strong>agr</strong>: the so-called attibute-geometry-relationship which specifies how the attribute information (the data) relate to the geometry (the points); in our example, we will use “constant”</p></li>
+<li><p><code>coords</code>: the variable names for x and y (given in parentheses)</p></li>
+<li><p><code>crs</code>: the coordinate reference system, here using the EPSG code of 4326</p></li>
+<li><p><code>agr</code>: the so-called attibute-geometry-relationship which specifies how the attribute information (the data) relate to the geometry (the points); in our example, we will use “constant”</p></li>
 </ul>
 <p>In our example, we create <strong>vehicle.points</strong> and check its class.</p>
 <pre class="r"><code>vehicle.points = st_as_sf(vehicle.coord, coords = c(&quot;lon&quot;, &quot;lat&quot;), crs = 4326, agr = &quot;constant&quot;)
@@ -497,7 +497,7 @@ class(chicago.comm)</code></pre>
 <pre><code>## Coordinate Reference System:
 ##   EPSG: 4326 
 ##   proj4string: &quot;+proj=longlat +datum=WGS84 +no_defs&quot;</code></pre>
-<p>Again, the layer is unprojected in decimal degrees. Also, a quick <code>plot</code>.</p>
+<p>Again, the layer is unprojected in decimal degrees. Also, a quick <code>plot</code>. Note that, by default, <strong>sf</strong> draws a choropleth map for each variable included in the data frame. Since we won’t be using <strong>sf</strong> for mapping, we ignore that aspect for now.</p>
 <pre class="r"><code>plot(chicago.comm)</code></pre>
 <p><img src="1_R_Spatial_Data_Handling_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
 <p>We also use <code>head</code> to check on the types of the variables.</p>
@@ -641,13 +641,13 @@ head(veh.cnts)</code></pre>
 pop.dat &lt;- pdf_text(pdf.file)
 class(pop.dat)</code></pre>
 <pre><code>## [1] &quot;character&quot;</code></pre>
-<p>We check the length of the data object using the <strong>length</strong> command and find that indeed it has only two elements (one for each page).</p>
+<p>We check the length of the data object using the <code>length</code> command and find that indeed it has only two elements (one for each page).</p>
 <pre class="r"><code>length(pop.dat)</code></pre>
 <pre><code>## [1] 2</code></pre>
 </div>
 <div id="parsing-the-pdf-file" class="section level3 unnumbered">
 <h3>Parsing the pdf file</h3>
-<p>The <strong>pop.dat</strong> object has two entries, one for each page. Each entry is a string. So, when you check the length of each item, it may be surprising that its <strong>length</strong> is only 1. That is because the underlying structure is unknown, it is simply a collection of characters. For example, the first element, <strong>pop.dat[[1]]</strong>:</p>
+<p>The <strong>pop.dat</strong> object has two entries, one for each page. Each entry is a single string. So, when you check the length of each item, it may be surprising that its <strong>length</strong> is only 1. That is because the underlying structure is unknown, it is simply a collection of characters contained in the string. For example, the first element, <strong>pop.dat[[1]]</strong>:</p>
 <pre class="r"><code>length(pop.dat[[1]])</code></pre>
 <pre><code>## [1] 1</code></pre>
 <p>We will parse this file by first turning each element into a separate list and then extracting the parts we are interested in.</p>
@@ -656,8 +656,8 @@ class(pop.dat)</code></pre>
 <pre class="r"><code>nnlist &lt;- &quot;&quot;
 nnlist</code></pre>
 <pre><code>## [1] &quot;&quot;</code></pre>
-<p>Next, we create a list of strings, one for each line in the table, by using the <code>strsplit</code> operation. This splits the long string into a list of one string for each line, by using the return character <strong>\n</strong> as the separator (the value for the <strong>split</strong> argument).</p>
-<p>The resulting list, <strong>pop.dat[[1]]</strong>, contains a list of 44 elements, matching the contents of the first page of the pdf file.</p>
+<p>Next, we create a list of strings, one for each line in the table, by using the <code>strsplit</code> operation. This splits the long string into a list of one string for each line, by using the return character <strong>\n</strong> as the separator (the value for the <code>split</code> argument).</p>
+<p>The resulting list, <strong>ppage</strong>, contains a list of 44 elements, matching the contents of the first page of the pdf file.</p>
 <pre class="r"><code>ppage &lt;- strsplit(pop.dat[[1]],split=&quot;\n&quot;)
 ppage[[1]]</code></pre>
 <pre><code>##  [1] &quot;                          CITY OF CHICAGO&quot;                               
@@ -704,7 +704,7 @@ ppage[[1]]</code></pre>
 ## [42] &quot; 38 Grand Boulevard          21,929     28,006        -6,077    -21.7%&quot;  
 ## [43] &quot; 39 Kenwood                  17,841     18,363         -522      -2.8%&quot;  
 ## [44] &quot; 40 Washington Park          11,717     14,146        -2,429    -17.2%&quot;</code></pre>
-<p>Each element is one long string, corresponding to a table row. We remove the first four lines (using the - operation on the list elements 1 through 4).</p>
+<p>Each element is one long string, corresponding to a table row. We remove the first four lines (using the - operation on the list elements 1 through 4). These first rows appear on each page, so we are safe to repeat this procedure for the second page (string) as well.</p>
 <pre class="r"><code>nni &lt;- ppage[[1]]
 nni &lt;- nni[-(1:4)]
 nni</code></pre>
@@ -888,7 +888,7 @@ for (i in 1:2) {
 </div>
 <div id="extracting-the-population-values" class="section level3">
 <h3>Extracting the population values</h3>
-<p>We first initialize a vector of zeros to hold the population values. It is the preferred approach to initialize a vector first if one knows its size, rather than having it grow by appending rows or columns. We use the <code>vector</code> command and specify the <strong>mode</strong> to <strong>numeric</strong> and give the <strong>length</strong> as the length of the list.</p>
+<p>We first initialize a vector of zeros to hold the population values. It is the preferred approach to initialize a vector first if one knows its size, rather than having it grow by appending rows or columns. We use the <code>vector</code> command and specify the <code>mode=&quot;numeric&quot;</code> and give the <code>length</code> as the length of the list.</p>
 <pre class="r"><code>nnpop &lt;- vector(mode=&quot;numeric&quot;,length=length(nnlist))</code></pre>
 <p>We again will use a loop to process each element of the list (each line of the table) one by one. We use the <code>substr</code> command to extract the characters between position 27 and 39 (these values were determined after taking a careful look at the structure of the table). However, there is still a problem, since the population values contain commas. We now do two things in one line of code. First, we use <code>gsub</code> to substitute the comma character by an empty <strong>“”</strong>. We turn the result into a numeric value by means of <code>as.numeric</code>. We then assign this number to position <strong>i</strong> of the vector. The resulting vector <strong>nnpop</strong> contains the population for each of the community areas.</p>
 <pre class="r"><code>for (i in (1:length(nnlist))) {
@@ -953,7 +953,7 @@ head(chicago.comm)</code></pre>
 ## # ... with 5 more variables: comarea &lt;chr&gt;, shape_len &lt;chr&gt;,
 ## #   AGG.COUNT &lt;int&gt;, POP2010 &lt;dbl&gt;, geometry &lt;MULTIPOLYGON [m]&gt;</code></pre>
 <p>We will now create a new variable using the <strong>tidyverse</strong> <code>mutate</code> command as the ratio of vehicle counts per 1000 population.</p>
-<pre class="r"><code>chicago.comm &lt;- chicago.comm %&gt;% mutate(vehpcap = AGG.COUNT / POP2010 * 1000) 
+<pre class="r"><code>chicago.comm &lt;- chicago.comm %&gt;% mutate(vehpcap = (AGG.COUNT / POP2010) * 1000) 
 head(chicago.comm)</code></pre>
 <pre><code>## Simple feature collection with 6 features and 12 fields
 ## geometry type:  MULTIPOLYGON
@@ -984,7 +984,7 @@ head(chicago.comm)</code></pre>
 <div id="optional---save-the-community-area-file-as-a-shape-file" class="section level4">
 <h4>Optional - save the community area file as a shape file</h4>
 <p>Finally, we can write the community area layer to the working directory. Note that, so far, all operations have been carried out in memory, and when you close the program, everything may be lost (unless you save your workspace).</p>
-<p>We can write the community area to a shape file (actually, four files contained in a directory) by means of the <strong>sf</strong> command <code>st_write</code>. This command has many options, but we just use the minimal ones. The <strong>chicago.comm</strong> object will be written to a set of files in the directory <strong>chicago_vehicles</strong> using the <strong>ESRI Shapefile</strong> format.</p>
+<p>We can write the community area to a shape file (actually, four files contained in a directory) by means of the <strong>sf</strong> command <code>st_write</code>. This command has many options, but we just use the minimal ones. The <strong>chicago.comm</strong> object will be written to a set of files in the directory <strong>chicago_vehicles</strong> using the <strong>ESRI Shapefile</strong> format. Note that if the directory already exists, it should be deleted or renamed first, since <code>st_write</code> only creates a new directory. Otherwise, there will be an error message.</p>
 <pre class="r"><code>st_write(chicago.comm,&quot;chicago_vehicles&quot;,driver=&quot;ESRI Shapefile&quot;)</code></pre>
 <pre><code>## Writing layer `chicago_vehicles&#39; to data source `chicago_vehicles&#39; using driver `ESRI Shapefile&#39;
 ## features:       77

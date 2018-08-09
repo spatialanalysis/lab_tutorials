@@ -2,7 +2,7 @@
 title: "Spatial Data Handling"
 subtitle: "R Notes"
 author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
-date: "08/01/2018"
+date: "08/07/2018"
 output:
   html_document:
     fig_caption: yes
@@ -219,7 +219,7 @@ In **sf**, a simple features object is constructed by combining a *geometry* wit
 The advantage of lat-lon is that they are decimal degrees, and thus unprojected. 
 However, we can provide the information on the datum, typically WGS84 (the standard
 used in most applications for decimal degrees) by passing the coordinate reference
-system argument (**crs**) set to the **EPSG** code 4326. After that, we can
+system argument (`crs`) set to the **EPSG** code 4326. After that, we can
 use the built-in projection transformation functionality in **sf** to turn the points into any projection we want.^[A good resource on coordinate reference systems is the [spatialreference.org](http://spatialreference.org) site, which contains thousands of references in a variety of commonly used formats.]
 
 #### Missing coordinates {-}
@@ -243,11 +243,11 @@ simple features spatial object by means of the `st_as_sf` function. This functio
 
 - the name of the data frame, i.e., vehicle.coord
 
-- **coords**: the variable names for x and y (given in parentheses)
+- `coords`: the variable names for x and y (given in parentheses)
 
-- **crs**: the coordinate reference system, here using the EPSG code of 4326
+- `crs`: the coordinate reference system, here using the EPSG code of 4326
 
-- **agr**: the so-called attibute-geometry-relationship which specifies how the attribute information (the data) relate to the geometry (the points); in our
+- `agr`: the so-called attibute-geometry-relationship which specifies how the attribute information (the data) relate to the geometry (the points); in our
 example, we will use "constant"
 
 In our example, we create **vehicle.points** and check its class.
@@ -302,7 +302,8 @@ In addition, we check the projection information using `st_crs`.
 st_crs(chicago.comm)
 ```
 
-Again, the layer is unprojected in decimal degrees. Also, a quick `plot`.
+Again, the layer is unprojected in decimal degrees. Also, a quick `plot`. Note that,
+by default, **sf** draws a choropleth map for each variable included in the data frame. Since we won't be using **sf** for mapping, we ignore that aspect for now.
 
 ```{r}
 plot(chicago.comm)
@@ -457,7 +458,7 @@ pop.dat <- pdf_text(pdf.file)
 class(pop.dat)
 ```
 
-We check the length of the data object using the **length** command and find that indeed it has only two elements (one for each page).
+We check the length of the data object using the `length` command and find that indeed it has only two elements (one for each page).
 
 ```{r}
 length(pop.dat)
@@ -465,7 +466,7 @@ length(pop.dat)
 
 ### Parsing the pdf file {-}
 
-The **pop.dat** object has two entries, one for each page. Each entry is a string. So, when you check the length of each item, it may be surprising that its **length** is only 1. That is because the underlying structure is unknown, it is simply a collection of characters. For example, the first element, **pop.dat[[1]]**:
+The **pop.dat** object has two entries, one for each page. Each entry is a single string. So, when you check the length of each item, it may be surprising that its **length** is only 1. That is because the underlying structure is unknown, it is simply a collection of characters contained in the string. For example, the first element, **pop.dat[[1]]**:
 
 ```{r}
 length(pop.dat[[1]])
@@ -486,16 +487,16 @@ nnlist
 
 Next, we create a list of strings, one for each line in the table, by using the
 `strsplit` operation. This splits
-the long string into a list of one string for each line, by using the return character **\\n** as the separator (the value for the **split** argument).
+the long string into a list of one string for each line, by using the return character **\\n** as the separator (the value for the `split` argument).
 
-The resulting list, **pop.dat[[1]]**, contains a list of 44 elements, matching the contents of the first page of the pdf file.
+The resulting list, **ppage**, contains a list of 44 elements, matching the contents of the first page of the pdf file.
 
 ```{r}
 ppage <- strsplit(pop.dat[[1]],split="\n")
 ppage[[1]]
 ```
 
-Each element is one long string, corresponding to a table row. We remove the first four lines (using the - operation on the list elements 1 through 4).
+Each element is one long string, corresponding to a table row. We remove the first four lines (using the - operation on the list elements 1 through 4). These first rows appear on each page, so we are safe to repeat this procedure for the second page (string) as well.
 
 ```{r}
 nni <- ppage[[1]]
@@ -545,7 +546,7 @@ nnlist <- nnlist[2:(length(nnlist)-1)]
 
 We first initialize a vector of zeros to hold the population values. It is the preferred approach to 
 initialize a vector first if one knows its size, rather than having it grow by appending rows or columns.
-We use the `vector` command and specify the **mode** to **numeric** and give the **length** as the
+We use the `vector` command and specify the `mode="numeric"` and give the `length` as the
 length of the list.
 
 ```{r}
@@ -611,7 +612,7 @@ We will now create a new variable using the **tidyverse** `mutate` command as th
 of vehicle counts per 1000 population.
 
 ```{r}
-chicago.comm <- chicago.comm %>% mutate(vehpcap = AGG.COUNT / POP2010 * 1000) 
+chicago.comm <- chicago.comm %>% mutate(vehpcap = (AGG.COUNT / POP2010) * 1000) 
 head(chicago.comm)
 ```
 
@@ -637,7 +638,9 @@ We can write the community area to a shape file (actually, four files contained
 in a directory) by means of the **sf** command `st_write`. This command has many
 options, but we just use the minimal ones. The **chicago.comm** object will 
 be written to a set of files in the directory **chicago_vehicles** using the 
-**ESRI Shapefile** format.
+**ESRI Shapefile** format. Note that if the directory already exists, it should be 
+deleted or renamed first, since `st_write` only creates a new directory. Otherwise,
+there will be an error message.
 
 ```{r}
 st_write(chicago.comm,"chicago_vehicles",driver="ESRI Shapefile")
