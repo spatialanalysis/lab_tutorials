@@ -253,10 +253,9 @@ d <- which(names(nyc.data)=="rentpct02")
 ggparcoord(data = nyc.data, columns = c(a,b,c,d))
 ```
 
+### Interactive Plot
 
-
-
-To make our PCP, we will use the **plotly** library. This will give PCP useful interactivity. We can select portions of each variables line to highlight the connecting lines. We can also move the variable lines to the right and left. This is useful when many of the lines are bunched up and patterns aren't quite visual. For this plot, we just need the `plotly()` function. We need to specify the dataset, the type of plot, and the dimensions. The most difficult to understand part of this code is the `dimension =` part as we have to use nested lists to everything together. This consist of a list of variables, then a list of specifications for each variables. in our case it is not too much, just the name of the axis and the variable specification.
+To make our PCP interactive, we will use the **plotly** library.  We will be able to select portions of each variable's line to highlight the connecting lines. We will  also be able to move the variable lines to the right and left. This is useful when many of the lines are bunched up and patterns aren't quite visual. For this plot, we just need the `plotly()` function. We need to specify the dataset, the type of plot, and the dimensions. The most difficult to understand part of this code is the `dimension =` part as we have to use nested lists to everything together. This consist of a list of variables, then a list of specifications for each variables. in our case it is not too much, just the name of the axis and the variable specification.
 
 
 ```{r}
