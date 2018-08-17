@@ -1,0 +1,627 @@
+---
+title: "Exploratory Data Analysis 2"
+subtitle: "R Notes"
+author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
+date: "08/08/2018"
+output:
+  html_document:
+    fig_caption: yes
+    self_contained: no
+    toc: yes
+    toc_depth: 4
+    css: tutor.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br>
+
+## Introduction
+
+This notebook cover the functionality of the [Exploratory Data Analysis 2](https://geodacenter.github.io/workbook/2b_eda_multi/lab2b.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.
+
+The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments
+on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).
+
+For this notebook, we will use socioeconomic data about NYC from the GeoDa website. Our goal in this lab is show how to implement exploratory data analysis methods with three or more variables. 
+
+
+### Objectives
+
+After completing the notebook, you should know how to carry out the following tasks:
+
+- Read a shapefile with **sf**
+
+- Set a projection with **sf**
+
+- Make choropleth maps of different types
+
+- Style the maps with **tmap** layout functions
+
+- Add a basemap to a choropleth map
+
+- Add centroids to a choropleth map
+
+- Make a cartogram
+
+- Make conditional maps
+
+#### R Packages used
+
+- **tmap**: To make variouschoropleth maps and
+
+- **sf**: To read in the shapefile and add centroids
+
+- **cartogram**: To make a cartogram
+
+- **ggplot2**: To make conditional maps
+
+
+#### R Commands used
+
+Below follows a list of the commands used in this notebook. For further details
+and a comprehensive list of options, please consult the 
+[R documentation](https://www.rdocumentation.org).
+
+- **Base R**: `install.packages`, `library`, `setwd`, `head`, `quantile`
+
+- **tmap**: `tm_shape`, `tm_fill`, `tm_layout`, `tm_legend`, `tm_borders`
+
+- **sf**: `st_read`, `plot`, `st_crs`, `st_set_geometry`, `st_centroid`
+
+- **cartogram**:
+
+- **ggplot2**: `ggplot`, `geom_sf`, 
+
+
+
+
+## Preliminaries
+
+Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not
+actually be saving any files.^[Use `setwd(directorypath)` to specify the working directory.]
+
+### Load packages
+
+First, we load all the required packages using the `library` command. If you don't have some of these in your system, make sure to install them first as well as
+their dependencies.^[Use 
+`install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
+
+
+
+
+```{r}
+library(tmap)
+library(sf)
+library(cartogram)
+library(ggplot2)
+```
+
+
+
+
+
+
+
+### Obtaining the Data from the GeoDa website
+
+To get the data for this notebook, you will and to go to [NYC Data](https://geodacenter.github.io/data-and-lab/nyc/) The download format is a zipfile, so you will need to unzip it by double clicking on the file in your file finder. From there move the resulting folder titled: nyc into your working directory to continue. Once that is done, you can use the **sf** function: `st_read()` to read the shapefile into your R environment. 
+
+
+
+
+```{r}
+nyc.bound <-st_read("nyc/nyc.shp")
+
+
+plot(nyc.bound)
+```
+
+## Setting the Projection
+
+
+
+```{r}
+st_crs(nyc.bound)
+st_crs(nyc.bound) <- 2263
+
+plot(nyc.bound)
+```
+
+
+
+
+
+## Basic Choropleth Mapping and Design
+
+We will be covering choropleth mapping in both the **tmap** library and
+the **ggplot2** library. The bulk of this notebook will be **tmap**, as 
+they have far more options for customization than **ggplot2** currently.
+We will not come close to covering all of the customization options that
+**tmap** provides. For more information on **tmap** customizations, check
+out the documentation at [tmap documentation](https://cran.r-project.org/web/packages/tmap/tmap.pdf)
+We will also cover **ggplot2** choropleth mapping because it has a few key
+advantages over **tmap**, even though it lacks the extensive customizations.
+Using **ggplot2** choropleth mapping allows to make interactive maps with
+the **plotly** library through the `ggplotly()` function. The `geom_sf()`
+function also provides a direct interface to the **sf** library, which makes
+it a valuable option to explore.
+
+
+
+
+### tmap choropleth maps and customizations
+
+Here we will start with the commands to get a bare bones choropleth map.
+We start by inputting the shapefile into the `tm_shape` function. This gives
+us our first layer, we use the `+` operator to add additional layers. Next,
+we use `tm_fill` and input our desired variable as a string. These two
+lines of code give us our first choropleth map with the default style of 
+pretty breaks.
+
+
+
+```{r}
+
+tm_shape(nyc.bound) +
+  tm_fill("rent2008") 
+```
+
+
+
+#### Title Format
+
+Now we will begin exploring formatting options for **tmap** maps. We start
+with title formatting. We add an another layer with the `+` operator.
+The `tm_layout` function allows us to update, the title name, position, size,
+along with many other things. Here we will only demonstrate how to change
+the name, set the position and change the size of the font. To change the 
+title, we use the `title =` parameter from the `tm_layout` function.
+For the position of the position of the title, we need `title.position =`.
+This parameter takes a vector of two strings specifying the position in a
+distinct format. The first item of the vector must be `left`, `right`, or 
+`center`. The second must be `top` or `bottom`.
+
+
+
+```{r}
+tm_shape(nyc.bound) +
+  tm_fill("rent2008")  +
+  tm_layout(title = "Rent 2008 Choropleth Map", title.size = 1.5, title.position = c("right","bottom"))
+```
+
+
+
+#### Color Scheme
+
+
+```{r}
+tm_shape(nyc.bound) +
+  tm_fill("rent2008", palette = "Reds") 
+```
+
+
+
+#### Borders
+
+We can update the borders with the `tm_borders` function. Here we will
+specify the color, line width, and line type. The `col =` parameter
+allows us to set the border color. `lwd =` sets the line width. `lty =`
+sets the line type.
+
+```{r}
+tm_shape(nyc.bound) +
+  tm_fill("rent2008") +
+  tm_borders(col = "black", lwd =.8, lty = "solid")
+```
+
+
+
+#### Legend Format
+
+
+```{r}
+
+```
+
+
+#### Basemaps
+
+
+```{r}
+tmap_mode("view")
+```
+
+
+
+
+
+```{r}
+
+
+tm_shape(nyc.bound) +
+  tm_fill("rent2008") + 
+  tm_layout(title = "Pretty Breaks Map", basemaps = c("OpenStreetMap"))
+```
+
+
+#### All Together
+
+```{r}
+tm_shape(nyc.bound) +
+  tm_fill("rent2008", palette = "Reds") + 
+  tm_borders(col = "black", lwd =.8, lty = "solid") +
+  tm_layout(title = "Pretty Breaks Map", basemaps = c("OpenStreetMap"), 
+            title.size = 1.5, title.position = c("right","bottom"))
+```
+
+
+
+
+```{r}
+tmap_mode("plot")
+```
+
+
+### ggplot2 choropleth mapping
+
+
+
+
+
+
+
+## Different Interval Styles
+
+An important feature of the `tm_fill` function is the `style =` parameter.
+We can change the intervals for our maps with this feature. This is very
+useful in exploring spatial patterns and distributions of variables. The
+default interval style is Pretty Breaks, but this is not always the best way
+to observe patterns in the data. **tmap** provides a variety of options for
+these intervals along with a custom option, which can be used to create
+mapping function for styles not available in **tmap**. In our case, we will
+take advantage of this to make a box plot map. 
+
+
+
+
+
+### Quantile Map
+
+Our first map is the style quantile. This map divides the observtions
+equally into 5 intervals and then maps them accordingly. This option is
+good for looking the upper or lower percentiles of a variable on a map,
+but is not good for identifying extreme values.
+
+```{r}
+tm_shape(nyc.bound) +
+  tm_fill("rent2008", style = "quantile") + 
+  tm_layout(title = "Quantile Map")
+```
+
+
+### Natural Breaks Map
+
+A natural breaks map uses a nonlinear algorithm to group observations such
+that the within-group homogeneity is maximized. This is a clustering
+algorithm in one dimension to determine the break points that yield groups
+with the largest internal similarity.
+
+```{r}
+tm_shape(nyc.bound) +
+  tm_fill("rent2008", style = "jenks") + 
+  tm_layout(title = "Natural Breaks Map")
+```
+
+
+
+### Equal Interval Map
+
+This map uses the equal interval style. An equal interval map is a map
+that follows the same priciple as a histogram to organize the observations
+into categories that divide the range of variables into equal interval
+bins. This results in intervals of equal size, but the number of 
+observations in the bins will typically not be equal.
+
+```{r}
+tm_shape(nyc.bound) +
+  tm_fill("rent2008", style = "equal") + 
+  tm_layout(title = "Equal Interval Map")
+```
+
+
+### Standard Deviation Map
+
+```{r}
+tm_shape(nyc.bound) +
+  tm_fill("rent2008", style = "sd") + 
+  tm_layout(title = "Standard Deviation Map")
+```
+
+
+### Custom Breaks Map
+
+To make a custom breaks map we use `breaks =` in the `tm_fill` function to set the breaks. All we need to
+do is input a vector including our desired breaks. The numbers in the vector need to be in order from
+least to greatest to avoid errors.
+
+```{r}
+tm_shape(nyc.bound) +
+  tm_fill("kids2000", breaks = c(5,15,25,35,45,55,65)) + 
+  tm_layout(title = "Custom Breaks Map")
+
+
+```
+
+
+### Boxplot Map
+
+
+Here we will take advantage of the `breaks =` component of the `tm_fill`
+function to make a new map style that is not supported by **tmap**
+currently. We will be making a box plot map, which separtes the map
+intervals like those of a box plot. These intervals will include lower
+outliers, < 25%, 25% - 50%, 50% - 75%, > 75%, and upper outliers. We will
+need to make a function that calculates these breaks and then evaluates
+wheter or not outlier are present, as to avoid errors when using the
+**tmap** functions. This can seem a little daunting at first, but is very
+simple when separated into pieces. We start by getting a dataframe without
+geometry, so we can select our desired variable. This is done with
+`st_set_geometry` and we set it to NULL. Then we can use the `quantile`
+function to get the min, max, median 1st quartile and third quartile. They
+are inorder from least to greatest, so we assign descriptive names to each
+by indexing the values. Now we assign values to our breaks: b1, b2, b3,
+etc. The only important thing to note at this stage is that at b2 and b6
+we use a formula to get the break points for outliers, which is 1.5 times
+the interquartile range plus or minus the median. Next we set up an
+if/else structure to test for the presence of lower and upper outliers,
+then sets the breaks accordingly in **tmap** mapping functions.
+
+```{r}
+boxplot_map <- function(shp, varname, mapTitle){
+  
+  #need a datframe without geometry column for quantile()
+  df <- shp %>% st_set_geometry(NULL)
+  
+  #gives us the quartiles and min and max
+  quartiles <- quantile(df[,varname])
+  
+  
+  #give shortened names to each value
+  min <- quartiles[1]
+  q1 <- quartiles[2]
+  m <- quartiles[3]
+  q3 <- quartiles[4]
+  max <- quartiles[5]
+  
+  
+  #set our potential break points
+  b1 <- min
+  b2 <- m - 1.5 * (q3 - q1)
+  b3 <- q1
+  b4 <- m
+  b5 <- q3
+  b6 <- m + 1.5 * (q3 - q1)
+  b7 <- max
+  
+  
+  # if/else if/ else structure to deal with the presence of absense of upper and lower outliers
+  
+  if (b2 < b1 & b6 > b7){
+    tm_shape(shp) +
+      tm_fill(varname, 
+              breaks = c(b1,b3,b4,b5,b7), 
+              labels = c("< 25%", "25% - 50%", "50% - 75%", "> 75%"))  + 
+      tm_layout(title = mapTitle)
+  } else if (b2 > b1 & b6 > b7){
+    tm_shape(shp) +
+      tm_fill(varname, 
+              breaks = c(b1,b2,b3,b4,b5,b7), 
+              labels = c("lower outlier", "< 25%", "25% - 50%", "50% - 75%", "> 75%"))  + 
+      tm_layout(title = mapTitle)
+  } else if (b2 < b1 & b6 < b7){
+    tm_shape(shp) + 
+      tm_fill(varname, 
+              breaks = c(b1,b3,b4,b5,b6,b7), 
+              labels = c("< 25%", "25% - 50%", "50% - 75%", "> 75%", "upper outlier"))  + 
+      tm_layout(title = mapTitle)
+  } else {
+    tm_shape(shp) +
+      tm_fill(varname, 
+              breaks = c(b1,b2,b3,b4,b5,b6,b7), 
+              labels = c("lower outlier", "< 25%", "25% - 50%", "50% - 75%","> 75%", "upper outlier"))  +
+      tm_layout(title = mapTitle)
+  }
+}
+
+
+
+
+#test our function
+boxplot_map(nyc.bound, "kids2000", "Boxplot Map")
+```
+
+### Percentile Map
+
+
+
+```{r}
+
+```
+
+
+
+### Plotting Categorical Variables
+
+
+
+```{r}
+nyc.bound$cut.hhsiz <- cut_number(nyc.bound$hhsiz00,n=2)
+nyc.bound$cut.hhsiz
+```
+
+
+
+```{r}
+nyc.bound$cut.yrhom <- cut_number(nyc.bound$yrhom02,n=2)
+nyc.bound$cut.yrhom
+```
+
+
+
+
+```{r}
+tm_shape(nyc.bound) +
+  tm_fill("cut.yrhom", style = "cat") + 
+  tm_layout(title = "Standard Deviation Map")
+```
+
+
+
+
+
+## Saving maps 
+
+
+
+
+
+### tmap
+
+```{r}
+tm <- tm_shape(nyc.bound) +
+  tm_fill("kids2000")
+
+
+save_tmap(tm = tm, filename = "tmap_choropleth")
+```
+
+
+### ggplot2
+
+
+```{r}
+gg <- ggplot(nyc.bound) +
+  geom_sf(aes(fill = "kids2000"))
+
+ggsave("ggplot2_choropleth", plot = gg)
+```
+
+
+## Adding Centroids to an sf object
+
+
+```{r}
+nyc.bound$centroids <- st_centroid(nyc.bound) %>% st_geometry()
+
+
+plot(nyc.bound$geometry)
+plot(nyc.bound$centroids)
+
+
+
+plot(st_geometry(nyc.bound))
+plot(nyc.bound[, 'centroids'], add = T, col = 'red', pch = 19)
+
+
+
+tm_shape(nyc.bound) +
+  tm_fill("kids2000") +
+  tm_dots("centroids")
+
+
+ggplot(nyc.bound) +
+  #geom_sf(aes(fill = kids2000)) +
+  geom_sf(aes(coords = centroids))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Cartograms
+
+
+
+
+```{r}
+carto <- cartogram_dorling(nyc.bound, "kids2000")
+
+
+
+ggplot(carto) +
+  geom_sf(aes(fill = kids2000))
+
+
+```
+
+
+
+
+
+
+
+
+
+
+## Conditional Maps
+
+
+
+```{r}
+ggplot(nyc.bound) +
+  geom_sf(aes(fill = kids2000)) +
+  facet_grid(cut.yrhom ~ cut.hhsiz,as.table=FALSE)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
