@@ -38,11 +38,9 @@ After completing the notebook, you should know how to carry out the following ta
 
 - Make choropleth maps of different types
 
-- Style the maps with **tmap** layout functions
+- Customize choropleth maps
 
-- Add a basemap to a choropleth map
-
-- Add centroids to a choropleth map
+- Calculate and plot centroids
 
 - Make a cartogram
 
@@ -50,14 +48,13 @@ After completing the notebook, you should know how to carry out the following ta
 
 #### R Packages used
 
-- **tmap**: To make variouschoropleth maps and
+- **tmap**: To make various choropleth maps and customize them
 
 - **sf**: To read in the shapefile and add centroids
 
 - **cartogram**: To make a cartogram
 
-- **ggplot2**: To make conditional maps
-
+- **ggplot2**: Plot centroids
 
 #### R Commands used
 
@@ -67,16 +64,13 @@ and a comprehensive list of options, please consult the
 
 - **Base R**: `install.packages`, `library`, `setwd`, `head`, `quantile`
 
-- **tmap**: `tm_shape`, `tm_fill`, `tm_layout`, `tm_legend`, `tm_borders`
+- **tmap**: `tm_shape`, `tm_fill`, `tm_layout`, `tm_legend`, `tm_borders`, `tm_facets`
 
 - **sf**: `st_read`, `plot`, `st_crs`, `st_set_geometry`, `st_centroid`
 
-- **cartogram**:
+- **cartogram**: `cartogram_dorling`
 
-- **ggplot2**: `ggplot`, `geom_sf`, 
-
-
-
+- **ggplot2**: `ggplot`, `geom_sf`
 
 ## Preliminaries
 
@@ -90,8 +84,6 @@ their dependencies.^[Use
 `install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
 
 
-
-
 ```{r}
 library(tmap)
 library(sf)
@@ -100,16 +92,9 @@ library(ggplot2)
 ```
 
 
-
-
-
-
-
 ### Obtaining the Data from the GeoDa website
 
 To get the data for this notebook, you will and to go to [NYC Data](https://geodacenter.github.io/data-and-lab/nyc/) The download format is a zipfile, so you will need to unzip it by double clicking on the file in your file finder. From there move the resulting folder titled: nyc into your working directory to continue. Once that is done, you can use the **sf** function: `st_read()` to read the shapefile into your R environment. 
-
-
 
 
 ```{r}
@@ -136,18 +121,10 @@ plot(nyc.bound)
 
 ## Basic Choropleth Mapping and Design
 
-We will be covering choropleth mapping in both the **tmap** library and
-the **ggplot2** library. The bulk of this notebook will be **tmap**, as 
-they have far more options for customization than **ggplot2** currently.
+We will be covering choropleth mapping and customization in the **tmap** library.
 We will not come close to covering all of the customization options that
 **tmap** provides. For more information on **tmap** customizations, check
 out the documentation at [tmap documentation](https://cran.r-project.org/web/packages/tmap/tmap.pdf)
-We will also cover **ggplot2** choropleth mapping because it has a few key
-advantages over **tmap**, even though it lacks the extensive customizations.
-Using **ggplot2** choropleth mapping allows to make interactive maps with
-the **plotly** library through the `ggplotly()` function. The `geom_sf()`
-function also provides a direct interface to the **sf** library, which makes
-it a valuable option to explore.
 
 
 
@@ -164,7 +141,6 @@ pretty breaks.
 
 
 ```{r}
-
 tm_shape(nyc.bound) +
   tm_fill("rent2008") 
 ```
@@ -196,10 +172,27 @@ tm_shape(nyc.bound) +
 
 #### Color Scheme
 
+Here we will go over some of the color customizations available in **tmap**. We
+use the `palette =` parameter from the `tm_fill` function. We start with a basic
+color scheme change by specifying the one of the built in palettes. Built in 
+palettes include "Reds", "Greens", and many more on found in the **tmap** documentation.
 
 ```{r}
 tm_shape(nyc.bound) +
   tm_fill("rent2008", palette = "Reds") 
+```
+
+
+Now we will move on to more customizable color palettes. With this feature, we can 
+mimic the color scheme used in GeoDa for the choropleth extreme value plots. To do
+this, we enter a vector with the desired colors for the palette. This will output
+a spectrum of colors in the map that range between the colors specified in the vector.
+For instance if we did `c("red", "blue"), the color spectrum would move from red to 
+purple, then to blue, with in between shades.
+
+```{r}
+tm_shape(nyc.bound) +
+  tm_fill("rent2008", palette = c("blue", "white", "red")) 
 ```
 
 
@@ -222,21 +215,59 @@ tm_shape(nyc.bound) +
 #### Legend Format
 
 
-```{r}
+We can change the default formatting of the legend in our maps with the `tm_layout`
+function. We will mainly go over the positioning of the legend, since it can often 
+times get in the way of the plot. We will first go over how to specify the location 
+of the legend within the plot.
 
+We use the `legend.position =` parameter to set the psoition in the plot. This parameter
+takes a vector with two strings indicating the desired position. The first value must
+be: "left", "right", or "center". The second value must be "top", "bottom", or "center"
+In our case, the default position was the best position for the legend, but we will
+move it to a worse position just to show how to.
+
+
+```{r}
+tm_shape(nyc.bound) +
+  tm_fill("rent2008") +
+  tm_layout(legend.position = c("right", "bottom"))
+```
+
+
+
+There will be times, when there is no good position for the legend inside of the plot.
+In these case we can move the legend outside. For this, we use the logical operator,
+`legend.outside =` and we set it equal to TRUE.
+
+```{r}
+tm_shape(nyc.bound) +
+  tm_fill("rent2008") + 
+  tm_layout(legend.outside = TRUE)
+```
+
+Now that we have moved the legend outside of the map, we can chose the position. For this we use `legend.outside.position =`. We have four choices for this parameter, "top", "bottom", "right", and "left".
+
+```{r}
+tm_shape(nyc.bound) +
+  tm_fill("rent2008") +
+  tm_layout(legend.outside = TRUE, legend.outside.position = "bottom")
 ```
 
 
 #### Basemaps
 
-
+**tmap** allows us to add a basemap to our choropleth map. This doesn't work
+unless you have the mode changed to `view` instead of `plot`. We do this
+with the `tmap_mode` function before moving on to the map. `view` mode also
+adds some interactivity to the map in that we will now be able to zoom in and 
+out.
 ```{r}
 tmap_mode("view")
 ```
 
-
-
-
+Now we can add a basemap. This is done in the layout function with the `basemap =`
+parameter. We input `OpenStreetMap` inside a vector to get a basemap from
+Open Street Map.
 
 ```{r}
 
@@ -251,26 +282,18 @@ tm_shape(nyc.bound) +
 
 ```{r}
 tm_shape(nyc.bound) +
-  tm_fill("rent2008", palette = "Reds") + 
+  tm_fill("rent2008", palette = c("blue", "white", "red")) + 
   tm_borders(col = "black", lwd =.8, lty = "solid") +
   tm_layout(title = "Pretty Breaks Map", basemaps = c("OpenStreetMap"), 
             title.size = 1.5, title.position = c("right","bottom"))
 ```
 
 
-
+Now we switch the mode back to plot, as we are done using basemaps for now.
 
 ```{r}
 tmap_mode("plot")
 ```
-
-
-### ggplot2 choropleth mapping
-
-
-
-
-
 
 
 ## Different Interval Styles
@@ -281,14 +304,15 @@ useful in exploring spatial patterns and distributions of variables. The
 default interval style is Pretty Breaks, but this is not always the best way
 to observe patterns in the data. **tmap** provides a variety of options for
 these intervals along with a custom option, which can be used to create
-mapping function for styles not available in **tmap**. In our case, we will
-take advantage of this to make a box plot map. 
+mapping function for styles not available in **tmap**.
 
 
 
+### Common map classifications
 
 
-### Quantile Map
+
+#### Quantile Map
 
 Our first map is the style quantile. This map divides the observtions
 equally into 5 intervals and then maps them accordingly. This option is
@@ -298,11 +322,12 @@ but is not good for identifying extreme values.
 ```{r}
 tm_shape(nyc.bound) +
   tm_fill("rent2008", style = "quantile") + 
-  tm_layout(title = "Quantile Map")
+  tm_layout(title = "Quantile Map") +
+  tm_borders(col = "black", lwd =.8, lty = "solid")
 ```
 
 
-### Natural Breaks Map
+#### Natural Breaks Map
 
 A natural breaks map uses a nonlinear algorithm to group observations such
 that the within-group homogeneity is maximized. This is a clustering
@@ -312,12 +337,13 @@ with the largest internal similarity.
 ```{r}
 tm_shape(nyc.bound) +
   tm_fill("rent2008", style = "jenks") + 
-  tm_layout(title = "Natural Breaks Map")
+  tm_layout(title = "Natural Breaks Map") +
+  tm_borders(col = "black", lwd =.8, lty = "solid")
 ```
 
 
 
-### Equal Interval Map
+#### Equal Interval Map
 
 This map uses the equal interval style. An equal interval map is a map
 that follows the same priciple as a histogram to organize the observations
@@ -328,17 +354,11 @@ observations in the bins will typically not be equal.
 ```{r}
 tm_shape(nyc.bound) +
   tm_fill("rent2008", style = "equal") + 
-  tm_layout(title = "Equal Interval Map")
+  tm_layout(title = "Equal Interval Map") +
+  tm_borders(col = "black", lwd =.8, lty = "solid")
+
 ```
 
-
-### Standard Deviation Map
-
-```{r}
-tm_shape(nyc.bound) +
-  tm_fill("rent2008", style = "sd") + 
-  tm_layout(title = "Standard Deviation Map")
-```
 
 
 ### Custom Breaks Map
@@ -350,16 +370,37 @@ least to greatest to avoid errors.
 ```{r}
 tm_shape(nyc.bound) +
   tm_fill("kids2000", breaks = c(5,15,25,35,45,55,65)) + 
-  tm_layout(title = "Custom Breaks Map")
+  tm_layout(title = "Custom Breaks Map") +
+  tm_borders(col = "black", lwd =.8, lty = "solid")
 
 
 ```
 
+### Extreme Value Maps
 
-### Boxplot Map
+Extreme value maps are choropleth maps that highlight extreme values at lower and upper
+ends of the scale. We will go through three different types of these maps: a standard
+deviation map, a box map and a percentile map.
+
+GeoDa supports all three of these maps, but **tmap** does not. We will have to use
+the custom breaks functionality in **tmap** to make the other two maps.
+
+#### Standard Deviation Map
+
+```{r}
+tm_shape(nyc.bound) +
+  tm_fill("rent2008", style = "sd", palette = c("blue", "white", "red")) + 
+  tm_layout(title = "Standard Deviation Map") +
+  tm_borders(col = "black", lwd =.8, lty = "solid")
+```
 
 
-Here we will take advantage of the `breaks =` component of the `tm_fill`
+#### Box Map
+
+A box map is the mapping counterpart of a box plot. It is like a quantile map, but 
+the four categories are extended to identify upper and lower outliers.
+
+To make this, we will take advantage of the `breaks =` component of the `tm_fill`
 function to make a new map style that is not supported by **tmap**
 currently. We will be making a box plot map, which separtes the map
 intervals like those of a box plot. These intervals will include lower
@@ -380,7 +421,7 @@ if/else structure to test for the presence of lower and upper outliers,
 then sets the breaks accordingly in **tmap** mapping functions.
 
 ```{r}
-boxplot_map <- function(shp, varname, mapTitle){
+box_map <- function(shp, varname, mapTitle){
   
   #need a datframe without geometry column for quantile()
   df <- shp %>% st_set_geometry(NULL)
@@ -413,26 +454,34 @@ boxplot_map <- function(shp, varname, mapTitle){
     tm_shape(shp) +
       tm_fill(varname, 
               breaks = c(b1,b3,b4,b5,b7), 
-              labels = c("< 25%", "25% - 50%", "50% - 75%", "> 75%"))  + 
-      tm_layout(title = mapTitle)
+              labels = c("< 25%", "25% - 50%", "50% - 75%", "> 75%"),
+              palette = c("blue", "white", "red"))  + 
+      tm_layout(title = mapTitle) +
+      tm_borders(col = "black", lwd =.8, lty = "solid")
   } else if (b2 > b1 & b6 > b7){
     tm_shape(shp) +
       tm_fill(varname, 
               breaks = c(b1,b2,b3,b4,b5,b7), 
-              labels = c("lower outlier", "< 25%", "25% - 50%", "50% - 75%", "> 75%"))  + 
-      tm_layout(title = mapTitle)
+              labels = c("lower outlier", "< 25%", "25% - 50%", "50% - 75%", "> 75%"),
+              palette = c("blue", "white", "red"))  + 
+      tm_layout(title = mapTitle) +
+      tm_borders(col = "black", lwd =.8, lty = "solid")
   } else if (b2 < b1 & b6 < b7){
     tm_shape(shp) + 
       tm_fill(varname, 
               breaks = c(b1,b3,b4,b5,b6,b7), 
-              labels = c("< 25%", "25% - 50%", "50% - 75%", "> 75%", "upper outlier"))  + 
-      tm_layout(title = mapTitle)
+              labels = c("< 25%", "25% - 50%", "50% - 75%", "> 75%", "upper outlier"),
+              palette = c("blue", "white", "red"))  + 
+      tm_layout(title = mapTitle) +
+      tm_borders(col = "black", lwd =.8, lty = "solid")
   } else {
     tm_shape(shp) +
       tm_fill(varname, 
               breaks = c(b1,b2,b3,b4,b5,b6,b7), 
-              labels = c("lower outlier", "< 25%", "25% - 50%", "50% - 75%","> 75%", "upper outlier"))  +
-      tm_layout(title = mapTitle)
+              labels = c("lower outlier", "< 25%", "25% - 50%", "50% - 75%","> 75%", "upper outlier"),
+              palette = c("blue", "white", "red"))  +
+      tm_layout(title = mapTitle) +
+      tm_borders(col = "black", lwd =.8, lty = "solid")
   }
 }
 
@@ -440,42 +489,128 @@ boxplot_map <- function(shp, varname, mapTitle){
 
 
 #test our function
-boxplot_map(nyc.bound, "kids2000", "Boxplot Map")
+box_map(nyc.bound, "kids2000", "Box Map")
 ```
 
-### Percentile Map
+#### Percentile Map
+
+The percentile map is a variant of a quantile map that would start off with 100 categories. However, rather than having these 100 categories, the map classification is reduced to six ranges, the lowest 1%, 1-10%, 10-50%, 50-90%, 90-99% and the top 1%.
+
+The process for making a percentile map is similar to that for the box map. We
+begin by getting a dataframe without geometry, so we can run the `quantile` function.
+We then use the quantile function to get breakpoints at the appropriate percentiles.
+we can do this by inputting a vector with the desired percentiles in decimal form. 
+This results in a numeric vector, which we will index to get our desired breakpoints.
+We assign short names such as **b1** and **b2**, as we will be typing these alot 
+later in the function. 
+
+We will need an if/else structure to deal with the cases where our input variable has
+a 1st percentile that is the same as the min and/or a 99th percentile that is the 
+same as the max. In each branch of the if/else structure we use breakpoints and labels
+that correspond with the test case. In each case we use `breaks =` to set the breaks
+and `labels =` to set the labels that fit our breaks
 
 
 
 ```{r}
 
+percentile_map <- function(shp, varname, mapTitle){
+  
+  #need a datframe without geometry column for quantile()
+  df <- shp %>% st_set_geometry(NULL)
+  
+  
+  
+  #gives us the desired percentiles
+  breaks <- quantile(df[,varname], c(0,.01,.1,.5,.9,.99,1))
+  
+  
+  
+  
+  
+  #assign the break points
+  b1 <- breaks[1]
+  b2 <- breaks[2]
+  b3 <- breaks[3]
+  b4 <- breaks[4]
+  b5 <- breaks[5]
+  b6 <- breaks[6]
+  b7 <- breaks[7]
+  
+  
+  
+  # if else structure to deal with 1st and 0th percentile being equal and/or 99th and 100th being equal
+  
+  if (b1 == b2 & b6 == b7){
+    tm_shape(shp) +
+      tm_fill(varname, 
+              breaks = c(b1,b3,b4,b5,b7), 
+              labels = c("0% - 10%", "10% - 50%", "50% - 90%", "90% - 100%"),
+              palette = c("blue", "white", "red"))  + 
+      tm_layout(title = mapTitle) +
+      tm_borders(col = "black", lwd =.8, lty = "solid")
+  } else if (b1 == b2 & b6 != b7){
+    tm_shape(shp) +
+      tm_fill(varname, 
+              breaks = c(b1,b3,b4,b5,b6,b7), 
+              labels = c("0% - 10%", "10% - 50%", "50% - 90%", "90% - 99%", "> 99%"),
+              palette = c("blue", "white", "red"))  + 
+      tm_layout(title = mapTitle) +
+      tm_borders(col = "black", lwd =.8, lty = "solid")
+  } else if (b1 != b2 & b6 == b7){
+    tm_shape(shp) + 
+      tm_fill(varname, 
+              breaks = c(b1,b2,b3,b4,b5,b6,b7), 
+              labels = c("< 1%", "1% - 10%", "10% - 50%", "50% - 90%", "90% - 100%"),
+              palette = c("blue", "white", "red"))  + 
+      tm_layout(title = mapTitle) +
+      tm_borders(col = "black", lwd =.8, lty = "solid")
+  } else {
+    tm_shape(shp) +
+      tm_fill(varname, 
+              breaks = c(b1,b2,b3,b4,b5,b6,b7), 
+              labels = c("< 1%", "1% - %10", "10% - 50%", "50% - 90%","90% - 99%", "> 99%"),
+              palette = c("blue", "white", "red"))  +
+      tm_layout(title = mapTitle) +
+      tm_borders(col = "black", lwd =.8, lty = "solid")
+  }
+  
+  
+}
+
+
+#testing our function
+percentile_map(nyc.bound, "rent2008", "percentile map")
 ```
 
 
 
 ### Plotting Categorical Variables
 
+The dataset used for this notebook doesn't contain any categorical variables. We
+will need to make a new column in order to demonstrate **tmap** functionality
+for categorical variables.
 
+We will use the `cut_number` function to create five categories for our categorical plot. 
+We pass the variable, e.g., **kids20000**, and the number of categories, say `n = 5`. This creates the new variable as an R `factor`, giving the intervals that resulted from the cut.
+
+For example, we create a new variable **kidscat** using a quantile classification with five categories.
 
 ```{r}
-nyc.bound$cut.hhsiz <- cut_number(nyc.bound$hhsiz00,n=2)
-nyc.bound$cut.hhsiz
+nyc.bound$kidscat <- cut_number(nyc.bound$hhsiz00,n=5)
+nyc.bound$kidscat
 ```
 
-
-
-```{r}
-nyc.bound$cut.yrhom <- cut_number(nyc.bound$yrhom02,n=2)
-nyc.bound$cut.yrhom
-```
-
-
-
+Now that we have our categorical variable, we can map it with **tmap**. To plot
+a categorical variable, we just use `cat` in the `style =` parameter. 
 
 ```{r}
+
+# colors that match the geoda scheme are "salmon", "lightgreen", "lightblue" and the ones in the function
 tm_shape(nyc.bound) +
-  tm_fill("cut.yrhom", style = "cat") + 
-  tm_layout(title = "Standard Deviation Map")
+  tm_fill("kidscat", style = "cat", palette = c("lightblue","royalblue","lightgreen","forestgreen","salmon")) + 
+  tm_layout(title = "Categorical Map") +
+  tm_borders(col = "black", lwd =.8, lty = "solid")
 ```
 
 
@@ -484,11 +619,11 @@ tm_shape(nyc.bound) +
 
 ## Saving maps 
 
-
-
-
-
-### tmap
+To save a map in **tmap**, you first store the plot in a variable, then use the 
+`save_tmap` function. The `tm =` parameter takes the variable name of your map,
+then the `filename =` parameter takes your desired file name. It is important to
+note that the default save will be a png image. To get other formats, you include
+the extension in the filename, for instance "tmap_choropleth.jpg".
 
 ```{r}
 tm <- tm_shape(nyc.bound) +
@@ -499,94 +634,127 @@ save_tmap(tm = tm, filename = "tmap_choropleth")
 ```
 
 
-### ggplot2
-
-
-```{r}
-gg <- ggplot(nyc.bound) +
-  geom_sf(aes(fill = "kids2000"))
-
-ggsave("ggplot2_choropleth", plot = gg)
-```
 
 
 ## Adding Centroids to an sf object
 
+Centroids are the shape centers of of a polygon. We can get these points by passing
+our **sf** object: **nyc.bound** to the `st_centroid` function. From there we use
+the pipe operator and `st_geometry` to get just the points. From there we store that
+information in `centroids`. We can add this to **nyc.bound**, but we only need them
+for a short section of this notebook.
 
 ```{r}
-nyc.bound$centroids <- st_centroid(nyc.bound) %>% st_geometry()
-
-
-plot(nyc.bound$geometry)
-plot(nyc.bound$centroids)
-
-
-
-plot(st_geometry(nyc.bound))
-plot(nyc.bound[, 'centroids'], add = T, col = 'red', pch = 19)
-
-
-
-tm_shape(nyc.bound) +
-  tm_fill("kids2000") +
-  tm_dots("centroids")
-
-
-ggplot(nyc.bound) +
-  #geom_sf(aes(fill = kids2000)) +
-  geom_sf(aes(coords = centroids))
+centroids <- st_centroid(nyc.bound) %>% st_geometry()
 
 ```
 
 
+### Plotting Centroids
+
+We have to use **ggplot2** to plot these points because the **tmap** function: `tm_dots` does not support the point structure made by **sf**. Plotting these points
+is simple and similar to **tmap** mapping. We start with the `ggplot` function. Then we add the original **sf** object **nyc.bound** as a data source in `geom_sf`. From
+here we also add the points using `geom_sf` and specifying **centroids** as the data
+source.
+
+```{r}
+ggplot() +
+  geom_sf(data = nyc.bound, fill = "white") +
+  geom_sf(data = centroids, color = "red")
+```
 
 
+### Saving Centroids
+
+To save our centroids, we will use the **sf** library. We use `st_write` to create a 
+new shapefile. The parameters necessary are the **sf** object, the desired name of the
+file, and the driver. We use `ESRI Shapefile` in this case.
+
+```{r}
+st_write(centroids, "nyc_centroids", driver = "ESRI Shapefile")
+```
 
 
+## Conditional Maps
 
+Conditional maps are a major feature of the functionality of **tmap**, where they are
+referred to as facetting, or small multiples. This is implemented in the `tm_facet`
+function. 
 
+There is one major difference between the approach taken in GeoDa and that in
+**tmap**. In GeoDa, the conditioning variables are typically continuous, and different
+types of classifications can be applied to them to obtain the actual condition. For
+example, in the GeoDa Workbook illustration, the variables **hhsiz08** and **forhis08**
+are used as conditioning variables for respectively, the x-axis and the y-axis. In
+**tmap** the conditioning is based on a categorical variable that needs to be
+available in the data set. The facetting formula does not evaluate functions, so the
+conditioning categories need to be computed beforehand. 
 
+There are three so-called helper functions to make this easy: `cut_interval`,
+`cut_width`, and `cut_number`. The closest to the median (2 quantiles) conditioning illustrated in the GeoDa Workbook is the `cut_number` function. We pass the variable, e.g., **hhziz00**, and the number of categories, say `n = 2`. This creates the new variable as an R `factor`, giving the intervals that resulted from the cut.
+
+For example, we create a new variable **cut.hhsiz** using a quantile classification with two categories (as in the GeoDa Workbook, the variable will be split on the median
+value), by setting `n=2`. Since we only have 55 observations, we can easily list the
+full set of values to verify.
+
+```{r}
+nyc.bound$cut.hhsiz <- cut_number(nyc.data$hhsiz08,n=2)
+nyc.bound$cut.hhsiz
+```
+
+And, similarly for **cut.yrhom**:
+
+```{r}
+nyc.bound$cut.forhis <- cut_number(nyc.data$forhis08,n=2)
+nyc.bound$cut.forhis
+```
+
+After examining our cuts we can see that our results differ slightly from the GeoDa
+conditional map example. The **cut.hhsiz** is the same as the example and **cut.forhis**
+is is about .9 higher. When we map the results we will get a similar map to the GeoDa
+example, with maybe a few differences.
+
+We use the `box_map` function we created earlier in the notebook to replicate the results 
+frome the GeoDa work book. We use the add operator and `tm_facets` to get our conditional plot. We can do this with the function we made because the ending result
+is a **tmap** choropleth. We use the `by =` parameter to specify our conditioning variables inside a vector. We can only input one or two conditioning vectors.
+
+```{r}
+box_map(nyc.bound, "rent2008", "Conditional Map") +
+  tm_facets(by = c("cut.hhsiz", "cut.forhis"))
+```
 
 
 
 
 ## Cartograms
 
+A cartogram is a map type where the original layout of the areal unit is replaced by a geometric form (usually a circle, rectangle, or hexagon) that is proportional to the value of the variable for the location. This is in contrast to a standard choropleth map, where the size of the polygon corresponds to the area of the location in question.
 
+GeoDa implements a circular cartogram, in which the areal units are represented as circles, whose size (and color) is proportional to the value observed at that location. The changed shapes remove the misleading effect that the area of the unit might have on perception of magnitude. 
 
+We will implement the the same circular cartogram in this section with the **cartogram**
+package. We start with the`cartogram_dorling` function, which will give us an **sf** object of circular
+polygons based on our inputed variable. We store the result in **carto**. 
 
 ```{r}
 carto <- cartogram_dorling(nyc.bound, "kids2000")
-
-
-
-ggplot(carto) +
-  geom_sf(aes(fill = kids2000))
-
-
 ```
 
-
-
-
-
-
-
-
-
-
-## Conditional Maps
-
-
+With our new **sf** obeject, we can now map the cartogram using **tmap**. The process
+is the same as with all of our maps. We start with our **sf** object in `tm_shape`, 
+then us `tm_fill` to specify our fill variable and other customizations. We use the
+same variable for the circle sizes as the the fill color to keep the plot simple.
+We can use different variables, but it makes the plot fairly hard to interpret. It is also important to note that we move the legend outside of the map because there is no room for it inside the map.
 
 ```{r}
-ggplot(nyc.bound) +
-  geom_sf(aes(fill = kids2000)) +
-  facet_grid(cut.yrhom ~ cut.hhsiz,as.table=FALSE)
+tm_shape(carto) +
+  tm_fill("rent2008", palette = c("blue", "white", "red"), style = "quantile") +
+  tm_borders(col = "black", lwd =.8, lty = "solid") +
+  tm_layout(title = "Cartogram", legend.outside = TRUE,
+            legend.outside.position = "bottom") 
+  
+  
 ```
-
-
-
 
 
 
