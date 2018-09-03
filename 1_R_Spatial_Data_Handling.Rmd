@@ -2,7 +2,7 @@
 title: "Spatial Data Handling"
 subtitle: "R Notes"
 author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
-date: "08/07/2018"
+date: "latest update 09/03/2018"
 output:
   html_document:
     fig_caption: yes
@@ -76,7 +76,7 @@ Below follows a list of the commands used in this notebook. For further details
 and a comprehensive list of options, please consult the 
 [R documentation](https://www.rdocumentation.org).
 
-- **base R**: `install.packages`, `library`, `head`, `dim`, `class`, `as.Date`, `names`, `!is.na`, `is.numeric`, `as.integer`, `is.integer`, `length`, `strsplit`, `unlist`, `for`, `vector`, `substr`, `gsub`, `as.numeric`, `data.frame`
+- **base R**: `setwd`, `install.packages`, `library`, `head`, `dim`, `class`, `as.Date`, `names`, `!is.na`, `is.numeric`, `as.integer`, `is.integer`, `length`, `strsplit`, `unlist`, `for`, `vector`, `substr`, `gsub`, `as.numeric`, `data.frame`
 
 - **RSocrata**: `read.socrata`
 
@@ -145,8 +145,8 @@ we will have to deal with. We also check the dimension of this data frame using 
 dim(vehicle.data)
 ```
 
-The table has 200,657 observations on 26 variables (the number of observations
-may be different as the table is constantly updated).
+The table has 203,657 observations on 26 variables (the number of observations shown
+may be slightly different as the table is constantly updated).
 
 In RStudio, the type of the variable in each column is listed under its name. For example, under **creation_date**, we see **S3: POSIXct**. You can also find out the same information by applying a `class` command to the variable
 **vehicle.data$creation_date**, as in
@@ -278,7 +278,7 @@ At this point, we will go about things in a slightly different way from how
 they are illustrated in the GeoDa workbook example. As it turns out, some of the points have missing community area information, which is a critical element to compute the number of abandoned cars at that scale. In GeoDa, we used a visual approach to obtain the missing information. Here, we will exploit some of the GIS functionality in **sf** to carry out a **spatial join**. This boils down to identifying which points belong to each community area (a so-called *point in polygon query*) and assigning the corresponding community area identifier to each  point.
 
 We proceed in three steps. First, we create a simple features spatial polygon object with the boundaries of the community areas, which we download from the Chicago Open Data portal. Next,
-we carry out a spatial join between our points object and the polygon object to assing a community area code to each point. Finally, we compute the point count by community area.
+we carry out a spatial join between our points object and the polygon object to assign a community area code to each point. Finally, we compute the point count by community area.
 
 ### Community Area boundary file {-}
 We resort to the City of Chicago open data portal for the boundary file of
