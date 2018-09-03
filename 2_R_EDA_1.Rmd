@@ -2,7 +2,7 @@
 title: "Exploratory Data Analysis 1"
 subtitle: "R Notes"
 author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
-date: "08/09/2018"
+date: "latest update 09/03/2018"
 output:
   html_document:
     fig_caption: yes
@@ -61,7 +61,7 @@ Below follows a list of the commands used in this notebook. For further details
 and a comprehensive list of options, please consult the 
 [R documentation](https://www.rdocumentation.org).
 
-- **Base R**: `install.packages`, `library`, `head`, `names`, `summary`, `range`, `var`, `sd`,`pdf`,`dev.off`,`saveRDS`,`readRDS`, `function`, `lm`, `str`, `dim`
+- **Base R**: `setwd`, `install.packages`, `library`, `head`, `names`, `summary`, `range`, `var`, `sd`,`pdf`,`dev.off`,`saveRDS`,`readRDS`, `function`, `lm`, `str`, `dim`
 
 - **tidyverse**: `read_csv`, `rename`, `mutate`, `if_else`, `filter`
 
@@ -150,7 +150,7 @@ are covered in Wickham's *ggplot2: elegant graphics for data analysis (2nd Editi
 The logic behind **ggplot** is an implementation of Wilkinson's *grammar for graphics*,
 using the concept of *layers*. These are the components that make up a plot, such as a *data set*, *aesthetic mappings* (variables for different aspects of the graph, such
 as the x and y-axes, colors, shapes, etc.), *statistical transformations*, a
-*geometric object* and position adjustments. Several layers can be drawn on top of each other, providing the ability to create incredibly complext graphs.
+*geometric object* and position adjustments. Several layers can be drawn on top of each other, providing the ability to create incredibly complex graphs.
 
 For now, the main parts to concentrate on are the data set and the aesthetics,
 or `aes`. The latter are typically (at least) the variables to be plotted. These
@@ -540,7 +540,7 @@ base.plt +
 As before, we can write this plot to a file using `ggsave`, or save the object for future use with `saveRDS`.
 
 ## Bivariate Analysis: The Scatter Plot {-}
-The scatter plot shows the relationship between two variables as points with
+The scatter plot shows the relationship between two variables as points with cartesian 
 (x, y) coordinates matching the value for each variable, one on the x-axis, the
 other on the y-axis. In **ggplot** the scatter plot is constructed by means
 of a `geom_point`. The aesthetics are mapped to the variables for the x and y axis.
