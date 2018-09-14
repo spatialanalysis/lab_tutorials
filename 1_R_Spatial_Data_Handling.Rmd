@@ -2,7 +2,7 @@
 title: "Spatial Data Handling"
 subtitle: "R Notes"
 author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
-date: "latest update 09/03/2018"
+date: "latest update 09/14/2018"
 output:
   html_document:
     fig_caption: yes
@@ -389,7 +389,8 @@ head(veh.cnts)
 At this point, we have a polygon layer with the community area boundaries and some identifiers (**chicago.comm**) and a data frame with the community identifier and the aggregate vehicle count (**veh.cnts**). In order to map the vehicle counts by community area, we need to `join` the two tables. We use the `left_join` command and use
 **area_num_1** as the key for the first table (the community area boundaries),
 and **comm** as the key for the second table (the vehicle counts). Since we assured
-that both variables are now integers, the join will work (if one were a character and the other integer, there would be an error message). Note how in the command below, the two keys can be different, which makes for a slightly more complex `by` statement.
+that both variables are now integers, the join will work (if one were a character and the other integer, there would be an error message). Note how in the command below, the two keys can have different
+variable names (but they must have the same values), which is made explicit in the `by` statement.
 
 ```{r}
 chicago.comm <- left_join(chicago.comm,veh.cnts, by = c("area_num_1" = "comm"))
@@ -632,7 +633,7 @@ In particular, the locations of the highest ratios are quite different from thos
 (e.g., equal area grid cells, or equal population zones).
 
 #### Optional - save the community area file as a shape file
-Finally, we can write the community area layer to the working directory. Note that, so far, all operations have been carried out in memory, and when you close the program, everything may be lost (unless you save your workspace).
+Finally, we can write the community area layer to the working directory. Note that, so far, all operations have been carried out in memory, and when you close the program, everything will be lost (unless you save your workspace).
 
 We can write the community area to a shape file (actually, four files contained
 in a directory) by means of the **sf** command `st_write`. This command has many
