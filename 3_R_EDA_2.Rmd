@@ -2,7 +2,7 @@
 title: "Exploratory Data Analysis 2"
 subtitle: "R Notes"
 author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
-date: "08/15/2018"
+date: "latest update 09/17/2018"
 output:
   html_document:
     fig_caption: yes
@@ -556,7 +556,9 @@ ggplot(data=nyc.data,aes(pubast00)) +
 ```
 
 
+<br>
 
+## References {-}
 
 
 
