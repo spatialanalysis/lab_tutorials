@@ -2,7 +2,7 @@
 title: "Spatial Weights as Distance Functions"
 subtitle: "R Notes"
 author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
-date: "08/08/2018"
+date: "09/17/2018"
 output:
   html_document:
     fig_caption: yes
@@ -25,7 +25,7 @@ This notebook cover the functionality of the [Spatial Weights as Distance Functi
 The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments
 on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).
 
-For this notebook, we use U.S. Homocide data. Our goal in this lab is show how to implement contiguity based spatial weights 
+For this notebook, we use Cleveland house price data. Our goal in this lab is show how to assign spatial weights based on different distance functions.
 
 
 ```{r}
@@ -392,25 +392,14 @@ Before we start computing kernal weights, we need to add the diagonal elements t
 neighbors list. We do this because in the kernal weights methods, the diagonal element
 is either assigned a value of 1 or is computed in the kernal function with a distance of
 0. It is important to note that the diagonal element means a point is a neighbor of its
-own self.
+own self when include in the neighbors list.
 
-Adding these points to the neighbors list is a bit tricky, as we have to add them to each
-row in the neighbors list and they need to go in particular spot in the respective row
-to avoid errors later on. Essentially what we need to do is loop through each row in
-the neighbors list, append the corresponding diagonal element, then sort the row.
-
-To do this, we use a `for` loop with i-values 1 to the length of the neighbors list. We 
-can access a row of the neighbors list through the variable name followed by double 
-brackets with the corresponding index. Once we have accessed a row, we use the `append`
-function to add the matching diagonal element, which will be **i**. Then we use the 
-`sort` function to put the row in increasing order, like all our neighbors lists have
-been up to this points.
+**spdep** has a built in function for this. `include.self` can be used to add the diagonal
+elements to a neighbors list of class **nb**.
 
 ```{r}
-for (i in 1:length(nb.dist.band)){
-  new_row <- sort(append(kernal.nb[[i]], i, after = 0), decreasing = FALSE)
-  kernal.nb[[i]] <- new_row
-}
+include.self(kernal.nb)
+kernal.nb[[2]]
 ```
 
 
@@ -469,6 +458,7 @@ triangular[1]
 
 ```{r}
 triang.weights <- nb2listw(kernal.nb,glist = triangular,style = "B")
+triang.weights$weights[1]
 ```
 
 #### Epanechnikov
@@ -482,6 +472,7 @@ epanechnikov[1]
 
 ```{r}
 epan.weights <- nb2listw(kernal.nb,glist = epanechnikov,style = "B")
+epan.weights$weights[1]
 ```
 
 
@@ -496,6 +487,7 @@ quartic[1]
 
 ```{r}
 quartic.weights <- nb2listw(kernal.nb,glist = quartic,style = "B")
+quartic.weights$weights[1]
 ```
 
 #### Gaussian
@@ -512,6 +504,7 @@ gaussian_w[1]
 
 ```{r}
 gaussian.weights <- nb2listw(kernal.nb,glist = gaussian.w,style = "B")
+gaussian.weights$weights[1]
 ```
 
 
@@ -610,6 +603,9 @@ k.distances2[[1]]
 var.band.weights <- nb2listw(k6,glist = k.distances2,style = "B")
 var.band.weights$weights[[1]]
 ```
+With our new weights structure all the neighbors included have a nonzero weight.
+
+
 
 
 #### Treatment of diagonal elements
@@ -653,6 +649,15 @@ str(var.band.w2$weights)
 
 
 #### Properties of kernal weights
+
+The connectivity plot will be the same for kernal weights as the 6th nearest neighbors structure.
+This is because they have the same neighbors list and connectivity ignores the weights themselves.
+While our connectivity plot will be the same, the histogram and summary stats will be different
+from the ones in GeoDa. This is because we have to add the diagonal elements to the neighbors 
+structure when moving forward. This is seen below when our 6th-nearest neighbors has an average 
+of 7 links. To get a more accurate view of the connectivity properties, the structure will have to 
+be examined before the diagonal elements are added.
+
 
 ```{r}
 summary(var.band.w2)
