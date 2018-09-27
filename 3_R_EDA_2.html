@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+<meta name="author" content="Luc Anselin and Grant Morrison" />
+
+
+<title>Exploratory Data Analysis 2</title>
+
+<script src="3_R_EDA_2_files/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="3_R_EDA_2_files/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="3_R_EDA_2_files/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="3_R_EDA_2_files/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="3_R_EDA_2_files/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="3_R_EDA_2_files/navigation-1.1/tabsets.js"></script>
+<link href="3_R_EDA_2_files/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="3_R_EDA_2_files/highlightjs-9.12.0/highlight.js"></script>
+<script src="3_R_EDA_2_files/htmlwidgets-1.2/htmlwidgets.js"></script>
+<script src="3_R_EDA_2_files/plotly-binding-4.8.0/plotly.js"></script>
+<script src="3_R_EDA_2_files/typedarray-0.1/typedarray.min.js"></script>
+<link href="3_R_EDA_2_files/crosstalk-1.0.0/css/crosstalk.css" rel="stylesheet" />
+<script src="3_R_EDA_2_files/crosstalk-1.0.0/js/crosstalk.min.js"></script>
+<link href="3_R_EDA_2_files/plotly-htmlwidgets-css-1.39.2/plotly-htmlwidgets.css" rel="stylesheet" />
+<script src="3_R_EDA_2_files/plotly-main-1.39.2/plotly-latest.min.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+<link rel="stylesheet" href="tutor.css" type="text/css" />
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Exploratory Data Analysis 2</h1>
+<h3 class="subtitle"><em>R Notes</em></h3>
+<h4 class="author"><em>Luc Anselin and Grant Morrison<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></em></h4>
+<h4 class="date"><em>latest update 09/17/2018</em></h4>
+
+</div>
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction">Introduction</a><ul>
+<li><a href="#objectives">Objectives</a><ul>
+<li><a href="#r-packages-used">R Packages used</a></li>
+<li><a href="#r-commands-used">R Commands used</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#preliminaries">Preliminaries</a><ul>
+<li><a href="#load-packages">Load packages</a></li>
+<li><a href="#obtaining-the-data">Obtaining the data</a><ul>
+<li><a href="#creating-an-initial-data-frame">Creating an initial data frame</a></li>
+<li><a href="#making-the-variable-names-compatible">Making the variable names compatible</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#scatter-plot-matrix">Scatter Plot Matrix</a><ul>
+<li><a href="#basic-scatter-plot-matrix">Basic scatter plot matrix</a></li>
+<li><a href="#scatter-plot-matrix-with-smoothing">Scatter plot matrix with smoothing</a><ul>
+<li><a href="#default-scatter-plot-matrix">Default scatter plot matrix</a></li>
+<li><a href="#pairwise-scatter-plots">Pairwise scatter plots</a></li>
+<li><a href="#scatter-plot-matrix-with-linear-smoother">Scatter plot matrix with linear smoother</a></li>
+<li><a href="#scatter-plot-matrix-with-loess-smoother">Scatter plot matrix with loess smoother</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#three-variables-bubble-chart-and-3d-scatter-plot">Three Variables: Bubble Chart and 3D Scatter Plot</a><ul>
+<li><a href="#bubble-chart">Bubble chart</a></li>
+<li><a href="#d-scatter-plot">3D Scatter Plot</a><ul>
+<li><a href="#basic-3d-scatter-plot">Basic 3D scatter plot</a></li>
+<li><a href="#plotly-in-a-nutshell"><strong>Plotly</strong> in a nutshell</a></li>
+<li><a href="#interacting-with-the-3d-scatter-plot">Interacting with the 3D scatter plot</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#true-multivariate-eda-parallel-coordinate-plot-and-conditional-plots">True Multivariate EDA: Parallel Coordinate Plot and Conditional Plots</a><ul>
+<li><a href="#parallel-coordinate-plot-pcp">Parallel Coordinate Plot (PCP)</a><ul>
+<li><a href="#pcp-in-ggally">PCP in <strong>GGally</strong></a></li>
+<li><a href="#pcp-in-plotly">PCP in <strong>plotly</strong></a></li>
+</ul></li>
+<li><a href="#conditional-plots">Conditional Plots</a><ul>
+<li><a href="#conditional-scatter-plot">Conditional scatter plot</a></li>
+<li><a href="#conditional-histogram">Conditional histogram</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+
+<p><br></p>
+<div id="introduction" class="section level2 unnumbered">
+<h2>Introduction</h2>
+<p>This notebook cover the functionality of the <a href="https://geodacenter.github.io/workbook/2b_eda_multi/lab2b.html">Exploratory Data Analysis 2</a> section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.</p>
+<p>The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).</p>
+<p>For this notebook, we continue to use the socioeconomic data about 55 sub-boroughs in NYC from the GeoDa website. Our goal in this lab is show how to implement exploratory data analysis methods with three or more variables.</p>
+<div id="objectives" class="section level3 unnumbered">
+<h3>Objectives</h3>
+<p>After completing the notebook, you should know how to carry out the following tasks:</p>
+<ul>
+<li><p>Creating a scatterplot matrix</p></li>
+<li><p>Adding different types of smoothers to a scatter plot matrix</p></li>
+<li><p>Creating a bubble plot</p></li>
+<li><p>Creating a 3d scatter plot</p></li>
+<li><p>Creating a parallel coordinate plot</p></li>
+<li><p>Constructing conditional plots</p></li>
+<li><p>Making graphs interactive</p></li>
+</ul>
+<div id="r-packages-used" class="section level4 unnumbered">
+<h4>R Packages used</h4>
+<ul>
+<li><p><strong>tidyverse</strong>: for general data wrangling (includes <strong>readr</strong> and <strong>dplyr</strong>)</p></li>
+<li><p><strong>ggplot2</strong>: to draw statistical plots, including conditional plots. We use this rather than base R for increased functionality and more aesthetically pleasing plots (included in <strong>tidyverse</strong>)</p></li>
+<li><p><strong>GGally</strong>: a <strong>ggplot</strong> add-on package to create a scatterplot matrix and parallel coordinate plot</p></li>
+<li><p><strong>scatterplot3d</strong>: to create a static 3d scattter plot</p></li>
+<li><p><strong>plotly</strong>: to construct interactive 3d scatter and parallel coordinate plots</p></li>
+</ul>
+</div>
+<div id="r-commands-used" class="section level4 unnumbered">
+<h4>R Commands used</h4>
+<p>Below follows a list of the commands used in this notebook. For further details and a comprehensive list of options, please consult the <a href="https://www.rdocumentation.org">R documentation</a>.</p>
+<ul>
+<li><p><strong>Base R</strong>: <code>setwd</code>, <code>install.packages</code>, <code>library</code>, <code>head</code>, <code>names</code></p></li>
+<li><p><strong>tidyverse</strong>: <code>read_csv</code>, <code>rename</code>, <code>select</code></p></li>
+<li><p><strong>GGally</strong>: <code>ggscatmat</code>, <code>ggpairs</code>, <code>ggparcoord</code></p></li>
+<li><p><strong>ggplot2</strong>: <code>ggplot</code>, <code>geom_point</code>, <code>xlab</code>, <code>ylab</code>, <code>ggtitle</code>, <code>theme</code>, <code>cut_number</code>, <code>facet_grid</code>, <code>geom_smooth</code>, <code>geom_histogram</code></p></li>
+<li><p><strong>scatterplot3d</strong>: <code>scatterplot3d</code></p></li>
+<li><p><strong>plotly</strong>: <code>plot_ly</code>, <code>add_markers</code>, <code>layout</code></p></li>
+</ul>
+</div>
+</div>
+</div>
+<div id="preliminaries" class="section level2 unnumbered">
+<h2>Preliminaries</h2>
+<p>Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, make sure to set a working directory, such that the data set is in the right path.<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a></p>
+<div id="load-packages" class="section level3 unnumbered">
+<h3>Load packages</h3>
+<p>First, we load all the required packages using the <code>library</code> command. If you don’t have some of these in your system, make sure to install them first as well as their dependencies.<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a> You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that. Note that <strong>ggplot2</strong> does not need to be loaded separately since it is included in the <strong>tidyverse</strong> package collection.</p>
+<pre class="r"><code>library(tidyverse)</code></pre>
+<pre><code>## ── Attaching packages ─────────────────────────────────────────────────────────────────────────── tidyverse 1.2.1 ──</code></pre>
+<pre><code>## ✔ ggplot2 3.0.0     ✔ purrr   0.2.5
+## ✔ tibble  1.4.2     ✔ dplyr   0.7.6
+## ✔ tidyr   0.8.1     ✔ stringr 1.3.1
+## ✔ readr   1.1.1     ✔ forcats 0.3.0</code></pre>
+<pre><code>## ── Conflicts ────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()</code></pre>
+<pre class="r"><code>library(GGally)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;GGally&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:dplyr&#39;:
+## 
+##     nasa</code></pre>
+<pre class="r"><code>library(scatterplot3d)
+library(plotly)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;plotly&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:ggplot2&#39;:
+## 
+##     last_plot</code></pre>
+<pre><code>## The following object is masked from &#39;package:stats&#39;:
+## 
+##     filter</code></pre>
+<pre><code>## The following object is masked from &#39;package:graphics&#39;:
+## 
+##     layout</code></pre>
+</div>
+<div id="obtaining-the-data" class="section level3 unnumbered">
+<h3>Obtaining the data</h3>
+<p>The data to implement the operations in this workbook are contained in <a href="https://geodacenter.github.io/data-and-lab/nyc/">NYC Data</a> on the GeoDa support web site. After the file is downloaded, it must be unzipped (e.g., double click on the file). The <strong>nyc</strong> folder should be moved to the current working directory for the path names we use below to work correctly.</p>
+<div id="creating-an-initial-data-frame" class="section level4 unnumbered">
+<h4>Creating an initial data frame</h4>
+<p>We use the <strong>tidyverse</strong> function <code>read_csv</code> to read the data into a data frame <strong>nyc.data</strong>. We could also have used the base R <code>read.csv</code>, but <code>read_csv</code> is a bit more robust and creates a <strong>tibble</strong>, a data frame with some additional information. As usual, we check the contents of the data frame with a <code>head</code> command.</p>
+<pre class="r"><code>nyc.data &lt;- read_csv(&quot;nyc/nyc.csv&quot;)</code></pre>
+<pre><code>## Parsed with column specification:
+## cols(
+##   .default = col_double(),
+##   bor_subb = col_integer(),
+##   NAME = col_character(),
+##   CODE = col_integer(),
+##   SUBBOROUGH = col_character(),
+##   RENT2002 = col_integer(),
+##   RENT2005 = col_integer(),
+##   RENT2008 = col_integer()
+## )</code></pre>
+<pre><code>## See spec(...) for full column specifications.</code></pre>
+<pre class="r"><code>head(nyc.data)</code></pre>
+<pre><code>## # A tibble: 6 x 34
+##   bor_subb NAME   CODE SUBBOROUGH FORHIS06 FORHIS07 FORHIS08 FORHIS09
+##      &lt;int&gt; &lt;chr&gt; &lt;int&gt; &lt;chr&gt;         &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
+## 1      501 Nort…   501 North Sho…     37.1     34.0    27.4      29.3
+## 2      502 Mid-…   502 Mid-Island     28.0     18.1    24.0      31.2
+## 3      503 Sout…   503 South Sho…     10.7     12.1     9.69     14.7
+## 4      401 Asto…   401 Astoria        52.1     54.0    54.7      47.8
+## 5      402 Sunn…   402 Sunnyside…     62.7     69.4    67.1      58.3
+## 6      403 Jack…   403 Jackson H…     68.5     68.5    66.5      69.2
+## # ... with 26 more variables: FORWH06 &lt;dbl&gt;, FORWH07 &lt;dbl&gt;, FORWH08 &lt;dbl&gt;,
+## #   FORWH09 &lt;dbl&gt;, HHSIZ1990 &lt;dbl&gt;, HHSIZ00 &lt;dbl&gt;, HHSIZ02 &lt;dbl&gt;,
+## #   HHSIZ05 &lt;dbl&gt;, HHSIZ08 &lt;dbl&gt;, KIDS2000 &lt;dbl&gt;, KIDS2005 &lt;dbl&gt;,
+## #   KIDS2006 &lt;dbl&gt;, KIDS2007 &lt;dbl&gt;, KIDS2008 &lt;dbl&gt;, KIDS2009 &lt;dbl&gt;,
+## #   RENT2002 &lt;int&gt;, RENT2005 &lt;int&gt;, RENT2008 &lt;int&gt;, RENTPCT02 &lt;dbl&gt;,
+## #   RENTPCT05 &lt;dbl&gt;, RENTPCT08 &lt;dbl&gt;, PUBAST90 &lt;dbl&gt;, PUBAST00 &lt;dbl&gt;,
+## #   YRHOM02 &lt;dbl&gt;, YRHOM05 &lt;dbl&gt;, YRHOM08 &lt;dbl&gt;</code></pre>
+</div>
+<div id="making-the-variable-names-compatible" class="section level4 unnumbered">
+<h4>Making the variable names compatible</h4>
+<p>As in the previous exercise, we need to make the variable names compatible with their lower case counterparts in the GeoDa Workbook. Again, we will use the <strong>tidyverse</strong> <code>rename</code> function to turn the all-caps variables into lower case for the examples we will use. As in the GeoDa workbook, we will use the average people per household in 2000 (<strong>hhsiz00</strong>), the percentage households with children under 18 in 2000 (<strong>kids2000</strong>), the average number of years lived in the current residence in 2002 (<strong>yrhom02</strong>), the percentage households receiving public assistance in 2000 (<strong>pubast00</strong>), and the median rent in 2002 (<strong>rent2002</strong>).</p>
+<pre class="r"><code>nyc.data &lt;- nyc.data %&gt;% rename(&quot;hhsiz00&quot; = &quot;HHSIZ00&quot;,&quot;kids2000&quot; = &quot;KIDS2000&quot;,
+                                &quot;yrhom02&quot;=&quot;YRHOM02&quot;,&quot;pubast00&quot; = &quot;PUBAST00&quot;,
+                                &quot;rent2002&quot;=&quot;RENT2002&quot;)
+names(nyc.data)</code></pre>
+<pre><code>##  [1] &quot;bor_subb&quot;   &quot;NAME&quot;       &quot;CODE&quot;       &quot;SUBBOROUGH&quot; &quot;FORHIS06&quot;  
+##  [6] &quot;FORHIS07&quot;   &quot;FORHIS08&quot;   &quot;FORHIS09&quot;   &quot;FORWH06&quot;    &quot;FORWH07&quot;   
+## [11] &quot;FORWH08&quot;    &quot;FORWH09&quot;    &quot;HHSIZ1990&quot;  &quot;hhsiz00&quot;    &quot;HHSIZ02&quot;   
+## [16] &quot;HHSIZ05&quot;    &quot;HHSIZ08&quot;    &quot;kids2000&quot;   &quot;KIDS2005&quot;   &quot;KIDS2006&quot;  
+## [21] &quot;KIDS2007&quot;   &quot;KIDS2008&quot;   &quot;KIDS2009&quot;   &quot;rent2002&quot;   &quot;RENT2005&quot;  
+## [26] &quot;RENT2008&quot;   &quot;RENTPCT02&quot;  &quot;RENTPCT05&quot;  &quot;RENTPCT08&quot;  &quot;PUBAST90&quot;  
+## [31] &quot;pubast00&quot;   &quot;yrhom02&quot;    &quot;YRHOM05&quot;    &quot;YRHOM08&quot;</code></pre>
+</div>
+</div>
+</div>
+<div id="scatter-plot-matrix" class="section level2 unnumbered">
+<h2>Scatter Plot Matrix</h2>
+<p>A scatter plot matrix visualizes the bivariate relationships among several pairs of variables. The individual scatter plots are stacked such that each variable is in turn on the x-axis and on the y-axis.</p>
+<div id="basic-scatter-plot-matrix" class="section level3 unnumbered">
+<h3>Basic scatter plot matrix</h3>
+<p>A scatter plot matrix is not included in the functionality of <strong>ggplot2</strong>, but it can be created in a number of ways using the <strong>GGally</strong> package, which extends <strong>ggplot2</strong> with many additional features. Extensive documentation of <strong>GGally</strong> functionality is available on its <a href="http://ggobi.github.io/ggally/">Github page</a>.</p>
+<p>A quick and dirty scatter plot matrix is created by means of the <code>ggscatmat</code> command (detailed documentation is available on the <a href="http://ggobi.github.io/ggally/rd.html#ggscatmat">GGally Github page</a>).</p>
+<p>The <code>ggscatmat</code> function provides pairwise scatter plots in a lower diagonal of the graph, a density graph in the diagonal, and the pairwise correlations in the upper diagonal. This contrasts with GeoDa, where all pairwise scatter plots are given, and the diagonal is populated with a histogram for the individual variable (GeoDa currently does not support density plots).</p>
+<p>The command is very simple: it takes the data set, the list of variables passed to <code>columns</code> and a few options (color, choice of correlation coefficient). However, it does not seem to contain a way to show a linear or nonlinear smoother. In order to accomplish this, we will need the more powerful <code>ggpairs</code> function (see below).</p>
+<p>We follow the example in the GeoDa Workbook and use the four variables <strong>hhsiz00</strong>, <strong>kids2000</strong>, <strong>yrhom02</strong>, and <strong>pubast00</strong>.</p>
+<pre class="r"><code>ggscatmat(nyc.data, columns= c(&quot;hhsiz00&quot;,&quot;kids2000&quot;, &quot;yrhom02&quot;, &quot;pubast00&quot;))</code></pre>
+<p><img src="3_R_EDA_2_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+</div>
+<div id="scatter-plot-matrix-with-smoothing" class="section level3 unnumbered">
+<h3>Scatter plot matrix with smoothing</h3>
+<p>An alternative approach that provides much finer control of the graph can be based on the <code>ggpairs</code> function of <strong>GGally</strong> (see <a href="http://ggobi.github.io/ggally/rd.html#ggpairs">the GGobi Github page</a> for extensive documentation). As in <code>ggscatmat</code>, this function takes the data set as an argument, followed by the variables specified in the <code>columns</code> argument. The lower and upper triangle part of the matrix, and the diagonal are specified by means of the arguments <code>lower</code>, <code>upper</code>, and <code>diag</code>. The values for these arguments must be passed as a <code>list</code>.</p>
+<div id="default-scatter-plot-matrix" class="section level4 unnumbered">
+<h4>Default scatter plot matrix</h4>
+<p>First, we illustrate the default setting. We do not need to include the specifics, but they amount to:</p>
+<ul>
+<li><p><code>lower=list(continuous=&quot;points&quot;)</code>, for a scatter plot in the lower triangle</p></li>
+<li><p><code>diag=list(continuous=&quot;densityDiag&quot;)</code>, for a density plot on the diagonal</p></li>
+<li><p><code>upper=list(coninuous='cor')</code>, for a correlation coefficient in the upper diagonal</p></li>
+</ul>
+<pre class="r"><code>ggpairs(nyc.data, columns=c(&quot;hhsiz00&quot;,&quot;kids2000&quot;, &quot;yrhom02&quot;, &quot;pubast00&quot;))</code></pre>
+<p><img src="3_R_EDA_2_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+</div>
+<div id="pairwise-scatter-plots" class="section level4 unnumbered">
+<h4>Pairwise scatter plots</h4>
+<p>In order to obtain a scatter plot in both lower and upper triangles, we set <code>upper = list(continuous=&quot;points&quot;)</code> in the arguments to <strong>ggpairs</strong>. In addition, to have histograms in the diagonal, set set <code>diag=list(continuous=&quot;barDiag&quot;)</code>.</p>
+<pre class="r"><code>ggpairs(nyc.data, columns=c(&quot;hhsiz00&quot;,&quot;kids2000&quot;, &quot;yrhom02&quot;, &quot;pubast00&quot;),
+        upper=list(continuous=&quot;points&quot;),diag=list(continuous=&quot;barDiag&quot;))</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="3_R_EDA_2_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+</div>
+<div id="scatter-plot-matrix-with-linear-smoother" class="section level4 unnumbered">
+<h4>Scatter plot matrix with linear smoother</h4>
+<p>At this point, we can add a linear smoother by specifying <code>list(continuous=&quot;smooth&quot;)</code> instead of <code>continuous=&quot;points&quot;</code> for both <code>upper</code> and <code>lower</code> parameters (back with the default density plot on the diagonal).</p>
+<pre class="r"><code>ggpairs(nyc.data, columns=c(&quot;hhsiz00&quot;,&quot;kids2000&quot;, &quot;yrhom02&quot;, &quot;pubast00&quot;),
+        upper=list(continuous=&quot;smooth&quot;),lower=list(continuous=&quot;smooth&quot;))</code></pre>
+<p><img src="3_R_EDA_2_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+</div>
+<div id="scatter-plot-matrix-with-loess-smoother" class="section level4 unnumbered">
+<h4>Scatter plot matrix with loess smoother</h4>
+<p>The <code>ggpairs</code> function also supports a nonlinear <code>loess</code> smoother, but not the LOWESS smoother implemented in GeoDa. In order to include the latter, it would be necessary to create a custom function to pass as an argument to the <code>upper</code> and <code>lower</code> settings. This is beyond our current scope (again, see <a href="http://ggobi.github.io/ggally/rd.html#ggpairs">the GGobi Github page</a> for techical details). Similarly, if one wanted finer control over the parameters of the smoothing method (like setting a span), this must be implemented by means of a custom function.</p>
+<p>The loess smoother is passed in the same way as the linear smoother, as an argument to <code>continuous = &quot;smooth_loess&quot;</code>.</p>
+<pre class="r"><code>ggpairs(nyc.data, columns=c(&quot;hhsiz00&quot;,&quot;kids2000&quot;, &quot;yrhom02&quot;, &quot;pubast00&quot;),
+        upper=list(continuous=&quot;smooth_loess&quot;),lower=list(continuous=&quot;smooth_loess&quot;))</code></pre>
+<p><img src="3_R_EDA_2_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p>The <code>ggpairs</code> function has many other customization features to deal with axis labels, titles, etc., which we do not further pursue here. As mentioned above, just about anything can be included as a custom function using the <strong>ggplot</strong> API (for example, using the <code>wrap</code> functionality documented on the <a href="http://ggobi.github.io/ggally/rd.html#ggmatrix-helpers">Github pages</a>).</p>
+<p>Finally, as already alluded to earlier, linking and brushing are not included in the functionality of <strong>ggplot</strong>. The graphs can be made interactive by means of the <strong>plotly</strong> package, which we illustrate below for the 3D scatter plot.</p>
+</div>
+</div>
+</div>
+<div id="three-variables-bubble-chart-and-3d-scatter-plot" class="section level2 unnumbered">
+<h2>Three Variables: Bubble Chart and 3D Scatter Plot</h2>
+<div id="bubble-chart" class="section level3 unnumbered">
+<h3>Bubble chart</h3>
+<p>The bubble chart augments the scatter plot with a third dimension, the <code>size</code> of the point (or, bubble). Optionally, a fourth dimension can be added as the <code>color</code> of the point, but this quickly becomes difficult to discern. In GeoDa, the four dimensions are available by default, with the third and fourth set to the same variable. In <strong>ggplot</strong>, this is accomplished by setting a third and potentially fourth aesthetic for <code>size</code> and <code>col</code> to a variable.</p>
+<p>We first illustrate a bubble chart using the variable <strong>kids2000</strong> for the x-axis, <strong>pubast00</strong> for the y-axis, and <strong>rent2002</strong> for the bubble size. These are passed as arguments to <code>aes</code>. This is followed by the <code>geom_point</code> geom. As before, we can add labels for the x and y axis, as well as a title.</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00,size=rent2002)) +
+  geom_point() +
+  xlab(&quot;Percent HH with kids&quot;) +
+  ylab(&quot;Percent HH with public assistance&quot;) +
+  ggtitle(&quot;Bubble Chart&quot;) +
+  theme(plot.title = element_text(hjust = 0.5))</code></pre>
+<p><img src="3_R_EDA_2_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<p>Now, we also introduce the <code>col</code> as <strong>rent2002</strong>.</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00,size=rent2002,col=rent2002)) +
+  geom_point() +
+  xlab(&quot;Percent HH with kids&quot;) +
+  ylab(&quot;Percent HH with public assistance&quot;) +
+  ggtitle(&quot;Bubble Chart&quot;) +
+  theme(plot.title = element_text(hjust = 0.5))</code></pre>
+<p><img src="3_R_EDA_2_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<p>Note that we used the default color bar for the color argument. There is a wide scope for customization of legends and color schemes in <strong>ggplot</strong>, which is beyond the current scope. In a nutshell, in order to fully mimic the graphs in GeoDa, one would need to use one of the ColorBrewer color schemes, which are available as an option in <strong>ggplot</strong>.</p>
+</div>
+<div id="d-scatter-plot" class="section level3 unnumbered">
+<h3>3D Scatter Plot</h3>
+<div id="basic-3d-scatter-plot" class="section level4 unnumbered">
+<h4>Basic 3D scatter plot</h4>
+<p>The three-dimensional scatter plot is a simple generalization of the two-dimensional case by creating a graph that projects a 3D cube onto the two-dimensional screen (or paper), as a perspective plot. This is not (currently) supported by <strong>ggplot</strong>, so we resort to the specialized package <strong>scatterplot3d</strong> <span class="citation">(see Ligges and Machler 2003)</span>. This is an older package that predates the layered logic of <strong>ggplot</strong>, and instead uses the approach taken in the base R <code>plot</code> commands.</p>
+<p>A rudimentary plot follows from the <code>scatterplot3d</code> function to which the variables for the three dimensions are passed as arguments to <code>x</code>, <code>y</code>, and <code>z</code>. In contrast to <strong>ggplot</strong>, there is no <code>data</code> argument, but the variables must be specified using the standard <code>$</code> notation. We again use the variables <strong>kids2000</strong>, <strong>pubast00</strong>, and <strong>rent2002</strong>. In addition, we spiff up the graph a bit by adding a <code>main</code> title, as well as titles for <code>xlab</code>, <code>ylab</code>, and <code>zlab</code>. In addition, we set the symbol to a filled circle (the default is a hollow circle), using the base R <code>pch = 20</code> argument, and color it red (<code>color = &quot;red&quot;</code>), as in the GeoDa Workbook example. The result is as given below.</p>
+<pre class="r"><code>scatterplot3d(x = nyc.data$kids2000, y = nyc.data$pubast00, z = nyc.data$rent2002,
+              main = &quot;NYC 3D Scatterplot&quot;,
+              xlab = &quot;Percent HH with kids&quot;,
+              ylab = &quot;Percent HH with public assistance&quot;,
+              zlab = &quot;Median rent&quot;,
+              pch = 20,
+              color = &quot;red&quot;)</code></pre>
+<p><img src="3_R_EDA_2_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+</div>
+<div id="plotly-in-a-nutshell" class="section level4 unnumbered">
+<h4><strong>Plotly</strong> in a nutshell</h4>
+<p>The static 3D scatter plot is fine as a traditional graph, but is not that useful for data exploration. To that effect, we will illustrate some functionality contained in the <strong>plotly</strong> package. This package forms an R interface to the extensive open source Javascript graphing library of the same name, <a href="https://plot.ly/javascript/">plotly.js</a>, which leverages the extensive collection of D3 charts. The <strong>plotly</strong> package is just one of several interfaces to <strong>plotly</strong>. Another commonly used one is Plotly.py for Python.</p>
+<p>The functionality in <strong>plotly</strong> is huge, and much more than we can cover here. We refer to the many web resources for further details. An excellent overview is given in Carson Sievert’s <a href="https://plotly-book.cpsievert.me">plotly for R book</a>, especially in Chapter 2, <a href="https://plotly-book.cpsievert.me/the-plotly-cookbook.html">The Plotly Cookbook</a>.</p>
+<p>There are two main ways to create interactive graphs using <strong>plotly</strong>. One is to pass the usual arguments to the <code>plot_ly</code> command, which has its own <em>Grammar of Graphics</em> syntax. This uses the concept of <em>traces</em>, which is similar to the <em>layers</em> in <strong>ggplot</strong>. The second way uses the <code>ggplotly</code> command, which takes one or more <strong>ggplot</strong> objects and makes them interactive. We will not cover the second approach, but it is a fairly straightforward way to make any of our earlier <strong>ggplot</strong> graphs interactive.</p>
+<p>The basic arguments to <code>plot_ly</code> are the same as for <code>ggplot</code>, i.e., the data set, and the axes (<code>x</code>, <code>y</code>, and for 3D, <code>z</code>). The variable names are passed in a slightly different way, and use the <em>formula</em> notation, with the variable name prefaced by the <code>~</code> symbol. So, for example, if the x-axis would map to the variable <strong>kids2000</strong>, that would be specified as <code>x = ~kids2000</code>, and similarly for the other axes.</p>
+<p>Just like <strong>ggplot</strong>, <strong>plotly</strong> has a layered approach to constructing a graph, but instead of using a plus sign to separate the layers, a <em>pipe</em> command, <code>%&gt;%</code> is used. Also, the various options for customization are passed to the respective arguments as a <code>list</code>.</p>
+<p>We will illustrate the basics of <code>plot_ly</code> by constructing a 3D scatter plot for the same three variables as above.</p>
+</div>
+<div id="interacting-with-the-3d-scatter-plot" class="section level4 unnumbered">
+<h4>Interacting with the 3D scatter plot</h4>
+<p>There are several ways to interact with a plot in <strong>plotly</strong>, but here we will illustrate some basic functionality to zoom in, zoom out, and rotate the 3D cube, similar to what is available in GeoDa.</p>
+<p>We start with a bare bones graph. We pass the data set and the three variables to the <code>plot_ly</code> function. Since the default <em>trace</em> is a scatter plot, this is all we really need to specify.</p>
+<pre class="r"><code>plot_ly(nyc.data, x = ~kids2000, y = ~pubast00, z = ~rent2002)</code></pre>
+<pre><code>## No trace type specified:
+##   Based on info supplied, a &#39;scatter3d&#39; trace seems appropriate.
+##   Read more about this trace type -&gt; https://plot.ly/r/reference/#scatter3d</code></pre>
+<pre><code>## No scatter3d mode specifed:
+##   Setting the mode to markers
+##   Read more about this attribute -&gt; https://plot.ly/r/reference/#scatter-mode</code></pre>
+<div id="htmlwidget-36a4473d4b646e632357" style="width:672px;height:480px;" class="plotly html-widget"></div>
+<script type="application/json" data-for="htmlwidget-36a4473d4b646e632357">{"x":{"visdat":{"1486592fe32e":["function () ","plotlyVisDat"]},"cur_data":"1486592fe32e","attrs":{"1486592fe32e":{"x":{},"y":{},"z":{},"alpha_stroke":1,"sizes":[10,100],"spans":[1,20]}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"scene":{"xaxis":{"title":"kids2000"},"yaxis":{"title":"pubast00"},"zaxis":{"title":"rent2002"}},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":[{"name":"Collaborate","icon":{"width":1000,"ascent":500,"descent":-50,"path":"M487 375c7-10 9-23 5-36l-79-259c-3-12-11-23-22-31-11-8-22-12-35-12l-263 0c-15 0-29 5-43 15-13 10-23 23-28 37-5 13-5 25-1 37 0 0 0 3 1 7 1 5 1 8 1 11 0 2 0 4-1 6 0 3-1 5-1 6 1 2 2 4 3 6 1 2 2 4 4 6 2 3 4 5 5 7 5 7 9 16 13 26 4 10 7 19 9 26 0 2 0 5 0 9-1 4-1 6 0 8 0 2 2 5 4 8 3 3 5 5 5 7 4 6 8 15 12 26 4 11 7 19 7 26 1 1 0 4 0 9-1 4-1 7 0 8 1 2 3 5 6 8 4 4 6 6 6 7 4 5 8 13 13 24 4 11 7 20 7 28 1 1 0 4 0 7-1 3-1 6-1 7 0 2 1 4 3 6 1 1 3 4 5 6 2 3 3 5 5 6 1 2 3 5 4 9 2 3 3 7 5 10 1 3 2 6 4 10 2 4 4 7 6 9 2 3 4 5 7 7 3 2 7 3 11 3 3 0 8 0 13-1l0-1c7 2 12 2 14 2l218 0c14 0 25-5 32-16 8-10 10-23 6-37l-79-259c-7-22-13-37-20-43-7-7-19-10-37-10l-248 0c-5 0-9-2-11-5-2-3-2-7 0-12 4-13 18-20 41-20l264 0c5 0 10 2 16 5 5 3 8 6 10 11l85 282c2 5 2 10 2 17 7-3 13-7 17-13z m-304 0c-1-3-1-5 0-7 1-1 3-2 6-2l174 0c2 0 4 1 7 2 2 2 4 4 5 7l6 18c0 3 0 5-1 7-1 1-3 2-6 2l-173 0c-3 0-5-1-8-2-2-2-4-4-4-7z m-24-73c-1-3-1-5 0-7 2-2 3-2 6-2l174 0c2 0 5 0 7 2 3 2 4 4 5 7l6 18c1 2 0 5-1 6-1 2-3 3-5 3l-174 0c-3 0-5-1-7-3-3-1-4-4-5-6z"},"click":"function(gd) { \n        // is this being viewed in RStudio?\n        if (location.search == '?viewer_pane=1') {\n          alert('To learn about plotly for collaboration, visit:\\n https://cpsievert.github.io/plotly_book/plot-ly-for-collaboration.html');\n        } else {\n          window.open('https://cpsievert.github.io/plotly_book/plot-ly-for-collaboration.html', '_blank');\n        }\n      }"}],"cloud":false},"data":[{"x":[39.2995,36.2234,39.7362,28.4592,29.8808,41.6335,41.8224,35.0385,21.9464,31.5298,34.3515,43.1082,41.6585,30.7215,44.9491,42.5305,40.128,11.3798,22.1389,8.3924,8.3815,14.6295,13.3162,30.93,34.0025,38.1172,40.7504,50.6003,50.6547,50.5058,55.3666,47.3797,32.148,45.5402,29.3876,35.7203,42.1675,35.0024,53.6096,45.0378,24.7407,25.0841,38.2278,51.6881,50.2566,43.0152,45.0122,42.1733,42.3996,26.3044,41.1304,41.7739,31.0049,31.9359,29.2787],"y":[6.005791,2.287034,1.350208,5.20451,2.974139,5.332569,6.02923,3.95129,3.111417,2.795721,2.995194,5.750022,3.435906,1.029474,6.878053,3.044977,9.614139,1.092345,6.955674,2.45756,0.942509,2.344866,0.898064,9.979948,16.025613,15.40489,13.266259,23.320949,23.226611,20.727422,23.431818,17.188436,6.869893,14.518186,3.33615,7.339144,8.117254,8.431087,19.968782,17.849689,7.910931,4.321379,13.093806,20.480894,13.888889,4.282995,7.388086,8.676957,8.982116,3.529319,7.453581,8.160499,5.224864,6.044883,9.121694],"z":[800,650,750,1000,1000,910,896,800,1000,1000,1000,800,850,1100,700,800,850,2300,2200,2475,2300,2500,2400,1200,870,900,0,0,500,756,0,0,990,750,750,800,800,825,725,650,1000,1044,775,700,750,850,728,750,800,975,754,850,869,750,750],"type":"scatter3d","mode":"markers","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"base_url":"https://plot.ly"},"evals":["config.modeBarButtonsToAdd.0.click"],"jsHooks":[]}</script>
+<p>There are warnings, but it works. Basically, since we did not specify a trace type, the default <code>scatter3d</code> is applied, which is exactly what we wanted. Also, since no mode is specified, the default is set to <code>markers</code>.</p>
+<p>The moment we move the pointer over the graph, a number of small icons appear in the right-hand top. These correspond to different types of interactions that can be carried out. Before we proceed with those, however, we move the pointer to one of the points. The <em>hovering</em> functionality (here left to the default of listing all data dimensions) will list the values for x, y and z in a small box, and draw the projections to each of the axes.</p>
+<p>The second left-most icon at the top of the graph invokes the <code>Zoom</code> functionality. Now, moving the pointer back and forth makes the cube smaller or larger. Other interesting options are the <code>Orbital rotation</code> and <code>Turntable rotation</code>, the two icons to the right of the home symbol. Both options move the cube around as the pointer changes position. The left-most icon allows a static version of the plot to be downloaded as a png file.</p>
+<p>Next, we illustrate a very simple way to add some further information to the graph. First, we use <code>add_markers</code> to turn the observation points red. Note how the argument <code>marker</code> is set equal to a <code>list</code> to pass the needed <code>color</code> parameter. The <code>add_markers</code> command follows the initial <code>plot_ly</code> setting after a <code>%&gt;%</code> pipe symbol. A final touch is to set titles for the axes, by means of the <code>layout</code> command and the <code>scene</code> option, again after a pipe symbol. The titles are set by means of a <code>list</code> command for each of the three <code>xaxis</code>, <code>yaxis</code>, and <code>zaxis</code>.</p>
+<p>At this point, when we execute the command, there are no more warnings. Also, we can interact with the graph in the same way as before.</p>
+<pre class="r"><code>plot_ly(nyc.data, x = ~kids2000, y = ~pubast00, z = ~rent2002) %&gt;%
+  add_markers(marker = list(color=&quot;red&quot;)) %&gt;%
+  layout(scene = list(xaxis = list(title = &quot;Percent HH with kids&quot;),
+                     yaxis = list(title = &quot;Percent HH with public assistance&quot;),
+                     zaxis = list(title = &quot;Median rent&quot;)))</code></pre>
+<div id="htmlwidget-3ad43192fe85e222152b" style="width:672px;height:480px;" class="plotly html-widget"></div>
+<script type="application/json" data-for="htmlwidget-3ad43192fe85e222152b">{"x":{"visdat":{"14866909543e":["function () ","plotlyVisDat"]},"cur_data":"14866909543e","attrs":{"14866909543e":{"x":{},"y":{},"z":{},"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter3d","mode":"markers","marker":{"color":"red"},"inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"scene":{"xaxis":{"title":"Percent HH with kids"},"yaxis":{"title":"Percent HH with public assistance"},"zaxis":{"title":"Median rent"}},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":[{"name":"Collaborate","icon":{"width":1000,"ascent":500,"descent":-50,"path":"M487 375c7-10 9-23 5-36l-79-259c-3-12-11-23-22-31-11-8-22-12-35-12l-263 0c-15 0-29 5-43 15-13 10-23 23-28 37-5 13-5 25-1 37 0 0 0 3 1 7 1 5 1 8 1 11 0 2 0 4-1 6 0 3-1 5-1 6 1 2 2 4 3 6 1 2 2 4 4 6 2 3 4 5 5 7 5 7 9 16 13 26 4 10 7 19 9 26 0 2 0 5 0 9-1 4-1 6 0 8 0 2 2 5 4 8 3 3 5 5 5 7 4 6 8 15 12 26 4 11 7 19 7 26 1 1 0 4 0 9-1 4-1 7 0 8 1 2 3 5 6 8 4 4 6 6 6 7 4 5 8 13 13 24 4 11 7 20 7 28 1 1 0 4 0 7-1 3-1 6-1 7 0 2 1 4 3 6 1 1 3 4 5 6 2 3 3 5 5 6 1 2 3 5 4 9 2 3 3 7 5 10 1 3 2 6 4 10 2 4 4 7 6 9 2 3 4 5 7 7 3 2 7 3 11 3 3 0 8 0 13-1l0-1c7 2 12 2 14 2l218 0c14 0 25-5 32-16 8-10 10-23 6-37l-79-259c-7-22-13-37-20-43-7-7-19-10-37-10l-248 0c-5 0-9-2-11-5-2-3-2-7 0-12 4-13 18-20 41-20l264 0c5 0 10 2 16 5 5 3 8 6 10 11l85 282c2 5 2 10 2 17 7-3 13-7 17-13z m-304 0c-1-3-1-5 0-7 1-1 3-2 6-2l174 0c2 0 4 1 7 2 2 2 4 4 5 7l6 18c0 3 0 5-1 7-1 1-3 2-6 2l-173 0c-3 0-5-1-8-2-2-2-4-4-4-7z m-24-73c-1-3-1-5 0-7 2-2 3-2 6-2l174 0c2 0 5 0 7 2 3 2 4 4 5 7l6 18c1 2 0 5-1 6-1 2-3 3-5 3l-174 0c-3 0-5-1-7-3-3-1-4-4-5-6z"},"click":"function(gd) { \n        // is this being viewed in RStudio?\n        if (location.search == '?viewer_pane=1') {\n          alert('To learn about plotly for collaboration, visit:\\n https://cpsievert.github.io/plotly_book/plot-ly-for-collaboration.html');\n        } else {\n          window.open('https://cpsievert.github.io/plotly_book/plot-ly-for-collaboration.html', '_blank');\n        }\n      }"}],"cloud":false},"data":[{"x":[39.2995,36.2234,39.7362,28.4592,29.8808,41.6335,41.8224,35.0385,21.9464,31.5298,34.3515,43.1082,41.6585,30.7215,44.9491,42.5305,40.128,11.3798,22.1389,8.3924,8.3815,14.6295,13.3162,30.93,34.0025,38.1172,40.7504,50.6003,50.6547,50.5058,55.3666,47.3797,32.148,45.5402,29.3876,35.7203,42.1675,35.0024,53.6096,45.0378,24.7407,25.0841,38.2278,51.6881,50.2566,43.0152,45.0122,42.1733,42.3996,26.3044,41.1304,41.7739,31.0049,31.9359,29.2787],"y":[6.005791,2.287034,1.350208,5.20451,2.974139,5.332569,6.02923,3.95129,3.111417,2.795721,2.995194,5.750022,3.435906,1.029474,6.878053,3.044977,9.614139,1.092345,6.955674,2.45756,0.942509,2.344866,0.898064,9.979948,16.025613,15.40489,13.266259,23.320949,23.226611,20.727422,23.431818,17.188436,6.869893,14.518186,3.33615,7.339144,8.117254,8.431087,19.968782,17.849689,7.910931,4.321379,13.093806,20.480894,13.888889,4.282995,7.388086,8.676957,8.982116,3.529319,7.453581,8.160499,5.224864,6.044883,9.121694],"z":[800,650,750,1000,1000,910,896,800,1000,1000,1000,800,850,1100,700,800,850,2300,2200,2475,2300,2500,2400,1200,870,900,0,0,500,756,0,0,990,750,750,800,800,825,725,650,1000,1044,775,700,750,850,728,750,800,975,754,850,869,750,750],"type":"scatter3d","mode":"markers","marker":{"color":"red","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"base_url":"https://plot.ly"},"evals":["config.modeBarButtonsToAdd.0.click"],"jsHooks":[]}</script>
+</div>
+</div>
+</div>
+<div id="true-multivariate-eda-parallel-coordinate-plot-and-conditional-plots" class="section level2 unnumbered">
+<h2>True Multivariate EDA: Parallel Coordinate Plot and Conditional Plots</h2>
+<p>True multivariate EDA deals with situations where more than three variables are considered. We follow the GeoDa Workbook and illustrate the Parallel Coordinate Plot, or PCP, and conditional plots. For the former, we again need to resort to <strong>GGally</strong>, but for the latter, we can exploit the <code>facet_wrap</code> and <code>facet_grid</code> functions of <strong>ggplot</strong>. In addition, we can turn these plots into interactive graphs by means of the <strong>plotly</strong> functionality.</p>
+<div id="parallel-coordinate-plot-pcp" class="section level3 unnumbered">
+<h3>Parallel Coordinate Plot (PCP)</h3>
+<div id="pcp-in-ggally" class="section level4 unnumbered">
+<h4>PCP in <strong>GGally</strong></h4>
+<p>The PCP is implemented in the <code>ggparcoord</code> function of <strong>GGally</strong>. However, its implementation does not follow the regular <code>columns</code> specification we used above for the scatterplot matrix. Instead of passing a list of variable names, the actual column numbers of the variables in the data frame must be specified (but those may be in any order).</p>
+<p>An easy, though not very elegant way to deal with this is to create a subset of the data for those variables to be plotted, and then exploit the default of <code>columns = 1:ncol(data)</code>. In other words, we don’t have to specify the <code>columns</code> argument at all.</p>
+<p>In the example below, we use the same four variables as in the GeoDa Workbook: <strong>kids2000</strong>, <strong>rent2002</strong>, <strong>pubast00</strong>, and <strong>yrhom02</strong>. We first <code>select</code> those from the <strong>nyc.data</strong> set to create a subset we call <strong>pcp.vars</strong>. Then, we pass this subset as the argument to <code>data</code> in <code>ggparcoord</code>. The result is a fairly rudimentary PCP, with the axes organized vertically (in GeoDa, they are horizontal). Many customizations are possible, for which detailed options can be found in <a href="https://www.rdocumentation.org/packages/GGally/versions/1.4.0/topics/ggparcoord">the documentation pages</a>.</p>
+<pre class="r"><code>vars &lt;- c(&quot;kids2000&quot;,&quot;rent2002&quot;,&quot;pubast00&quot;,&quot;yrhom02&quot;)
+pcp.vars &lt;- select(nyc.data,vars)
+ggparcoord(data = pcp.vars)</code></pre>
+<p><img src="3_R_EDA_2_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+</div>
+<div id="pcp-in-plotly" class="section level4 unnumbered">
+<h4>PCP in <strong>plotly</strong></h4>
+<p>In <strong>plotly</strong>, the PCP functionality in implemented as the <code>type = &quot;parcoords&quot;</code>. This is passed as the second argument to the <code>plot_ly</code> function (the first argument, as usual, is the data set, <strong>nyc.data</strong>). The axes of the PCP are specified through the <code>dimensions</code> argument. As is the case in other <code>plot_ly</code> examples, they are passed as a list. In this instance, this is actually a list of lists, one for each axis. In each of these lists, we include a <code>label</code> for the axis, and a variable as the argument to the <code>values</code> parameter. As before, we need to use a formula format for the variables and precede their names with the <code>~</code> symbol.</p>
+<pre class="r"><code>plot_ly(nyc.data,type = &quot;parcoords&quot;,
+          dimensions = list(
+            list(label = &quot;Kids&quot;, values = ~kids2000),
+            list(label = &quot;Public Assistance&quot;, values = ~pubast00),
+            list(label = &quot;Rent&quot;, values = ~rent2002),
+            list(label = &quot;Stable&quot;, values = ~yrhom02)
+            )
+          )</code></pre>
+<div id="htmlwidget-d698df7d18924d25ba7f" style="width:672px;height:480px;" class="plotly html-widget"></div>
+<script type="application/json" data-for="htmlwidget-d698df7d18924d25ba7f">{"x":{"visdat":{"1486597a46d5":["function () ","plotlyVisDat"]},"cur_data":"1486597a46d5","attrs":{"1486597a46d5":{"dimensions":[{"label":"Kids","values":{}},{"label":"Public Assistance","values":{}},{"label":"Rent","values":{}},{"label":"Stable","values":{}}],"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"parcoords"}},"layout":{"margin":{"b":40,"l":60,"r":10},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":[{"name":"Collaborate","icon":{"width":1000,"ascent":500,"descent":-50,"path":"M487 375c7-10 9-23 5-36l-79-259c-3-12-11-23-22-31-11-8-22-12-35-12l-263 0c-15 0-29 5-43 15-13 10-23 23-28 37-5 13-5 25-1 37 0 0 0 3 1 7 1 5 1 8 1 11 0 2 0 4-1 6 0 3-1 5-1 6 1 2 2 4 3 6 1 2 2 4 4 6 2 3 4 5 5 7 5 7 9 16 13 26 4 10 7 19 9 26 0 2 0 5 0 9-1 4-1 6 0 8 0 2 2 5 4 8 3 3 5 5 5 7 4 6 8 15 12 26 4 11 7 19 7 26 1 1 0 4 0 9-1 4-1 7 0 8 1 2 3 5 6 8 4 4 6 6 6 7 4 5 8 13 13 24 4 11 7 20 7 28 1 1 0 4 0 7-1 3-1 6-1 7 0 2 1 4 3 6 1 1 3 4 5 6 2 3 3 5 5 6 1 2 3 5 4 9 2 3 3 7 5 10 1 3 2 6 4 10 2 4 4 7 6 9 2 3 4 5 7 7 3 2 7 3 11 3 3 0 8 0 13-1l0-1c7 2 12 2 14 2l218 0c14 0 25-5 32-16 8-10 10-23 6-37l-79-259c-7-22-13-37-20-43-7-7-19-10-37-10l-248 0c-5 0-9-2-11-5-2-3-2-7 0-12 4-13 18-20 41-20l264 0c5 0 10 2 16 5 5 3 8 6 10 11l85 282c2 5 2 10 2 17 7-3 13-7 17-13z m-304 0c-1-3-1-5 0-7 1-1 3-2 6-2l174 0c2 0 4 1 7 2 2 2 4 4 5 7l6 18c0 3 0 5-1 7-1 1-3 2-6 2l-173 0c-3 0-5-1-8-2-2-2-4-4-4-7z m-24-73c-1-3-1-5 0-7 2-2 3-2 6-2l174 0c2 0 5 0 7 2 3 2 4 4 5 7l6 18c1 2 0 5-1 6-1 2-3 3-5 3l-174 0c-3 0-5-1-7-3-3-1-4-4-5-6z"},"click":"function(gd) { \n        // is this being viewed in RStudio?\n        if (location.search == '?viewer_pane=1') {\n          alert('To learn about plotly for collaboration, visit:\\n https://cpsievert.github.io/plotly_book/plot-ly-for-collaboration.html');\n        } else {\n          window.open('https://cpsievert.github.io/plotly_book/plot-ly-for-collaboration.html', '_blank');\n        }\n      }"}],"cloud":false},"data":[{"dimensions":[{"label":"Kids","values":[39.2995,36.2234,39.7362,28.4592,29.8808,41.6335,41.8224,35.0385,21.9464,31.5298,34.3515,43.1082,41.6585,30.7215,44.9491,42.5305,40.128,11.3798,22.1389,8.3924,8.3815,14.6295,13.3162,30.93,34.0025,38.1172,40.7504,50.6003,50.6547,50.5058,55.3666,47.3797,32.148,45.5402,29.3876,35.7203,42.1675,35.0024,53.6096,45.0378,24.7407,25.0841,38.2278,51.6881,50.2566,43.0152,45.0122,42.1733,42.3996,26.3044,41.1304,41.7739,31.0049,31.9359,29.2787]},{"label":"Public Assistance","values":[6.005791,2.287034,1.350208,5.20451,2.974139,5.332569,6.02923,3.95129,3.111417,2.795721,2.995194,5.750022,3.435906,1.029474,6.878053,3.044977,9.614139,1.092345,6.955674,2.45756,0.942509,2.344866,0.898064,9.979948,16.025613,15.40489,13.266259,23.320949,23.226611,20.727422,23.431818,17.188436,6.869893,14.518186,3.33615,7.339144,8.117254,8.431087,19.968782,17.849689,7.910931,4.321379,13.093806,20.480894,13.888889,4.282995,7.388086,8.676957,8.982116,3.529319,7.453581,8.160499,5.224864,6.044883,9.121694]},{"label":"Rent","values":[800,650,750,1000,1000,910,896,800,1000,1000,1000,800,850,1100,700,800,850,2300,2200,2475,2300,2500,2400,1200,870,900,0,0,500,756,0,0,990,750,750,800,800,825,725,650,1000,1044,775,700,750,850,728,750,800,975,754,850,869,750,750]},{"label":"Stable","values":[10.80506793,15.24124639,12.70425043,12.83916713,15.3876559,12.64922885,11.554984,13.49840766,13.40156226,14.01125986,13.94706039,9.726724617,12.81775297,13.43954091,14.39448279,14.88520634,12.56409219,10.74627497,12.78223754,11.33124176,11.26985963,12.34367249,10.58666958,13.84669464,13.21054289,14.97406004,13.53630543,10.99920577,10.14931717,9.704102674,9.723328488,8.21638886,13.01775643,12.39149802,16.12394165,10.3671338,12.59261453,12.44717388,9.145593284,12.25786632,11.66121667,11.76849798,11.78837462,11.67831193,10.32799817,12.07898587,11.25862449,11.6595575,11.44083364,13.1092734,12.87324909,11.01807276,12.77818963,12.84560741,11.86403167]}],"type":"parcoords","line":{"color":"rgba(31,119,180,1)"},"frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"base_url":"https://plot.ly"},"evals":["config.modeBarButtonsToAdd.0.click"],"jsHooks":[]}</script>
+<p>Once we move the pointer over the graph, a few icons appear on the top right (but fewer than for the 3D scatter plot). The interaction with the graph is not that intuitive, but once you know what to look for, it is quite powerful. The easiest way to proceed is to click on one of the axes: with the cross hair <code>+</code> symbol placed at any location along an axis, clicking will change the color and <em>select</em> the observations (lines) covered by the small vertical bar (the pointer will turn into an arrow that points up or down, depending on the direction of the selection). Clicking the cross hair in another position on the same axis turns the selection off.</p>
+<p>A second interactive feature allows one to change the order of the axes. For example, if we move the pointer to the top of the <em>Stable</em> axis, it changes from a cross hair to a double sided arrow &lt;-&gt;. Pressing down on the pointer now lets us move this axis to the left, e.g., to become the third axis. This can be done even while certain observations are selected.</p>
+<p>Several options for customization of the PCP graph can be found in the <strong>plotly</strong> <a href="https://plot.ly/r/reference/#parcoords">documentation for <code>parcoords</code></a>.</p>
+</div>
+</div>
+<div id="conditional-plots" class="section level3 unnumbered">
+<h3>Conditional Plots</h3>
+<p>Conditional plots are a major feature of the functionality of <strong>ggplot</strong>, where they are referred to as <em>facetting</em>, or <em>small multiples</em>. This is implemented in the <code>facet_wrap</code> and <code>facet_grid</code> functions. The main difference between the two approaches is that <code>facet_grid</code> is explicitly two-dimensional. In that aspect, it is the closest matches to the conditional plot design in GeoDa.</p>
+<p>There is one major difference between the approach taken in GeoDa and that in <strong>ggplot</strong>. In GeoDa, the conditioning variables are typically continuous, and different types of classifications can be applied to them to obtain the actual condition. For example, in the GeoDa Workbook illustration, the variables <strong>hhsiz00</strong> and <strong>yrhom02</strong> are used as conditioning variables for respectively, the x-axis and the y-axis. A classification such as quantiles (e.g., 3 or 2 in the GeoDa Workbook examples) yields the categories for the sub-plots. In <strong>ggplot</strong>, the conditioning is based on a categorical variable that needs to be available in the data set. The facetting formula does not evaluate functions, so the conditioning categories need to be computed beforehand.</p>
+<p>There are three so-called helper functions to make this easy: <code>cut_interval</code>, <code>cut_width</code>, and <code>cut_number</code>. The closest to the median (2 quantiles) conditioning illustrated in the GeoDa Workbook is the <code>cut_number</code> function. We pass the variable, e.g., <strong>hhziz00</strong>, and the number of categories, say <code>n = 2</code>. This creates the new variable as an R <code>factor</code>, giving the intervals that resulted from the cut.</p>
+<p>For example, we create a new variable <strong>cut.hhsiz</strong> using a quantile classification with two categories (as in the GeoDa Workbook, the variable will be split on the median value), by setting <code>n=2</code>. We need to use the <code>$</code> notation to ensure that the new variable is added to the relevant data set. Since we only have 55 observations, we can easily list the full set of values to verify. Internally, they are stored as <em>factors</em> (hence, the summary of the <code>Levels</code> at the end of the listing).</p>
+<pre class="r"><code>nyc.data$cut.hhsiz &lt;- cut_number(nyc.data$hhsiz00,n=2)
+nyc.data$cut.hhsiz</code></pre>
+<pre><code>##  [1] (2.72,3.2]  [1.57,2.72] (2.72,3.2]  [1.57,2.72] [1.57,2.72]
+##  [6] (2.72,3.2]  (2.72,3.2]  [1.57,2.72] [1.57,2.72] [1.57,2.72]
+## [11] [1.57,2.72] (2.72,3.2]  (2.72,3.2]  [1.57,2.72] (2.72,3.2] 
+## [16] (2.72,3.2]  [1.57,2.72] [1.57,2.72] [1.57,2.72] [1.57,2.72]
+## [21] [1.57,2.72] [1.57,2.72] [1.57,2.72] [1.57,2.72] [1.57,2.72]
+## [26] [1.57,2.72] (2.72,3.2]  (2.72,3.2]  (2.72,3.2]  (2.72,3.2] 
+## [31] (2.72,3.2]  (2.72,3.2]  [1.57,2.72] (2.72,3.2]  [1.57,2.72]
+## [36] [1.57,2.72] (2.72,3.2]  (2.72,3.2]  (2.72,3.2]  (2.72,3.2] 
+## [41] [1.57,2.72] [1.57,2.72] [1.57,2.72] (2.72,3.2]  (2.72,3.2] 
+## [46] (2.72,3.2]  (2.72,3.2]  (2.72,3.2]  (2.72,3.2]  [1.57,2.72]
+## [51] (2.72,3.2]  (2.72,3.2]  [1.57,2.72] [1.57,2.72] [1.57,2.72]
+## Levels: [1.57,2.72] (2.72,3.2]</code></pre>
+<p>And, similarly for <strong>cut.yrhom</strong>:</p>
+<pre class="r"><code>nyc.data$cut.yrhom &lt;- cut_number(nyc.data$yrhom02,n=2)
+nyc.data$cut.yrhom</code></pre>
+<pre><code>##  [1] [8.22,12.4] (12.4,16.1] (12.4,16.1] (12.4,16.1] (12.4,16.1]
+##  [6] (12.4,16.1] [8.22,12.4] (12.4,16.1] (12.4,16.1] (12.4,16.1]
+## [11] (12.4,16.1] [8.22,12.4] (12.4,16.1] (12.4,16.1] (12.4,16.1]
+## [16] (12.4,16.1] (12.4,16.1] [8.22,12.4] (12.4,16.1] [8.22,12.4]
+## [21] [8.22,12.4] [8.22,12.4] [8.22,12.4] (12.4,16.1] (12.4,16.1]
+## [26] (12.4,16.1] (12.4,16.1] [8.22,12.4] [8.22,12.4] [8.22,12.4]
+## [31] [8.22,12.4] [8.22,12.4] (12.4,16.1] [8.22,12.4] (12.4,16.1]
+## [36] [8.22,12.4] (12.4,16.1] (12.4,16.1] [8.22,12.4] [8.22,12.4]
+## [41] [8.22,12.4] [8.22,12.4] [8.22,12.4] [8.22,12.4] [8.22,12.4]
+## [46] [8.22,12.4] [8.22,12.4] [8.22,12.4] [8.22,12.4] (12.4,16.1]
+## [51] (12.4,16.1] [8.22,12.4] (12.4,16.1] (12.4,16.1] [8.22,12.4]
+## Levels: [8.22,12.4] (12.4,16.1]</code></pre>
+<p>If we compare the breakpoints to the ones in Figure 34 of the Workbook, we see that they are close, but not exactly the same, i.e., 2.72 vs. 2.703 in GeoDa, and 12.4 vs. 12.368. More precisely, upon closer examination, we find that for <strong>cut.hhsiz</strong>, the lower group has 28 observations vs. 27 in GeoDa. Since we have so few data points, this may lead to slight differences in the graphs.</p>
+<p>At this point, we can set up the conditioning in the <code>facet_grid</code> function, expressed as a formula, with the row conditioning variable first. Note that the row conditioning variable is the y-axis in GeoDa, and the column conditioning variable is the x-axis. For example, with our new categories <strong>cut.hhsiz</strong> and <strong>cut.yrhom</strong>, this would be <code>facet_grid(cut.yrhom ~ cut.hhsiz)</code>.</p>
+<p>One final aspect is how the categories are ordered in the graph. The default (<code>as.table=TRUE</code>) is to have the highest category in the lower-right corner. In order to mimic the organization in GeoDa, we set <code>as.table=FALSE</code>. This results in the highest category being in the upper-right corner.</p>
+<p>We now illustrate this for a conditional scatter plot and a conditional histogram.</p>
+<div id="conditional-scatter-plot" class="section level4 unnumbered">
+<h4>Conditional scatter plot</h4>
+<p>We replicate the example in the GeoDa Workbook and condition a scatter plot with <strong>kids2000</strong> on the x-axis and <strong>pubast00</strong> on the y-axis. We set these two variables as <code>x</code> and <code>y</code> in the <code>aes</code> argument of <code>ggplot</code>. Next, we specify the geom as <code>geom_point</code>, for the default scatter plot. Finally, we add the <code>facet_grid</code> command.</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
+  geom_point() +
+  facet_grid(cut.yrhom ~ cut.hhsiz,as.table=FALSE)</code></pre>
+<p><img src="3_R_EDA_2_files/figure-html/unnamed-chunk-18-1.png" width="672" /></p>
+<p>We can add a linear smoother by means of <code>geom_smooth(method=&quot;lm&quot;)</code>:</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
+  geom_point() +
+  geom_smooth(method=&quot;lm&quot;) +
+  facet_grid(cut.yrhom ~ cut.hhsiz,as.table=FALSE)</code></pre>
+<p><img src="3_R_EDA_2_files/figure-html/unnamed-chunk-19-1.png" width="672" /></p>
+<p>We can also add a loess smoother by means of <code>geom_smooth(method=&quot;loess&quot;)</code>:</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(x=kids2000,y=pubast00)) +
+  geom_point() +
+  geom_smooth(method=&quot;loess&quot;) +
+  facet_grid(cut.yrhom ~ cut.hhsiz,as.table=FALSE)</code></pre>
+<p><img src="3_R_EDA_2_files/figure-html/unnamed-chunk-20-1.png" width="672" /></p>
+<p>As is the case for all graphs in <strong>ggplot</strong>, many further customizations can be added, but we do not consider that further.</p>
+</div>
+<div id="conditional-histogram" class="section level4 unnumbered">
+<h4>Conditional histogram</h4>
+<p>We conclude with a conditional histogram for the variable <strong>pubast00</strong>. The principle is the same as before. The only difference is that now only one variable needs to be specified in <code>aes</code>, and the <code>geom_histogram</code> is used. As we did earlier, we set the <code>bins=7</code> (the default of 30 is not appropriate in this example). The resulting graph differs slightly from the example in the GeoDa Workbook due to different bin widths. With some customization, they can be made to look exactly the same, but we won’t pursue that here.</p>
+<pre class="r"><code>ggplot(data=nyc.data,aes(pubast00)) +
+  geom_histogram(bins=7) +
+  facet_grid(cut.yrhom ~ cut.hhsiz,as.table=FALSE)</code></pre>
+<p><img src="3_R_EDA_2_files/figure-html/unnamed-chunk-21-1.png" width="672" /></p>
+<p><br></p>
+</div>
+</div>
+</div>
+<div id="references" class="section level2 unnumbered">
+<h2>References</h2>
+<div id="refs" class="references">
+<div id="ref-scatterplot3d03">
+<p>Ligges, Uwe, and Martin Machler. 2003. “Scatterplot3d - an R Package for Visualizing Multivariate Data.” <em>Journal of Statistical Software</em> 8.</p>
+</div>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>University of Chicago, Center for Spatial Data Science – <a href="mailto:anselin@uchicago.edu">anselin@uchicago.edu</a>,<a href="mailto:morrisonge@uchicago.edu">morrisonge@uchicago.edu</a><a href="#fnref1" class="footnote-back">↩</a></p></li>
+<li id="fn2"><p>Use <code>setwd(directorypath)</code> to specify the working directory.<a href="#fnref2" class="footnote-back">↩</a></p></li>
+<li id="fn3"><p>Use <code>install.packages(packagename)</code>.<a href="#fnref3" class="footnote-back">↩</a></p></li>
+</ol>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
