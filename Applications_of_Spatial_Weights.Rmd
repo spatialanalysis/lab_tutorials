@@ -1,0 +1,909 @@
+---
+title: "Applications of Spatial Weights"
+subtitle: "R Notes"
+author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
+date: "09/17/2018"
+output:
+  html_document:
+    fig_caption: yes
+    self_contained: no
+    toc: yes
+    toc_depth: 4
+    css: tutor.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br>
+
+## Introduction {-}
+
+This notebook cover the functionality of the [Applications of Spatial Weights](https://geodacenter.github.io/workbook/4d_weights_applications/lab4d.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.
+
+The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments
+on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).
+
+For this notebook, we use Cleveland house price data. Our goal in this lab is show how to assign spatial weights based on different distance functions.
+
+
+```{r}
+
+```
+### Objectives
+
+After completing the notebook, you should know how to carry out the following tasks:
+
+- Compute inverse distance functions
+
+- Compute kernal weights functions
+
+- Assess the characteristics of weights based on distance functions
+
+#### R Packages used
+
+- **sf**: To read in the shapefile.
+
+- **spdep**: To create k-nearest neighbors and distance-band neighbors, calculate distances between neighbors, convert to a weights structure, and coercion methods to sparse matrices.
+
+#### R Commands used
+
+Below follows a list of the commands used in this notebook. For further details
+and a comprehensive list of options, please consult the 
+[R documentation](https://www.rdocumentation.org).
+
+- **Base R**: `install.packages`, `library`, `setwd`, `class`, `str`, `lapply`, `attributes`, `summary`, `head`, `seq`, `as`, `cbind`, `max`, `unlist`, `length`, `sqrt`, `exp`, `diag`, `sort`, `append`
+
+- **sf**: `st_read`, `plot`
+
+- **spdep**: `knn2nb`, `dnearneigh`, `knearneigh`, `nb2listw`, `mat2listw` 
+
+## Preliminaries
+
+Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not
+actually be saving any files.^[Use `setwd(directorypath)` to specify the working directory.]
+
+### Load packages
+
+First, we load all the required packages using the `library` command. If you don't have some of these in your system, make sure to install them first as well as
+their dependencies.^[Use 
+`install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
+
+
+```{r}
+library(sf)
+library(spdep)
+library(tmap)
+library(ggplot2)
+library(GGally)
+```
+
+
+### Obtaining the Data from the GeoDa website {-}
+
+To get the data for this notebook, you will and to go to [Cleveland Home Sales](https://geodacenter.github.io/data-and-lab//clev_sls_154_core/) The download format is a
+zipfile, so you will need to unzip it by double clicking on the file in your file
+finder. From there move the resulting folder titled: nyc into your working directory
+to continue. Once that is done, you can use the **sf** function: `st_read()` to read
+the shapefile into your R environment. 
+
+
+```{r}
+clev.points <- st_read("cleveland/clev_sls_154_core.shp")
+```
+
+
+## Spatially lagged variables
+
+With a neighbor structure defined by the non-zero elements of the spatial weights matrix W, a spatially lagged
+variable is a weighted sum or a weighted average of the neighboring values for that variable. In most commonly
+used notation, the spatial lag of y is then expressed as Wy.
+.
+
+Formally, for observation i, the spatial lag of $y_i$, referred to as $[Wy]_i$ (the variable Wy observed for 
+location i) is:
+$$[Wy]_i = w_{i1}y_1 + w_{i2}y_2 + ... + w_{in}y_n$$
+or,
+$$[Wy]_i = \sum_{j=1}^nw_{ij}y_j$$
+where the weights $w_{ij}$ consist of the elements of the i-th row of the matrix W, matched up with the 
+corresponding elements of the vector y.
+
+
+
+In other words, the spatial lag is a weighted sum of the values observed at neighboring locations, since the
+non-neighbors are not included (those i for which $w_{ij}=0$). Typically, the weights matrix is very sparse, so 
+that only a small number of neighbors contribute to the weighted sum. For row-standardized weights, 
+with$\sum_jw_{ij} = 1$, the spatially lagged variable becomes a weighted average of the values at 
+neighboring observations.
+
+
+In matrix notation, the spatial lag expression corresponds to the matrix product of the **n × n** spatial weights 
+matrix W with the **n × 1** vector of observations y, or **W × y**. The matrix W can therefore be considered to be
+the spatial lag operator on the vector **y**.
+
+In a number of applied contexts, it may be useful to include the observation at location i itself in the weights
+computation. This implies that the diagonal elements of the weights matrix must be non-zero, i.e., $w_{i}i≠0$. 
+Depending on the context, the diagonal elements may take on the value of one or equal a specific value (e.g., for
+kernel weights where the kernel function is applied to the diagonal). We will highlight this issue in the specific
+illustrations that follow.
+
+### Creating a spatially lagged variable
+
+In this section, we will go through the four different spatial lag options covered in the Geoda workbook. These
+are **Spatial lag with row-standardized weights**, ** Spatial lag as a sum of neighboring values**, 
+**Spatial window average**, and **Spatial window sum**.
+
+
+### Creating the weights
+
+To start, we will need to make our weights to follow along with the Geoda workbook example. This will require 
+making a k-nearest neighbors for k = 6 with row standarized weights.
+
+The process for making these weights is the same as covered in earlier notebooks. However, to summarize, we
+start by getting the coordinates in a separate matrix with the base R function `cbind`, then use that with
+the **spdep** functions `knn2nb` and `knearneigh` to compute a neighbors list. From there we convert the
+neighbors list to class **listw** with `nb2listw`. This will result in row standardized weights. It is 
+important to note that we will have to work with neighbors structure in some cases to get the desired
+functionality, which will require creating more than one weights object for the k-nearest neighbors weights
+used in this section of the notebook.
+  
+```{r}
+# getting coordinates
+coords <- cbind(clev.points$x,clev.points$y)
+
+# creating neighbors list
+k6 <- knn2nb(knearneigh(coords, k = 6))
+
+# converting to weights structure from neighbors list
+k6.weights1 <- nb2listw(k6)
+k6.weights1$weights[[1]]
+```
+
+
+
+### Spatial lag with row-standardized weights
+
+The default case in Geoda is to use row-standardized weights and to leave out the diagonal. Implementing this
+will be relatively simple, as we will only need one line of code with the weights structure we already have:
+**k6.weights1**. To create the lag variable the **spdep** function, `lag.listw` is used. The inputs require
+are a weights structure and a variable with the same length as the weights structure. The length should not
+be a problem if the variable comes from the same dataset used to create your weights.
+
+
+```{r}
+lag1 <- lag.listw(k6.weights1, clev.points$sale_price)
+head(lag1)
+```
+The values match with the example from the Geoda workbook, only difference being in that it is rounded to less
+significant figures than GeoDa.
+
+
+The lag variables are calculated in this instance, by taking an average of the neighboring values. We will
+illustrate this find the neighboring sale price values for the first observation. To get these values,
+we get the neighbor ids for the first observation by double bracket notation. We then select the sale
+price values by indexing with the resulting numeric vector.
+
+```{r}
+nb1 <- k6[[1]]
+nb1 <- clev.points$sale_price[nb1]
+nb1
+```
+We now verify the value for the spatial lag listed in the table. It is obtained as the average of the sales price
+for the six neighbors, or (131650 + 65000 + 81500 + 76000 + 120000 + 5000)/6 = 79858.33.
+
+
+We can quickly assess the effect of spatial averaging by comparing the descriptive statistics for the lag variable
+with those of the original sale price variable.
+
+```{r}
+summary(clev.points$sale_price)
+```
+```{r}
+summary(lag1)
+```
+As seen above, the range for the original sale price variable is 1,049 to 527,409. The range for the 
+lag variable is much more compressed, being 6,583 to 229,583. The typical effect of spatial lag is a compression
+of the range and variance of a variable. We can see this further when examing the standard deviation.
+
+```{r}
+sd(clev.points$sale_price)
+```
+```{r}
+sd(lag1)
+```
+The standard deviation for home sales gets significantly condensed from 60654.34 to 36463.76 in the creation
+of the lag variable.
+
+
+
+#### PCP
+
+To get a more dramatic view of the influence of high-valued or low-valued neighbors on the spatial lag, we use
+a parallel coordinates plot. This will be done using **GGally**, which is an R package that builds off of the
+**ggplot2** package for some more coomplicated plots, ie the paralell coordinates plot and the scatter plot
+matrix. We won't go in depth about the different options this package offers in this notebook, but if interested,
+check out [GGally documentation](https://www.rdocumentation.org/packages/GGally/versions/1.4.0).
+
+To make the pcp with just the two desired variables, we will need to put them in a separate matrix, or data 
+frame. We use `cbind` to do this, as with the coordinates. From there we use `ggparcoord` from the **GGally**
+package. The necessary inputs are the data(**pcp.vars**) and the scale parameter. We use `scale = "globalminmax"
+to keep the same price values as our lag variable and sale price variable. The default option scales it down,
+chich is not what we are looking for in this case.
+
+```{r}
+sale.p <- clev.points$sale_price
+pcp.vars <- cbind(sale.p,lag1)
+ggparcoord(data = pcp.vars,scale ="globalminmax")
+```
+
+
+### Spatial lag as a sum of neighboring values
+
+
+```{r}
+binary.weights <- lapply(k6, function(x) 0*x + 1)
+binary.weights[1]
+```
+
+
+
+```{r}
+k6.weights2 <- nb2listw(k6, glist = binary.weights, style = "B")
+```
+
+
+```{r}
+lag2 <- lag.listw(k6.weights2, clev.points$sale_price)
+head(lag2)
+```
+
+### Spatial window average
+
+```{r}
+k6a <- k6
+```
+
+```{r}
+for (i in 1:length(k6a)){
+  new_row <- sort(append(k6a[[i]], i, after = 0), decreasing = FALSE)
+  k6a[[i]] <- new_row
+}
+```
+
+
+```{r}
+k6.weights3 <- nb2listw(k6a)
+```
+
+
+```{r}
+lag3 <- lag.listw(k6.weights3, clev.points$sale_price)
+head(lag3)
+```
+
+
+### Spatial window sum
+
+```{r}
+binary.weights2 <- lapply(k6a, function(x) 0*x + 1)
+binary.weights2[1]
+```
+
+
+
+```{r}
+k6.weights4 <- nb2listw(k6a, glist = binary.weights2, style = "B")
+```
+
+
+```{r}
+lag4 <- lag.listw(k6.weights4, clev.points$sale_price)
+head(lag4)
+```
+
+
+
+
+## Spatially lagged variables from inverse distance weights
+
+
+### Principle
+
+The spatial lag operation can also be applied using spatial weights calculated from the inverse
+distance between observations. As mentioned in our earlier discussion, the magnitude of these
+weights is highly scale dependent (depends on the scale of the coordinates). An uncritical
+application of a spatial lag operation with these weights can easily result in non-sensical
+values. More specifically, since the resulting weights can take on very small values, the
+spatial lag could end up being essentially zero.
+
+Formally, the spatial lag operation amounts to a weighted average of the neighboring values,
+with the inverse distance function as the weights:
+$$[Wy]_i = \sum_jy_j/d_{ij}^\alpha$$
+where in our implementation, α is either 1 or 2. In the latter case (a so-called gravity model
+weight), the spatial lag is sometimes referred to as a potential in geo-marketing analyses. It
+is a measure of how accessible location i is to opportunities located in the neighboring
+locations (as defined by the weights).
+
+### Default approach
+
+### inverse distance for k = 6 nearest neighbors
+
+
+```{r}
+k6.distances <- nbdists(k6,coords)
+```
+
+```{r}
+invd1a <- lapply(k6.distances, function(x) (1/(x/100)))
+invd1a[1]
+```
+
+
+```{r}
+invd.weights <- nb2listw(k6,glist = invd1a,style = "B")
+```
+
+
+
+```{r}
+lag5 <- lag.listw(invd.weights, clev.points$sale_price)
+head(lag5)
+```
+
+
+
+
+### Spatial lags with row-standardized inverse distance weights
+
+```{r}
+row_stand <- function(x){
+  row_sum <- sum(x)
+  scalar <- 1/row_sum
+  x * scalar
+}
+```
+
+```{r}
+row.standw <- lapply(invd1a, row_stand)
+row.standw[1]
+```
+
+```{r}
+sum(row.standw[[1]])
+```
+
+
+
+```{r}
+invd.weights2 <- nb2listw(k6,glist = row.standw,style = "B")
+invd.weights2$weights[[1]]
+```
+
+```{r}
+lag6 <- lag.listw(invd.weights2, clev.points$sale_price)
+head(lag6)
+```
+
+
+
+## Spatially lagged variables from kernel weights
+
+
+
+```{r}
+k6a.distances <- nbdists(k6a,coords)
+```
+
+
+
+
+
+```{r}
+for (i in 1:length(k6a.distances)){
+  maxk6 <- max(k6a.distances[[i]])
+  bandwidth <- maxk6
+  new_row <- .75*(1-(k6a.distances[[i]] / bandwidth)^2)
+  k6a.distances[[i]] <- new_row
+}
+k6a.distances[[1]]
+```
+
+
+.75*(1-(k6a.distances[[i]] / bandwidth)^2)
+
+```{r}
+epan.weights <- nb2listw(k6a,glist = k6a.distances,style = "B")
+epan.weights$weights[[1]]
+```
+
+
+
+```{r}
+lag7 <- lag.listw(epan.weights, clev.points$sale_price)
+head(lag7)
+head(clev.points$sale_price)
+```
+
+
+
+## Spatial rate smoothing
+
+
+### Principle
+
+A spatial rate smoother is a special case of a nonparameteric rate estimator, based on
+the principle of locally weighted estimation. Rather than applying a local average to
+the rate itself, as in an application of a spatial window average, the weighted
+average is applied separately to the numerator and denominator.
+
+The spatially smoothed rate for a given location i
+ is then given as:
+
+
+$$\pi_i = \frac{\Sigma_{j=1}^nw_{ij}O_j} {\Sigma_{j=1}^nw_{ij}P_j}$$
+
+where $O_j$ is the event count in location j, $P_j$ is the population at risk,
+and $w_{ij}$ are spatial weights (typically with $w_{ii} = 0$, i.e. including the
+diagonal)
+
+
+Different smoothers are obtained for different spatial definitions of neighbors and/or
+different weights applied to those neighbors (e.g., contiguity weights, inverse
+distance weights, or kernel weights).
+
+
+The window average is not applied to the rate itself, but it is computed separately for the
+numerator and denominator. The simplest case boils down to applying the idea of a spatial
+window sum to the numerator and denominator (i.e., with binary spatial weights in both, and
+including the diagonal term):
+
+
+where $J_i$ is a reference set (neighbors) for observation i. In practice, this is achieved by 
+using binary spatial weights for both numerator and denominator, and including the diagonal in 
+both terms, as in the expression above.
+
+A map of spatially smoothed rates tends to emphasize broad spatial trends and is
+useful for identifying general features of the data. However, it is not useful for the
+analysis of spatial autocorrelation, since the smoothed rates are autocorrelated by
+construction. It is also not very useful for identifying outlying observations, since
+the values portrayed are really regional averages and not specific to an individual
+location. By construction, the values shown for individual locations are determined by
+both the events and the population sizes of adjoining spatial units, which can lead to
+misleading impressions. Often, inverse distance weights are applied to both the
+numerator and denominator
+
+
+
+
+### Preliminaries
+
+We return to the rate smoothing examples using the Ohio county lung cancer data.
+Therefore, we need to close the current project and load the ohlung data set.
+
+Next, we need to create the spatial weights files we will use if we don’t have them
+already stored in a project file. In order to make sure that some smoothing will
+occur, we take a fairly wide definition of neighbors. Specifically, we will create a
+second order queen contiguity, inclusive of first order neighbors, inverse distance
+weights based on knn = 10 nearest neighbor weights, and Epanechnikov kernel weights,
+using the same 10 nearest neighbors and with the kernel applied to the diagonal (its
+value will be 0.75).
+
+To proceed, we will be using procedures outlined in earlier notebooks to create the
+weights. The process will be less in depth than the ones in the distance and 
+contiguity weight notebooks, but will be enough to make and review the process
+of making the weights.
+
+
+#### Loading the Data
+
+To get the data for this notebook, you will and to go to [Ohio Lung Cancer](https://geodacenter.github.io/data-and-lab/ohiolung/) The download format is a
+zipfile, so you will need to unzip it by double clicking on the file in your file
+finder. From there move the resulting folder titled: nyc into your working directory
+to continue. Once that is done, you can use the **sf** function: `st_read()` to read
+the shapefile into your R environment. 
+
+
+
+```{r}
+ohio_lung <- st_read("ohiolung/ohlung.shp")
+```
+
+
+#### Creating a Crude Rate
+
+In addition to the spatial weights, we also need an example for crude rates. If not
+already saved in the data set, we compute the crude rate for lung cancer among white
+females in 68.
+
+To get the rate we make a new variable, **LRATE** and calculated the rate through
+bivariate operation. We multiply the ratio by 10,000 to the crude rate of lung cancer
+per 10,000 white women in 1968.
+
+```{r}
+ohio_lung$LRATE <- ohio_lung$LFW68 / ohio_lung$POPFW68 * 10000
+```
+
+
+
+```{r}
+tm_shape(ohio_lung) +
+  tm_fill("LRATE",palette = "-RdBu",style ="sd",title = "SRS-Smoothed LFW68 over POPFW68") +
+  tm_borders() + 
+  tm_layout(legend.outside = TRUE, legend.outside.position = "right")
+```
+
+
+
+
+
+#### Creating the Weights
+
+
+
+
+##### Queen Contiguity
+
+To create the queen contiguity weights, we will use the **spdep** package and **sf**
+package to make a neighbors list with both first and second order neighbors 
+included.
+
+To begin we create a queen contiguity function with the corresponding pattern. We 
+use the `st_relate` function to accomplish this. For a more in depth explanation
+of the specified pattern, check the contiguity based weights notebook.
+
+
+```{r}
+st_queen <- function(a, b = a) st_relate(a, b, pattern = "F***T****")
+```
+
+
+Here we define a function needed to convert the resulting data structure from the
+`st_relate` function. Specifically from **sgbp** to **nb**. It's fairly
+straightforward, we just change the class name, transfer the attributes, 
+and check for observations without a neighbor.
+```{r}
+as.nb.sgbp <- function(x, ...) {
+  attrs <- attributes(x)
+  x <- lapply(x, function(i) { if(length(i) == 0L) 0L else i } )
+  attributes(x) <- attrs
+  class(x) <- "nb"
+  x
+}
+```
+
+
+
+Now we create a comprehnsive neighbors list with both first and second order 
+neighbors. To start, we use the two functions we created to get a 1st order
+neighbors list, then we use `nblag` to get the first and second order neighbors. The
+next step is reoragnize the data structre so that first and second order neighbors
+are not separated, this is done with `nblag_cumul`. With these steps, we have a
+neighbors list of first and second order neighbors.
+
+```{r}
+queen.sgbp <- st_queen(ohio_lung)
+queen.nb <- as.nb.sgbp(queen.sgbp)
+second.order.queen <- nblag(queen.nb, 2)
+second.order.queen.cumul <- nblag_cumul(second.order.queen)
+```
+
+
+
+
+Here we add the diagonal elements to the neighbors list because we will need them
+later on in computations.
+```{r}
+for (i in 1:length(second.order.queen.cumul)){
+  new_row <- sort(append(second.order.queen.cumul[[i]], i, after=0), decreasing = FALSE)
+  second.order.queen.cumul[[i]] <- new_row
+}
+```
+
+
+
+Now, we just use the `nb2listw` function to convert the neighbors list to a 
+weights structure, which is row-standardized by default.
+
+```{r}
+queen.weights <- nb2listw(second.order.queen.cumul)
+queen.weights$weights[[1]]
+```
+
+
+
+
+##### K-nearest neighbors
+
+
+Here we will make the inverse distance weights for the 10th-nearest neighbors. To 
+start, we need the coordinates in a separate data structure before we can proceed
+with the neighbor and distance calculations. We use the same method to extract these
+values as the distance-band weights notebook.
+
+```{r}
+longitude <- map_dbl(us.bound$geometry, ~st_centroid(.x)[[1]])
+latitude <- map_dbl(us.bound$geometry, ~st_centroid(.x)[[2]])
+coords <- cbind(longitude, latitude)
+```
+
+From here we just use `knearneigh` and `knn2nb` to get our neighbors structure.
+
+```{r}
+k10 <- knn2nb(knearneigh(coords, k = 10))
+```
+
+
+
+```{r}
+for (i in 1:length(k10)){
+  new_row <- sort(append(k10[[i]], i, after = 0), decreasing = FALSE)
+  k10a[[i]] <- new_row
+}
+```
+
+
+
+
+Now we need the distances between each observation and its neighbors. Having this will
+allow us to calculate the inverse later and assign these values as weights when
+converting the neighbors structure to a weights structure.
+```{r}
+k10.dists <- nbdists(k10,coords)
+```
+
+
+Here we apply a function to the distances of the 10th nearest neighbors and change
+the scale by an order of 10,000. The purpose of changing the scale is to get 
+weight values that are not approximently zero.
+
+```{r}
+invdk10 <- lapply(k10.dists, function(x) (1/(x/10000)))
+invdk10[1]
+```
+
+
+With the `nb2listw` function, we can assign non-default weights to the new weights 
+structure by means of the `glist` argument. Here we just assign the scaled inverse 
+weights we created above.
+
+```{r}
+k10.weights <- nb2listw(k10,glist = invdk10, style = "B")
+k10.weights$weights[[1]]
+```
+
+
+##### Epanechnikov kernel
+
+For the Epanechnikov kernal weights, things are a bit more complicated, as we need
+to add in diagonal elements. This is best done with neighbors list.
+
+We start with the 10-nearest neighbors and assign to a new object because we will 
+be altering the structure to get the resulting weights.
+
+```{r}
+k10a <- k10
+```
+
+
+
+
+Here we add the diagonal elements to the neighbors structure.
+```{r}
+for (i in 1:length(k10a)){
+  new_row <- sort(append(k10a[[i]], i, after = 0), decreasing = FALSE)
+  k10a[[i]] <- new_row
+}
+```
+
+
+
+
+
+This gives us the distances between neighbors in the same structure as the neighbors 
+list.
+```{r}
+k10a.distances <- nbdists(k10a,coords)
+```
+
+
+
+
+This four loop gives us the epanechnikov weights in the the distance data structure
+that we computed above.
+```{r}
+for (i in 1:length(k10a.distances)){
+  maxk10 <- max(k10a.distances[[i]])
+  bandwidth <- maxk10
+  new_row <- .75*(1-(k10a.distances[[i]] / bandwidth)^2)
+  k10a.distances[[i]] <- new_row
+}
+k10a.distances[[1]]
+```
+
+
+.75*(1-(k6a.distances[[i]] / bandwidth)^2)
+
+
+Now we can assign our epanechnikov weight values as weights with the `nb2listw` function throught the `glist =` parameter.
+```{r}
+epan.weights <- nb2listw(k10a,glist = k10a.distances,style = "B")
+epan.weights$weights[[1]]
+```
+
+
+
+### Simple window average of rates
+
+
+
+
+
+```{r}
+
+#getting binary weights
+weight.values <- lapply(second.order.queen.cumul, function(x) 0*x + 1)
+
+#creating weights structure
+window.weight <- nb2listw(second.order.queen.cumul,glist = weight.values,style="B")
+
+#lag variable for population
+lag_pop <- lag.listw(window.weight,ohio_lung$POPF68)
+
+#lag variable for lung cancer times 10,000
+lag_fw <- lag.listw(window.weight,ohio_lung$LFW68) * 10000
+```
+
+```{r}
+O <- ohio_lung$LFW68
+
+ohio_lung$W_LRATE <- (O + lag_fw) / (O + lag_pop)
+```
+
+
+```{r}
+tm_shape(ohio_lung) +
+  tm_fill("W_LRATE",palette = "-RdBu",style ="sd",title = "SRS-Smoothed LFW68 over POPFW68") +
+  tm_borders() + 
+  tm_layout(legend.outside = TRUE, legend.outside.position = "right")
+```
+
+
+
+
+
+
+```{r}
+k6a <- k6
+```
+
+```{r}
+for (i in 1:length(k6a)){
+  new_row <- sort(append(k6a[[i]], i, after = 0), decreasing = FALSE)
+  k6a[[i]] <- new_row
+}
+```
+
+
+```{r}
+k6.weights3 <- nb2listw(k6a)
+```
+
+
+
+
+
+
+
+
+
+### Spatially Smoothed Rates
+
+To create the spatially smoothed rate, we need to make lag variables of the 
+event variable and base variable, then divide them to get our rate. In GeoDa
+we just select our variables and the software does it for us, in R we need 
+some extra steps.
+
+
+lag.listw(epan.weights, clev.points$sale_price)
+
+
+
+```{r}
+lag_lfw68 <- lag.listw(queen.weights,ohio_lung$LFW68)
+lag_popfw68 <- lag.listw(queen.weights,ohio_lung$POPFW68)
+ohio_lung$R_SPAT_R <- lag_lfw68 / lag_popfw68
+```
+
+
+
+```{r}
+
+#need to include the diagonal for this match the geoda example
+
+
+tm_shape(ohio_lung) +
+  tm_fill("R_SPAT_RT",palette = "-RdBu",style ="sd",title = "SRS-Smoothed LFW68 over POPFW68") +
+  tm_borders() + 
+  tm_layout(legend.outside = TRUE, legend.outside.position = "right")
+
+
+```
+
+
+```{r}
+ohio_lung$R_SPAT_RT <- ohio_lung$R_SPAT_R * 10000
+ggplot(data=ohio_lung,aes(x=W_LRATE,y=R_SPAT_RT)) +
+  geom_point() +
+  geom_smooth(method=lm) 
+```
+
+
+
+## Spatial Empirical Bayes smoothing
+
+
+
+
+
+### Principle
+
+
+
+
+
+### Spatial EB rate smoother
+
+```{r}
+ohio_lung$eb_bayes <- lag_f / lag_pop
+```
+
+
+
+```{r}
+tm_shape(ohio_lung) +
+  tm_fill("eb_bayes",palette = "-RdBu",style ="sd",title = "SRS-Smoothed LFW68 over POPFW68") +
+  tm_borders() + 
+  tm_layout(legend.outside = TRUE, legend.outside.position = "right")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
