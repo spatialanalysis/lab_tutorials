@@ -1,0 +1,1258 @@
+---
+title: "Global Spatial Autocorrelation 1"
+subtitle: "R Notes"
+author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
+date: "09/17/2018"
+output:
+  html_document:
+    fig_caption: yes
+    self_contained: no
+    toc: yes
+    toc_depth: 4
+    css: tutor.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br>
+
+## Introduction {-}
+
+This notebook cover the functionality of the [Global Spatial Autocorrelation 1](https://geodacenter.github.io/workbook/5a_global_auto/lab5a.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.
+
+The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments
+on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).
+
+For this notebook, we use Cleveland house price data. Our goal in this lab is show how to assign spatial weights based on different distance functions.
+
+
+```{r}
+
+```
+### Objectives
+
+After completing the notebook, you should know how to carry out the following tasks:
+
+- Visualize Moran's I with a Moran scatterplot
+
+- Carry out inference using the permutation approach
+
+- Make analysis reproducible with the random seed
+
+- Create a LOWESS smooth of the Moran scatter plot
+
+- Conduct a Chow test with the Moran scatterplot
+
+- Analyze the range of spatial autocorrelation by means of a spatial correlogram
+
+- 
+
+#### R Packages used
+
+- **sf**: To read in the shapefile and make queen contiguity weights
+
+- **spdep**: To create k-nearest neighbors and distance-band neighbors, calculate distances between neighbors, convert to a weights structure, and coercion methods to sparse matrices.
+
+#### R Commands used
+
+Below follows a list of the commands used in this notebook. For further details
+and a comprehensive list of options, please consult the 
+[R documentation](https://www.rdocumentation.org).
+
+- **Base R**: `install.packages`, `library`, `setwd`, `rep`, `sd`, `mean`, `summary`, `attributes`, `lapply`, `class`, `length`
+
+- **sf**: `st_read`, `st_relate`, `st_as_sf`
+
+- **spdep**: `knn2nb`, `dnearneigh`, `knearneigh`, `nb2listw`, `mat2listw`, `EBlocal`, `sp.correlogram`, `Szero`
+
+- **ggplot2**: `ggplot`, `geom_smooth`, `geom_point`, `xlim`, `ylim`, `geom_hline`, `geom_vline`, `geom_line`
+
+- **Hmisc**: `stat_plsmo`
+
+- **robustHD**: `standardized`
+
+- **deldir**: `deldir`
+
+- **tidyverse**: `filter`
+
+- **gap**: `chow.test`
+
+
+## Preliminaries
+
+Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not
+actually be saving any files.^[Use `setwd(directorypath)` to specify the working directory.]
+
+### Load packages
+
+First, we load all the required packages using the `library` command. If you don't have some of these in your system, make sure to install them first as well as
+their dependencies.^[Use 
+`install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
+
+
+```{r}
+library(sf)
+library(spdep)
+library(ggplot2)
+library(deldir)
+library(robustHD)
+library(broom)
+library(Hmisc)
+library(tidyverse)
+library(gap)
+library(gridExtra)
+```
+
+
+
+### Obtaining the Data from the GeoDa website {-}
+
+To get the data for this notebook, you will and to go to [Cleveland Home Sales](https://geodacenter.github.io/data-and-lab//clev_sls_154_core/) The download format is a
+zipfile, so you will need to unzip it by double clicking on the file in your file
+finder. From there move the resulting folder titled: nyc into your working directory
+to continue. Once that is done, you can use the **sf** function: `st_read()` to read
+the shapefile into your R environment. 
+
+
+```{r}
+clev.points <- st_read("cleveland/clev_sls_154_core.shp")
+```
+
+
+
+
+### Making the weights
+
+
+
+
+
+```{r}
+vtess <- deldir(clev.points$x, clev.points$y)
+plot(vtess, wlines="tess", wpoints="none",
+      lty=1)
+```
+
+
+```{r}
+voronoipolygons = function(thiess) {
+w = tile.list(thiess)
+polys = vector(mode='list', length=length(w))
+for (i in seq(along=polys)) {
+    pcrds = cbind(w[[i]]$x, w[[i]]$y)
+    pcrds = rbind(pcrds, pcrds[1,])
+    polys[[i]] = Polygons(list(Polygon(pcrds)), ID=as.character(i))
+}
+SP = SpatialPolygons(polys)
+ voronoi = SpatialPolygonsDataFrame(SP, data=data.frame(dummy = seq(length(SP)), row.names=sapply(slot(SP, 'polygons'), 
+    function(x) slot(x, 'ID'))))
+}
+```
+
+
+
+```{r}
+v <- voronoipolygons(vtess)
+plot(v)
+```
+
+
+```{r}
+vtess.sf <- st_as_sf(v)
+plot(vtess.sf$geometry)
+```
+
+
+
+
+
+
+This gets a plotable thiessen polygon object and seems like it would be the go to
+for sf data, but the output of `st_voronoi` is a weird data structure that I 
+can't figure out how to convert to an sf geometry column. It also includes some
+complicated steps because st_voronoi does not work directly on sf objects. The 
+other way takes a detour into sp and is really complicated, but gives the desired
+output, but for the context of a tutorial, might be a bit much, especially since
+we don't cover sp in the earlier tutoirlas
+
+
+```{r}
+bbox_polygon <- function(x) {
+  bb <- sf::st_bbox(x)
+
+  p <- matrix(
+    c(bb["xmin"], bb["ymin"], 
+      bb["xmin"], bb["ymax"],
+      bb["xmax"], bb["ymax"], 
+      bb["xmax"], bb["ymin"], 
+      bb["xmin"], bb["ymin"]),
+    ncol = 2, byrow = T
+  )
+
+  sf::st_polygon(list(p))
+}
+```
+
+
+
+```{r}
+box <- st_sfc(bbox_polygon(clev.points))
+```
+
+
+```{r}
+v <- st_voronoi(st_union(clev.points), box)
+plot(v,col = 0)
+class(v)
+```
+
+
+
+
+
+Now that we have voronoi polygons as an **sf** object, we can use the queen contiguity
+process outline in the Contiguity Based Weights notebook. We will briefly cover
+each step of the process. For more indepth information please see the Contiguity 
+Based Weights notebook.
+
+
+To start we create a function for queen contiguity, which is just `st_relate` with
+the specified pattern for queen contiguity which is `F***T****`
+
+```{r}
+st_queen <- function(a, b = a) st_relate(a, b, pattern = "F***T****")
+```
+
+
+We apply the queen contiguity function to the voronoi polygons and see that the class
+of the output is **sgbp**. This structure is close to the **nb** structure, but has
+a few difference that we will need to correct to use the rest of **spdep** functionality.
+
+
+```{r}
+queen.sgbp <- st_queen(vtess.sf)
+class(queen.sgbp)
+```
+
+
+This function converts type **sgbp** to **nb**. It is covered in more depth in the 
+Contiguity Based Weight notebook. In short, it explicitly changes the name of the 
+class and deals with the observations that have no neighbors.
+
+```{r}
+as.nb.sgbp <- function(x, ...) {
+  attrs <- attributes(x)
+  x <- lapply(x, function(i) { if(length(i) == 0L) 0L else i } )
+  attributes(x) <- attrs
+  class(x) <- "nb"
+  x
+}
+```
+
+
+
+
+```{r}
+queen.nb <- as.nb.sgbp(queen.sgbp)
+```
+
+
+```{r}
+queen.weights <- nb2listw(queen.nb)
+```
+
+
+
+
+
+
+
+
+## The Moran Scatter Plot
+
+
+### Concept
+
+
+#### Moran's I
+
+
+Moran’s I statistic is arguably the most commonly used indicator of global spatial
+autocorrelation. It was initially suggested by Moran (1948), and popularized through
+the classic work on spatial autocorrelation by Cliff and Ord (1973). In essence, it is
+a cross-product statistic between a variable and its spatial lag, with the variable
+expressed in deviations from its mean. For an observation at location i, this is
+expressed as $z_i = x_i - \bar{x}$, where $\bar{x}$is the mean of variable x.
+
+
+Moran's I statistic is then: 
+
+$$I = \frac{\Sigma_i\Sigma_jw_{ij}z_iz_j/S_0}{\Sigma_iz_i^2/n}$$
+with $w_{ij}$ as elements of the spatial weights matrix, $S_0 = \Sigma_i\Sigma_jw_{ij}$
+as the sum of all of the weights and n as the number of observations.
+
+
+
+#### Permutation inference
+
+
+Inference for Moran’s I is based on a null hypothesis of spatial randomness. The
+distribution of the statistic under the null can be derived using either an
+assumption of normality (independent normal random variates), or so-called
+randomization (i.e., each value is equally likely to occur at any location).
+
+
+
+An alternative to an analytical derivation is a computational approach based on
+permutation. This calculates a reference distribution for the statistic under the
+null hypothesis of spatial randomness by randomly permuting the observed values
+over the locations. The statistic is computed for each of these randomly
+reshuffled data sets, which yields a reference distribution.
+
+
+This distribution is then used to calculate a so-called pseudo p-value. This is
+found as
+
+
+
+$$p = \frac{R +1}{M+1}$$
+
+where R is the number of times the computed Moran’s I from the spatial random data
+sets (the permuted data sets) is equal to or more extreme than the observed
+statistic. M equals the number of permutations. The latter is typically taken as
+99, 999, etc., to yield nicely rounded pseudo p-values.
+
+
+The pseudo p-value is only a summary of the results from the reference
+distribution and should not be interpreted as an analytical p-value. Most
+importantly, it should be kept in mind that the extent of significance is
+determined in part by the number of random pemutations. More precisely, a result
+that has a p-value of 0.01 with 99 permutations is not necessarily more
+significant than a result with a p-value of 0.001 with 999 permutations.
+
+
+
+
+
+
+#### Moran scatter plot
+
+
+
+The Moran scatter plot, first outlined in Anselin (1996), consists of a plot with the spatially
+lagged variable on the y-axis and the original variable on the x-axis. The slope of the linear fit to
+the scatter plot equals Moran’s I.
+
+We consider a variable z, given in deviations from the mean. With row-standardized weights, the sum
+of all the weights (S0) equals the number of obsevations (n). As a result, the expression for Moran’s
+I simplifies to:
+
+
+$$I= \frac{\Sigma_i\Sigma_jw_{ij}z_iz_j}{\Sigma_iz_i^2} = \frac{\Sigma_i(z_i*\Sigma_jw_{ij}z_j)}{\Sigma_iz_i^2}$$
+
+Upon closer examination, this turns out to be the slope of a regression of $\Sigma_jw_{ij}z_i$ on $z_i$
+This is the principle underlying the Moran scatter plot.
+
+
+
+An important aspect of the visualization in the Moran scatter plot is the classification of the
+nature of spatial autocorrelation into four categories. Since the plot is centered on the mean (of
+zero), all points to the right of the mean have $z_i>0$ and all points to the left have $z_i<0$. 
+We refer to these values respectively as high and low, in the limited sense of higher or lower than
+average. Similarly, we can classify the values for the spatial lag above and below the mean as high
+and low.
+
+
+The scatter plot is then easily decomposed into four quadrants. The upper-right
+quadrant and the lower-left quadrant correspond with positive spatial
+autocorrelation (similar values at neighboring locations). We refer to them as
+respectively high-high and low-low spatial autocorrelation. In contrast, the
+lower-right and upper-left quadrant correspond to negative spatial autocorrelation
+(dissimilar values at neighboring locations). We refer to them as respectively
+high-low and low-high spatial autocorrelation.
+
+The classification of the spatial autocorrelation into four types begins to make
+the connection between global and local spatial autocorrelation. However, it is
+important to keep in mind that the classification as such does not imply
+significance. This is further explored in our discussion of local indicators of
+spatial association (LISA).
+
+
+
+### Creating a Moran scatter plot
+
+Before we create the Moran's I scatterplot, we will get the statistic using `moran` from
+**spdep**. For this function, we need the a variable to do the Moran's I on, a weights
+strcuture, the length of the dataset, and then `Szero` of the queen
+weights, which calculates the constants needed for tests of spatial
+autocorrelation.
+```{r}
+moran <- moran(clev.points$sale_price, queen.weights, length(queen.nb), Szero(queen.weights))
+moran$I
+```
+We get a value of .281, which is the Moran's I statistic and also 
+corresponds to the slope of the Moran's I scatter plot.
+
+
+
+
+
+```{r}
+clev.points$lagged_sale_price <- lag.listw(queen.weights,clev.points$sale_price)
+clev.points$lagged_sale_price
+```
+
+
+We need standardized values for both the lag variable and the sale price variable 
+because the standard approach for Moran'I scatterplot is to use standrdized values.
+Standardized values are just z scores for each observation($z_i =\frac{ x_i -\mu}{\sqrt{Var(x)}}$). To get the standardized values, we will just `standardize`
+from the **robustHD** package. We could very easily calculate these with Base R
+vectorized operations, but it is faster to just use a package function.
+
+```{r}
+clev.points$standardized_sale_price <- standardize(clev.points$sale_price)
+clev.points$standardized_lag_sale_price <- standardize(clev.points$lagged_sale_price)
+```
+
+
+To construct the moran's I scatterplot, we will use **ggplot2** for aesthically
+pleasing plots. We will not go into too much depth on the options available for
+for these plots, but for more information, check out [ggplot2 documentation](https://ggplot2.tidyverse.org/reference/index.html). In addition, The first
+Exploratory Data Analysis notebook is also a good resource to look. 
+
+To make the Moran's I scatterplot, we make a scatterplot in **ggplot2**
+with the standardized sale price values as the x axis and the 
+standardized lag sale price variable as the y axis. We use `geom_point` to add the points to the plot. `geom_smooth` adds a regression line. The
+defualt option is a loess smooth line, we specify the `method =` . We add dotted lines at the
+x and y axis to separate the 4 types of spatial autocorrelation. We do this with
+`geom_hline` for the x axis and `geom_vline` for the y axis. To get the speciifcations of
+the scatterplot to better match up with GeoDa, we set the x and y scale limits to -10 and 10.
+
+
+
+```{r}
+ggplot(data = clev.points, aes(x=standardized_sale_price, y = standardized_lag_sale_price)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_vline(xintercept = 0, lty = 2) +
+  xlim(-10,10) +
+  ylim(-10,10) 
+```
+
+
+
+
+#### Interpretation
+
+
+We can see that the shape of the point cloud is determined by the presence of
+several outliers on the high end (e.g., larger than three standard deviational
+units from the mean). One observation, with a sales price of 527,409 (compared to
+the median sales prices of 20,000), is as large as 8 standard deviational units
+above the mean. On the lower end of the spectrum (to the left of the dashed line
+in the middle that represents the mean), there is much less spread in the house
+prices, and those points end up bunched together. By eliminating some of the
+outliers, one may be able to see more detail for the remaining observations, but
+we will not pursue that here.
+
+#### Assessing significance
+
+We have an estimate of the Moran's I statistic, but no information on the significance
+of that statistic. This can be obtained by constructing a distribution by means of
+random assignment. In order to do this, we first choose the number of permutations desired,
+which will directly affect the minimum pseud p-value we can obtain for the test statistic.
+In the case of 999 permutation the minimum p-value would be .001, which would mean none
+of the sample distribution statistics are as extreme or more extreme than the test statistic.
+
+
+
+#### Reference distribution
+
+
+To make the reference distribution that, we
+will need to draw 999 randomized samples of the housing point data of the same 
+size as the number of observations in the housing point data. This random
+sample will allow us to assign the values to random locations, which will give
+us a spatially random distribution. To get to this point, we will buid up in steps
+in order to better understand the process.
+
+We start by taking one random sample of our points with the built in `sample`
+function. We choose the same size as the number of sale price data observations
+to make a spatially randomized vector of our data. The point of this is to randomly
+assign the housing prices to the voronoi polygons, then to compute the Moran's I
+statistic for the spatially random assignment.
+```{r}
+draw <- sample(clev.points$sale_price, size = length(clev.points$sale_price))
+draw
+```
+
+Now we can begin to calculate the Moran's I statistic by first calculating the 
+spatial lag variable based on our queen weights and the spatially random sample.
+```{r}
+lag1 <- lag.listw(queen.weights,draw)
+```
+
+We can get the Moran's I statistic by regressing the standardized values of 
+the spatial lag variable on the standardized values of the random draw. We 
+can get the standardized value with the `standardize` function.
+
+```{r}
+lmfit <- lm(standardize(lag1) ~ standardize(draw))
+
+kable(tidy(lmfit))
+```
+The slope here is the estimate for **standardize(draw)**. This value is fairly 
+close to zero as the randomization process makes makes the draw spatially random.
+
+
+
+To build our distribution, we will need to repeat this process many times over.
+We can accomplish this by way of a `for` loop. We will need somewhere to store 
+our Moran's I result for each iteration. To do this we will make an empty 
+vector of a length corresponding to our desired number of permutations.
+
+```{r}
+randomized_moran <- rep(NA, 999)
+```
+
+
+The process here is the same as the one we followed for one draw but we use the 
+`for` loop to get 999 iterations and store the Moran's I value in the vector 
+that we created above. First we do the random sample with the `sample` function.
+Then we make a lag variable based upon the draw and our queen weights. Next
+we run the regression with the `lm` function between the stanardized values
+of the lag variable and random draw variable. Lastly we extract the slope 
+coefficient which is our Moran's I statistic and store it in index i. Each 
+iteration of the loop will store the value at the subsequent index ie 1, then 2,
+then 3, and so on.
+
+```{r}
+for(i in 1:999){
+  draw <- sample(clev.points$sale_price, size = length(clev.points$sale_price))
+  lag <- lag.listw(queen.weights,draw)
+  lmfit <- lm(standardize(lag) ~ standardize(draw))
+  randomized_moran[i] <- lmfit$coefficients[2] 
+}
+```
+
+
+
+
+```{r}
+summary(randomized_moran)
+
+```
+
+```{r}
+sd(randomized_moran)
+```
+
+
+
+Now to get the p value, we will check the number of samples that had higher Moran's I
+statistics than the observed value. To do this, we use the base R `which` function
+to get a vector of the indices at which the conditional is TRUE. We then get the length
+of the vector with `length`. 
+
+```{r}
+length(which(randomized_moran > .281))
+```
+Since the result is 1, there is only 1 value in all of the permutations that is higher 
+than the test statistic. This means that the p value is .002 $\frac{1 + R}{1 + M}$, where 
+R = 1 and M = 999.
+
+
+
+
+There are a number of ways we can visualize the distribution that we just constructed
+in R. We will use **ggplot2** to do these visualizations because it looks much 
+better than base R visualizations.
+
+To start, we convert our vector with the randomized moran's I values into a data frame, 
+so we can use **ggplot2** functions. For this, we just use the `data.frame` function with
+the vector of randomized moran's I values as an argument and then assign a name for the 
+column, which is just `moran` in this case.
+
+
+
+
+
+
+```{r}
+df <- data.frame(moran = randomized_moran)
+ggplot(data = df,aes(x=moran)) +
+  geom_density() +
+  geom_vline(xintercept = moran[[1]], col = "green") +
+  geom_vline(xintercept = mean(randomized_moran), col = "blue")
+```
+
+
+```{r}
+ggplot(data = df, aes(x=moran)) +
+  geom_histogram() +
+  geom_vline(xintercept = moran[[1]], col = "green") +
+  geom_vline(xintercept = mean(randomized_moran), col = "blue")
+```
+
+
+
+#### Replicability - the random seed
+
+
+To faciliate replication, it is best to set a seed for the random number generator. The one
+used in GeoDa is 123456789, so we will demonstrate how to set the seed here. It is just 
+`set.seed` and the desired seed number as an input.
+
+
+
+```{r}
+set.seed(123456789)
+```
+
+
+#### LOWESS smoother
+
+The LOWESS smoother is not implemented directly in **ggplot2**, but can be found in an
+add-on package. We use the **Hmisc** package to add this functionality to the 
+**ggplot2** plots. To add the smoother to our Moran's I scatter plot, we use the 
+`stat_plsmo` from the **Hmisc** package. The default span for GeoDa is .2 so we will
+set the `span =` parameter to .2.
+
+With the LOWESS smoother, we can see potential structural breaks in the pattern of 
+spatial autocorrelation. For example some parts of the data, the curve may be very steep,
+and positive, indicating strong spatial autocorrelation, whereas in other parts, it
+could be flat, indicating no spatial autocorrelation.
+
+
+
+```{r}
+ggplot(data = clev.points, aes(x=standardized_sale_price, y = standardized_lag_sale_price)) +
+  geom_point() +
+  stat_plsmo(span = .2, color = "blue") +
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_vline(xintercept = 0, lty = 2) +
+  xlim(-10,10) +
+  ylim(-10,10) 
+```
+
+
+
+
+
+
+
+#### Chow test Moran's I scatterplot
+
+The brushing operation in GeoDa s fairly difficult to implement in R, but we can
+do a less interactive version. First we must consider which criteria we want to 
+slect points upon. This could be anything from it's location to other characteristics
+in the data. In our case we will do it based on location. As an approximation for the 
+midpoint of the set of points, we take the the mean of the x and y coordinates. 
+From there we assign "Select" to the points in the bottom left quadrant and "Rest"
+to the rest of the points by way of the `if_else` function. This function takes
+a conditional and a result to assign in the case where the conditional is TRUE and
+a result to assign when the conditional is FALSE. In our case it is "Select" and 
+"Rest".
+
+
+```{r}
+mid_x <- mean(clev.points$x)
+mid_y <- mean(clev.points$y)
+clev.points<- clev.points %>% mutate(bottom_left = if_else((x < mid_x & y < mid_y),"Select", "Rest"))
+```
+
+
+Before we run the chow test, we will visualize the difference in slopes of the selected data, non-selected
+data and the aggregate data. With **ggplot2**, we can accomplish this by setting categorical colors based
+whether or not an observation is "Selected" or "Rest". To do this, we specify `aes(color = bottom_left)` in
+both `geom_point` and `geom_smooth`. This will give us colored points and regression lines for "Selected"
+and "Rest". Then to get blue and red colors, we use `scale_color_manual`. For this plot, we do not set 
+x and y limits because the -10 to 10 speciifcation is too dificult to see the differences in the regression
+lines.
+
+
+```{r}
+ggplot(clev.points, aes(x=standardized_sale_price,y=standardized_lag_sale_price)) +
+  geom_point(aes(color=bottom_left)) +
+  geom_smooth(aes(color=bottom_left), method = lm, se = FALSE) +
+  geom_smooth(method=lm,se = FALSE, color = "black") +
+  scale_color_manual(values=c("blue","red"))  +
+  labs(color="Selection") +
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_vline(xintercept = 0, lty = 2)
+```
+
+
+
+To perform the chow test, we need two separate data frames as inputs for the function. To get the 
+two data frames, we use the **tidyverse** `filter` function. This function filter out observations
+based on a conditional. TRUE values for the conditional stay in the data frame while FALSE values are
+filtered out.
+```{r}
+clev.select <- clev.points %>% filter(bottom_left == "Select")
+clev.rest <- clev.points %>% filter(bottom_left == "Rest")
+```
+
+
+Now we use the base R `lm` function to run separate regressions on the standardized lag variable and 
+standardized sale price variable.
+
+```{r}
+reg.select <- lm(standardized_lag_sale_price~standardized_sale_price, data=clev.select)
+reg.rest <- lm(standardized_lag_sale_price~standardized_sale_price, data=clev.rest)
+```
+
+
+Now we use the `summary` function on each regression object to get summary statistics of the residuals,
+the regression coefficients and and their respective standard errors, the R squared values, and the 
+F statistic.
+
+```{r}
+summary(reg.select)
+```
+
+
+
+
+```{r}
+summary(reg.rest)
+```
+
+We see that the slopes vary by about .08 and the intercepts vary by .25
+
+
+To run the chow test, we need 4 inputs for `chow.test`. We need the two standardized
+variables from the the "Select" data frame: **clev.select** and the two standardized
+variables from the the "Rest" data frame: **clev.rest**.
+```{r}
+chow <- chow.test(clev.select$standardized_lag_sale_price, clev.select$standardized_sale_price, clev.rest$standardized_lag_sale_price, clev.rest$standardized_sale_price)
+chow
+```
+With a p-value of .103 we do not have significant eviden to conclude that the slopes of the 
+two regressions are different under a standard alpha level of .05.
+
+
+## Spatial Correlogram
+
+### Concept
+
+
+A non-parametric spatial correlogram is an alternative measure of global spatial
+autocorrelation that does not rely on the specification of a spatial weights
+matrix. Instead, a local regression is fit to the covariances or correlations
+computed for all pairs of observations as a function of the distance between them
+(for example, as outlined in Bjornstad and Falck 2001).
+
+
+With standardized variables z, this boils down to a local regression:
+
+
+$$z_iz_j = f(d_{ij}) + u$$
+
+where $d_{ij}$ is the distance between a pair of locations i - j, u is an
+error term and f is a non-parametric function to be determined from the data.
+Typically, the latter is a LOWESS or kernel regression.
+
+
+### Creating a spatial correlogram
+
+
+
+In GeoDa, creating a spatial correlogram is much more straight forward than
+in R. The process in r, requires us to start with the sale price points, then to 
+create a neighbors structure base on the distance breaks desired for the 
+correlogram.
+
+To start, we use `cbind` to put the x and y coordinates together for use in
+the distance based neighbor functions of **spdep**.
+
+
+```{r}
+coords <- cbind(clev.points$x, clev.points$y)
+```
+
+
+Now we create distance based neighbors coordinate matrix and lower distance bound and an upper distance bound, which is used to define neighbors. We use `dnearneigh` to create
+the distance band neighbors. For more in depth information on distance based neighbors,
+please see the Disatnce Based Weights notebook. We use a distance of 4823.27 to emulate
+the first example in the GeoDa workbook.
+
+```{r}
+dist.band.nb <- dnearneigh(coords,0,4823.27)
+```
+
+
+Using the **spdep** function `sp.correlogram, we can get measures of spatial autocorrelation
+for an input number of lag orders. We can then use the base R plotting function to get a look
+at the autocorrelation values for each lag order.
+```{r}
+sp <- sp.correlogram(dist.band.nb, clev.points$sale_price, order = 10, method = "I",style = "W", randomisation = TRUE, spChk = NULL, zero.policy = TRUE)
+plot(sp)
+```
+The values here do not quite match with the GeoDa ones.
+
+
+To get a better looking plot, we can extract the moran's I values and put
+them into a data frame, so we can use **ggplot2** plotting functionality.
+```{r}
+morans <- sp$res[,1]
+df <- data.frame(Morans_I = lags,lags = 1:10 )
+ggplot(data = df, aes(x=lags,y=Morans_I)) +
+  geom_point() +
+  geom_smooth(col = "purple", se = FALSE) +
+  geom_hline(yintercept = 0) +
+  ylim(-.5,.5) 
+```
+
+To get closer to the GeoDa correlogram plotting functionality, we can convert lags to 
+euclidean distance.
+
+```{r}
+df$euclidean_distance <- df$lags * 4823.3
+ggplot(data = df, aes(x=euclidean_distance,y=Morans_I)) +
+  geom_point() +
+  geom_smooth(col = "purple", se = FALSE) +
+  geom_hline(yintercept = 0) +
+  ylim(-.5,.5) +
+  scale_x_continuous(breaks = df$euclidean_distance)
+```
+
+
+
+
+
+
+This next section is an attempt to get values for spatial autocorrelation that mirror
+the GeoDa ones
+
+
+Setting up vectors to store Moran's I values and number of pairs for each lag order
+```{r}
+pairs <- rep(NA, 10)
+spat_auto_cor <- rep(NA, 10)
+```
+
+
+
+Here we run `dnearneigh` on each interval of euclidean distance that correspond to a lag in
+1 to 10. From there we compute the associated moran's I statistic and store it in the vector
+we created above. To get the number of pairs for each lag order, we simply sum up the cardinality
+of the neighbor structure per each lag order and then divide it by two because this sum gives the
+total number of neighbors and the total number of pairs will be half this number.
+```{r}
+for (i in 1:10){
+  nb <- dnearneigh(coords, (i - 1) * 4823.28, i * 4823.28)
+  weight <- nb2listw(nb, zero.policy = TRUE)
+  moran <- moran(clev.points$sale_price, weight, length(nb), Szero(weight))
+  pairs[i] <- sum(card(nb)) / 2
+  spat_auto_cor[i] <- moran$I
+}
+```
+
+
+Now we create a data frame from the two vectors we create with the lag order values and 
+associated euclidean distance values.
+```{r}
+df <- data_frame(lag_order = 1:10, auto_corr = spat_auto_cor[1:10], num_pairs = pairs)
+df$euclidean_distance <- df$lag_order * 4823
+```
+
+
+
+
+```{r}
+p1 <- ggplot(data = df, aes(x = euclidean_distance,y = auto_corr)) +
+    geom_point() +
+    geom_smooth(col = "purple") +
+    geom_hline(yintercept = 0) +
+    ylim(-1,1)+
+  scale_x_continuous(breaks = df$euclidean_distance)
+p2 <- ggplot(data = df, aes(x=euclidean_distance,y = num_pairs, fill = as.factor(euclidean_distance))) +
+  geom_bar(stat = "identity") +
+  scale_fill_brewer(palette = "Paired") +
+  theme(legend.position = "none") +
+  geom_text(aes(label=num_pairs), position = position_dodge(width = .9), vjust=-.25) +
+  ylim(0, 1.2 * max(pairs))+
+  scale_x_continuous(breaks = df$euclidean_distance)
+p1
+p2
+```
+
+
+```{r}
+grid.arrange(p1,p2,ncol = 1)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+geoda_correlogram <- function(lag.order, distance, var,coords){
+  # Function for making a GeoDa correlogram inputs are, a desired number
+  # of lags, the desired distance cutoff per lag order, a vector of values,
+  # and a coordinate matrix
+  pairs <- rep(NA, lag.order)
+  spat_auto_cor <- rep(NA, lag.order)
+  #computing the pairs and moran's I values
+  for(i in 1:lag.order) {
+    nb <- dnearneigh(coords, (i-1) * distance, i * distance)
+    weight <- nb2listw(nb, zero.policy = TRUE)
+    moran <- moran(var, weight, length(nb), Szero(weight))
+    pairs[i] <- sum(card(nb)) / 2
+    spat_auto_cor[i] <- moran$I
+  }
+  # Makign a dat frame of computed values
+  df <- data.frame(lag = 1:lag.order, num_pairs = pairs, auto_corr = spat_auto_cor)
+  df$euclidean_distance <- df$lag * round(distance, digits = 0)
+  
+  # Making the plots
+  p1 <- ggplot(data = df, aes(x = euclidean_distance,y = auto_corr)) +
+    geom_point() +
+    geom_smooth(col = "purple") +
+    geom_hline(yintercept = 0) +
+    ylim(-1,1) +
+    scale_x_continuous(breaks = df$euclidean_distance)
+  p2 <- ggplot(data = df, aes(x=euclidean_distance,y=num_pairs, fill = as.factor(euclidean_distance))) +
+    geom_bar(stat= "identity") +
+    scale_fill_brewer(palette = "Paired") +
+    theme(legend.position = "none") +
+    geom_text(aes(label=num_pairs), position = position_dodge(width = .9), vjust=-.25) +
+    ylim(0, 1.2 * max(pairs)) +
+    scale_x_continuous(breaks = df$euclidean_distance)
+  grid.arrange(p1,p2,ncol =1)
+}
+geoda_correlogram(10, 4823.3, clev.points$sale_price, coords)
+```
+
+
+
+
+Basically same function as the first one, but it uses `sp.correlogram` to calculate the
+autocorrelation for the lags.
+
+```{r}
+geoda_correlogram2 <- function(lag.order, distance, var,coords){
+  pairs <- rep(NA, lag.order)
+  spat_auto_cor <- rep(NA, lag.order)
+  for(i in 1:lag.order) {
+    nb <- dnearneigh(coords, (i-1) * distance, i * distance)
+    pairs[i] <- sum(card(nb)) / 2
+  }
+  
+  # Main difference between 1st geoda_correlogram function is this section
+  nb1 <- dnearneigh(coords, 0 , distance)
+  sp <- sp.correlogram(nb1, var, order = lag.order, method = "I", style = "W", randomisation = FALSE, spChk = NULL, zero.policy = TRUE)
+  ########
+  df <- data.frame(lag = 1:lag.order, num_pairs = pairs, auto_corr = sp$res[,1])
+  df$euclidean_distance <- df$lag * round(distance, digits = 0)
+  
+  p1 <- ggplot(data = df, aes(x = euclidean_distance,y = auto_corr)) +
+    geom_point() +
+    geom_smooth(col = "purple", se = FALSE) +
+    geom_hline(yintercept = 0) +
+    ylim(-1,1)  +
+    scale_x_continuous(breaks = df$euclidean_distance)
+  p2 <- ggplot(data = df, aes(x=euclidean_distance,y=num_pairs, fill = as.factor(euclidean_distance))) +
+    geom_bar(stat= "identity") +
+    scale_fill_brewer(palette = "Paired") +
+    theme(legend.position = "none") +
+    geom_text(aes(label=num_pairs), position = position_dodge(width = .9), vjust=-.25) +
+    ylim(0, 1.2 * max(pairs)) +
+    scale_x_continuous(breaks = df$euclidean_distance)
+  grid.arrange(p1,p2,ncol =1)
+}
+geoda_correlogram2(10, 4823.3, clev.points$sale_price, coords)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Interpretation
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
