@@ -47,13 +47,27 @@ After completing the notebook, you should know how to carry out the following ta
 
 - Analyze the range of spatial autocorrelation by means of a spatial correlogram
 
-- 
-
 #### R Packages used
 
 - **sf**: To read in the shapefile and make queen contiguity weights
 
 - **spdep**: To create k-nearest neighbors and distance-band neighbors, calculate distances between neighbors, convert to a weights structure, and coercion methods to sparse matrices.
+
+- **ggplot2**: To make customized plots such as a Moran's I scatter plot and spatial 
+correlogram.
+
+- **Hmisc**: To get LOWESS smoother functionality in ggplot2.
+
+- **robustHD**: To compute standarized scores for variables and lag variables.  in construction of a Moran's I scatterplot
+
+- **deldir**: To create thiessen polygons.
+
+- **tidyverse**: For basic data frame manipulation.
+
+- **gap**: To compute chow test statistics.
+
+- **gridExtra**: To pack multiple plots into one, mainly use to construct the spatial correlogram
+
 
 #### R Commands used
 
@@ -61,13 +75,14 @@ Below follows a list of the commands used in this notebook. For further details
 and a comprehensive list of options, please consult the 
 [R documentation](https://www.rdocumentation.org).
 
-- **Base R**: `install.packages`, `library`, `setwd`, `rep`, `sd`, `mean`, `summary`, `attributes`, `lapply`, `class`, `length`
+- **Base R**: `install.packages`, `library`, `setwd`, `rep`, `sd`, `mean`, `summary`, `attributes`, `lapply`, `class`, `length`, `which`, `data.frame`
 
 - **sf**: `st_read`, `st_relate`, `st_as_sf`
 
-- **spdep**: `knn2nb`, `dnearneigh`, `knearneigh`, `nb2listw`, `mat2listw`, `EBlocal`, `sp.correlogram`, `Szero`
+- **spdep**: `dnearneigh`, `nb2listw`, `sp.correlogram`, `Szero`
 
-- **ggplot2**: `ggplot`, `geom_smooth`, `geom_point`, `xlim`, `ylim`, `geom_hline`, `geom_vline`, `geom_line`
+- **ggplot2**: `ggplot`, `geom_smooth`, `geom_point`, `xlim`, `ylim`, `geom_hline`, `geom_vline`, `geom_line`,
+               `ggtitle`, `scale_x_continous`
 
 - **Hmisc**: `stat_plsmo`
 
@@ -98,7 +113,6 @@ library(spdep)
 library(ggplot2)
 library(deldir)
 library(robustHD)
-library(broom)
 library(Hmisc)
 library(tidyverse)
 library(gap)
@@ -166,7 +180,7 @@ plot(vtess.sf$geometry)
 
 
 
-
+#######################
 
 
 This gets a plotable thiessen polygon object and seems like it would be the go to
@@ -207,7 +221,7 @@ v <- st_voronoi(st_union(clev.points), box)
 plot(v,col = 0)
 class(v)
 ```
-
+###########################################
 
 
 
@@ -254,11 +268,13 @@ as.nb.sgbp <- function(x, ...) {
 
 
 
+
 ```{r}
 queen.nb <- as.nb.sgbp(queen.sgbp)
 ```
 
-
+To go from neighbors object to weights object, we use `nb2listw`, with default parameters, we will 
+get row standardized weights.
 ```{r}
 queen.weights <- nb2listw(queen.nb)
 ```
@@ -396,9 +412,9 @@ We get a value of .281, which is the Moran's I statistic and also
 corresponds to the slope of the Moran's I scatter plot.
 
 
-
-
-
+In creating the Moran's I scatterplot, we will need to to create a lag variable of sale price from
+our queen weights. This is just done the the function `lag.listw`, which takes a weights structure 
+and a variable of equal length the create a lag variable from.
 ```{r}
 clev.points$lagged_sale_price <- lag.listw(queen.weights,clev.points$sale_price)
 clev.points$lagged_sale_price
@@ -435,11 +451,12 @@ the scatterplot to better match up with GeoDa, we set the x and y scale limits t
 ```{r}
 ggplot(data = clev.points, aes(x=standardized_sale_price, y = standardized_lag_sale_price)) +
   geom_point() +
-  geom_smooth(method = "lm") +
+  geom_smooth(method = "lm", se = FALSE) +
   geom_hline(yintercept = 0, lty = 2) +
   geom_vline(xintercept = 0, lty = 2) +
   xlim(-10,10) +
-  ylim(-10,10) 
+  ylim(-10,10) + 
+  ggtitle("Moran scatter plot sale price")
 ```
 
 
@@ -635,7 +652,8 @@ ggplot(data = clev.points, aes(x=standardized_sale_price, y = standardized_lag_s
   geom_hline(yintercept = 0, lty = 2) +
   geom_vline(xintercept = 0, lty = 2) +
   xlim(-10,10) +
-  ylim(-10,10) 
+  ylim(-10,10) + 
+  ggtitle("LOWESS smooth of Moran Scatterplot")
 ```
 
 
@@ -682,7 +700,8 @@ ggplot(clev.points, aes(x=standardized_sale_price,y=standardized_lag_sale_price)
   scale_color_manual(values=c("blue","red"))  +
   labs(color="Selection") +
   geom_hline(yintercept = 0, lty = 2) +
-  geom_vline(xintercept = 0, lty = 2)
+  geom_vline(xintercept = 0, lty = 2) +
+  ggtitle("Chow test Moran Scatterplot")
 ```
 
 
@@ -862,6 +881,8 @@ df$euclidean_distance <- df$lag_order * 4823
 
 
 
+Here we create two different plots, one is a histogram with the number of pairs in each bin, the other
+is the spatial
 
 ```{r}
 p1 <- ggplot(data = df, aes(x = euclidean_distance,y = auto_corr)) +
@@ -885,9 +906,6 @@ p2
 ```{r}
 grid.arrange(p1,p2,ncol = 1)
 ```
-
-
-
 
 
 
@@ -943,8 +961,10 @@ autocorrelation for the lags.
 
 ```{r}
 geoda_correlogram2 <- function(lag.order, distance, var,coords){
+  # creating vectors to store autocorrelation values and number of pairs
   pairs <- rep(NA, lag.order)
   spat_auto_cor <- rep(NA, lag.order)
+  #loop to calculate number of pairs for each lag order
   for(i in 1:lag.order) {
     nb <- dnearneigh(coords, (i-1) * distance, i * distance)
     pairs[i] <- sum(card(nb)) / 2
@@ -957,6 +977,7 @@ geoda_correlogram2 <- function(lag.order, distance, var,coords){
   df <- data.frame(lag = 1:lag.order, num_pairs = pairs, auto_corr = sp$res[,1])
   df$euclidean_distance <- df$lag * round(distance, digits = 0)
   
+  # Making plots
   p1 <- ggplot(data = df, aes(x = euclidean_distance,y = auto_corr)) +
     geom_point() +
     geom_smooth(col = "purple", se = FALSE) +
@@ -975,30 +996,41 @@ geoda_correlogram2 <- function(lag.order, distance, var,coords){
 geoda_correlogram2(10, 4823.3, clev.points$sale_price, coords)
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ### Interpretation
 
+The top of the above graph is the actual correlogram. This depicts how spatial autocorrelation
+changes with distance. The first dot correpsonds with distances between 0 and 4823 feet. 
+The dashed line indicates a spatial autocorrelation of 0. The autocorrelation starts positive
+and then fluctates above and below the dashed line.
 
 
 
 
+
+
+
+Attempting to recreate the other correlograms with the constructed functions. Both cannot do
+the higher lag order with 20 bins due a lack of values in the higher lag orders.
+
+
+
+```{r}
+geoda_correlogram(10, 2413.15, clev.points$sale_price, coords)
+geoda_correlogram2(10, 2413.15, clev.points$sale_price, coords)
+```
+
+
+
+
+
+
+
+
+
+```{r}
+geoda_correlogram(20, 1000, clev.points$sale_price, coords)
+geoda_correlogram2(20, 1000, clev.points$sale_price, coords)
+```
 
 
 
