@@ -1,0 +1,1360 @@
+---
+title: "Local Spatial Autocorrelation 2"
+author: Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial
+  Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]
+date: "06/30/2019"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+  html_document:
+    css: tutor.css
+    fig_caption: yes
+    self_contained: no
+    toc: yes
+    toc_depth: 4
+subtitle: R Notes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br>
+
+## Introduction {-}
+
+This notebook cover the functionality of the [Local Spatial Autocorrelation](https://geodacenter.github.io/workbook/6a_local_auto/lab6a.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.
+
+The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments
+on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).
+
+For this notebook, we use Cleveland house price data. Our goal in this lab is show how to assign spatial weights based on different distance functions.
+
+
+```{r}
+
+```
+### Objectives
+
+After completing the notebook, you should know how to carry out the following tasks:
+
+- Identify clusters with the Local Moran cluster map and significance map
+
+- Identify clusters with the Local Geary cluster map and significance map
+
+- Identify clusters with the Getis-Ord Gi and Gi* statistics
+
+- Identify clusters with the Local Join Count statistic
+
+- Interpret the spatial footprint of spatial clusters
+
+- Assess potential interaction effects by means of conditional cluster maps
+
+- Assess the significance by means of a randomization approach
+
+- Assess the sensitivity of different significance cut-off values
+
+- Interpret significance by means of Bonferroni bounds and the False Discovery Rate (FDR)
+
+#### R Packages used
+
+- **sf**: To read in the shapefile and make queen contiguity weights
+
+- **spdep**: To create spatial weights structure from neighbors structure
+
+- **robustHD**: To compute standarized scores for variables and lag variables 
+
+- **tmap**: To construct significance and cluster maps with custom functions
+
+- **tidyverse**: To manipulate the data
+
+- **RColorBrewer**: To create custom color palattes that mirror the GeoDa cluster and significance maps
+
+#### R Commands used
+
+Below follows a list of the commands used in this notebook. For further details
+and a comprehensive list of options, please consult the 
+[R documentation](https://www.rdocumentation.org).
+
+- **Base R**: `install.packages`, `library`, `setwd`, `summary`, `attributes`, `lapply`, `class`, `length`, `rev`, `cut`, `mean`, `sample`, `as.data.frame`, `matrix`, `unique`, `as.character`, `which`, `order`, `data.frame`, `ifelse`, `sum`, `rep`, `set.seed`
+
+- **sf**: `st_read`, `st_relate`
+
+- **spdep**: `nb2listw`, `lag.listw`
+
+- **robustHD**: `standardized`
+
+- **tmap**: `tm_shape`, `tm_borders`, `tm_fill`, `tm_layout`, `tm_facets`
+
+- **tidyverse**: `filter`, `mutate`
+
+- **RColorBrewer: `brewer.pal`
+
+
+## Preliminaries
+
+Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not
+actually be saving any files.^[Use `setwd(directorypath)` to specify the working directory.]
+
+### Load packages
+
+First, we load all the required packages using the `library` command. If you don't have some of these in your system, make sure to install them first as well as
+their dependencies.^[Use 
+`install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
+
+
+```{r}
+library(sf)
+library(spdep)
+library(tmap)
+library(tidyverse)
+library(RColorBrewer)
+library(robustHD)
+```
+
+
+
+
+
+
+### Obtaining the Data from the GeoDa website {-}
+
+To get the data for this notebook, you will and to go to [Guerry](https://geodacenter.github.io/data-and-lab/Guerry/) The download format is a
+zipfile, so you will need to unzip it by double clicking on the file in your file
+finder. From there move the resulting folder titled: nyc into your working directory
+to continue. Once that is done, you can use the **sf** function: `st_read()` to read
+the shapefile into your R environment. 
+
+
+```{r}
+us.homocides <- st_read("ncovr/NAT.shp")
+```
+
+
+
+
+### Making the weights
+
+
+
+To start we create a function for queen contiguity, which is just `st_relate` with
+the specified pattern for queen contiguity which is `F***T****`
+
+```{r}
+st_queen <- function(a, b = a) st_relate(a, b, pattern = "F***T****")
+```
+
+
+We apply the queen contiguity function to the guerry polygons and see that the class
+of the output is **sgbp**. This structure is close to the **nb** structure, but has
+a few difference that we will need to correct to use the rest of **spdep** functionality.
+
+
+```{r}
+queen.sgbp <- st_queen(us.homocides)
+class(queen.sgbp)
+```
+
+
+This function converts type **sgbp** to **nb**. It is covered in more depth in the 
+Contiguity Based Weight notebook. In short, it explicitly changes the name of the 
+class and deals with the observations that have no neighbors.
+
+```{r}
+as.nb.sgbp <- function(x, ...) {
+  attrs <- attributes(x)
+  x <- lapply(x, function(i) { if(length(i) == 0L) 0L else i } )
+  attributes(x) <- attrs
+  class(x) <- "nb"
+  x
+}
+```
+
+
+
+
+
+```{r}
+queen.nb <- as.nb.sgbp(queen.sgbp)
+```
+
+To go from neighbors object to weights object, we use `nb2listw`, with default parameters, we will 
+get row standardized weights.
+```{r}
+queen.weights <- nb2listw(queen.nb, style = "B", zero.policy = TRUE)
+```
+
+
+
+
+
+
+
+## Extensions of Local Moran's I
+
+
+
+### Bivariate Local Moran's I
+
+
+
+
+#### Concept
+
+The treatment of the bivariate local Moran’s I closely follows that of its global counterpart (see also
+Anselin, Syabri, and Smirnov 2002). In essence, it captures the relationship between the value for one
+variable at location i, $x_i$, and the average of the neighboring values for another variable, i.e,
+it spatial lag $\Sigma_jw_{ij}y_j$. Apart from a constant scaling factor (that can be ignored), the
+statistic is the product of $x_i$ with the spatial lag of $y_i$ (i.e, $\Sigma_jw_{ij}y_j$), with 
+both variables standardized, such that their means are zero and variences equal 1.
+
+$$I_{B,i} = cx_i\Sigma_jw_{ij}y_j$$,
+
+where $w_{ij}$ are elements of the spatial weights matrix.
+
+As for its global counterpart, this statistic needs to be interpreted with caution, since it ignores
+in-situ correlation between the two variables (see the discussion of global bivariate spatial
+autocorrelation for details).
+
+
+A special case of the bivariate local Moran statistic is comparing the same variable at two points in time. The most meaningful application is where one variable is for time period t, say $z_t$ and
+the other variable is for the neighbors in the previous time period, say $z_{t-1}$. This is illustrated
+in the example below. 
+
+
+#### Implementation
+
+
+##### Computing the observed statistic
+
+
+To start we will make a function that calculates the observed bivariate local moran
+statistic. There are many ways to approach this, but it will be most efficient to
+to work with a full spatial weights matrix rather than the reduced structure 
+utilized by **spdep**. This is because it is much faster when applying the conditional
+randomization approach in assessing significance.
+
+Before proceeding we will turn the weights structure into a **symmetricMatrix**. We
+can do this with `as`, our queen weights and "symmetricMatrix" as arguments. Next
+we use `as.matrix` with **W/rowSums(W)** as a precaution to make sure our weights 
+are row-standardized. Lastly we assign 0 to all NA's.
+
+```{r}
+W  <- as(queen.weights, "symmetricMatrix")
+W  <- as.matrix(W/rowSums(W))
+W[which(is.na(W))] <- 0
+```
+
+
+In the function, we must first standardize the x and y variables. We use `standardize`
+to accomplish this. To get the statistic, we follow the formual from above, but
+use matrix multiplication. Multiplying the full spatial weight matrix by the standardized
+y variable still gets us the standardized lag variable for y. To get matrix multiplication,
+we use `%*%`.
+
+```{r}
+bivariate_moran <- function(x, y = NULL, W){
+        if(is.null(y)) y = x
+        xs <- standardize(x)
+        ys <- standardize(y)
+        local  <- (xs*W%*%ys)
+        local
+}
+```
+
+
+Here we use the function made above on our x and y variables.
+
+```{r}
+lmoran <- bivariate_moran(us.homocides$HR90, us.homocides$HR80,W)
+```
+
+
+
+##### Conditional permutation
+
+
+In order to assess significance of the local statistics, we will need to do some conditional
+permutations. With these, we can obtain a pseudo p-value or determine a cutoff for 
+significance.
+
+Before we proceed with the conditional permutation process, we set the seed to `123456789`.
+This is the same randomization seed as GeoDa. Randomization seeds are used for replicability
+in research.
+
+
+```{r}
+set.seed(123456789)
+```
+
+We will make a function to do the conditional permutations for the bivariate moran. We 
+will use a full size spatial weights matrix to take adavtantage of the speed of 
+vectorized operation in R. 
+
+To begin, we need to number of locations(**n**). We use `nrow` on the weights matrix, but 
+could also use `ncol` since it is a full size spatial weights matrix, which is nxn.
+Next we create a vector of id numbers. We will need a place to store the **y** result of
+each sample and statistic. **local.sims** is for the statistics and **y.sample** is for
+the y sample draws. Now we need a `for` loop in the sample draws because we must draw
+samples from all of the locations except location i in the condional permutations. To
+accomplish this, we have to loop through 1:n and take a sample of length **permutations**
+from **id[-i]**. The minus notation excludes index i from the vector, so we are taking a
+sample of all locations except i. We take a sample of id numbers, so we can index the
+**y** vector to get the sample values. at the end of the loop we have a full matrix
+of **y** sample values for each location and permutation. We then use `apply` to standardize
+the y values in the matrix.
+
+
+```{r}
+bivariate_moran_sim <- function(x, y = NULL, W, permutations = 999){
+        if(is.null(y)) y = x
+
+        n   <- nrow(W)
+        id  <- 1:n
+
+        #place to store results
+        local.sims  <- matrix(NA, nrow = n, ncol=permutations)
+        y.sample = matrix(NA, nrow = n, ncol = permutations)
+        
+        # filling each column of the sample matrix
+        for(i in 1:n){
+          sample.indices <- sample(id[-i], permutations, replace = TRUE)
+          y.sample[i,] <- y[sample.indices]
+        }
+        
+        #standardizing the y sample values
+        y.sample <- (y.sample - apply(y.sample, 1, mean))/apply(y.sample, 1, sd)
+        
+        #standardizing x
+        xs <- standardize(x)
+        W[which(is.na(W))] <- 0
+        
+        #calculating the local statistics
+        local.sims  <- (xs*W%*%y.sample)
+        local.sims
+}
+```
+
+We use the function from above on our x and y variables.
+```{r}
+local.sims <- bivariate_moran_sim(us.homocides$HR90,us.homocides$HR80, W)
+```
+
+
+
+To assess significance at the .05 level for a two-sided test as in GeoDa, we will us an
+alpha level of .1. `probs` will be .05 and .95, which corresponds with a two sided test
+at the .05 level. 
+
+```{r}
+alpha <- .1  # for a 90% confidence interval
+probs <- c(alpha/2, 1-alpha/2)
+intervals <- t( apply(local.sims, 1, function(x) quantile(x, probs=probs)))
+sig        <- (lmoran < intervals[,1] )  | ( lmoran > intervals[,2] )
+```
+
+##### Classification
+
+
+To build the classifications, we will need the standardized scores for both the x and y variables. We
+build the classifications in the same manner as the univariate Local Moran. The quadrant of the
+moran scatterplot gives us the cluster classification. Positive values give the designation "High",
+and negative values "Low"
+
+```{r}
+xs <- standardize(us.homocides$HR90)
+ys <- standardize(us.homocides$HR80)
+```
+
+We can create the classifications using `interaction, which will assign a boolean based on each 
+conditional for each observation. We convert these booleans to strings, so we can use 
+`str_replace_all` to get "High" and "Low" in place of TRUE and FALSE. Lastly, we assign 
+"Not significant" to all insignificant observations based on the conditional permutation approach
+taken above.
+
+
+```{r}
+patterns <- as.character( interaction(xs > 0, W%*%ys > 0) ) 
+patterns <- patterns %>% 
+        str_replace_all("TRUE","High") %>% 
+        str_replace_all("FALSE","Low")
+patterns[sig==0] <- "Not significant"
+```
+
+
+Here we add the classification variable, **patterns** to the data frame with `mutate` from 
+**tidyverse**.
+
+```{r}
+us.homocides <- us.homocides %>% mutate(patterns = patterns)
+```
+
+
+
+##### Constructing the map
+
+
+
+
+```{r}
+pal <- c("#DE2D26","#FCBBA1","#C6DBEF", "#3182BD", "#D3D3D3")
+pal
+```
+
+
+```{r}
+tm_shape(us.homocides) +
+  tm_fill("patterns", palette = pal) +
+  tm_borders() +
+  tm_layout(main.title = "Bivariate Local Moran's I")
+```
+
+
+
+##### Putting it all together
+
+We can put together all of the steps above to create a bivariate LISA map function.
+The only addition we need is something to match up the colors to the classifications
+present in the data. For instance "high-low" or one of the other classifications might 
+not always be there for a variable, so to ensure that the mapping function displays
+a map with the correct color scheme, we need to check the classifications and construct
+the palette based on the categories present. This is done below by making a matrix
+matching the colors to the classifications then checking the classification present
+in the data with `unique`. With the resulting vector from `unique`, we use the `%in%`
+operator on the vector with the classification, which gives us a vector logical
+values. From there we use the logical value to select rows in the matrix. With this
+we can select the row with the colors as our palette.
+
+```{r}
+bivariate_lisa_map <- function(area,x, y = NULL, weights, nperms, sig_cutoff){
+  # function to create a bivariate LISA map
+  # arguments:
+  #    area: sf dataframe
+  #    x: vectors of x values
+  #    y: a vector of y values
+  #    nperms: the number of permuations used to calculate the pvalues
+  #    sig_cutoff: the alpha level required for significance
+  # returns:
+  #    a LISA map in GeoDa style
+  if(is.null(y)) y = x
+  
+  # Converting the weights
+  W <- as(weights, "symmetricMatrix")
+  W  <- as.matrix(W/rowSums(W))
+  W[which(is.na(W))] <- 0
+  
+  # Computing the observed statistics and reference distributions
+  observed <- bivariate_moran(x,y = y,W)
+  sims <- bivariate_moran_sim(x,y = y,W, permutations = nperms)
+  
+  # Assessing significance
+  alpha <- sig_cutoff  # for a 90% confidence interval
+  probs <- c(alpha/2, 1-alpha/2)
+  intervals <- t( apply(sims, 1, function(x) quantile(x, probs=probs)))
+  sig        <- ( observed < intervals[,1] )  | ( observed > intervals[,2] )
+  
+  # Standardizing the x and y vars
+  xp <- standardize(x)
+  yp <- standardize(y)
+  
+  #Assigning classifications
+  patterns <- as.character( interaction(xp > 0, W%*%yp > 0) ) 
+  patterns <- patterns %>% 
+        str_replace_all("TRUE","High") %>% 
+        str_replace_all("FALSE","Low")
+  patterns[sig==0] <- "Not significant"
+  
+  # Adding the classifications to the data frame
+  area <- area %>% mutate(patterns = patterns)
+  
+  # Constructing the correct palette based on presense of classifications
+  classes <- unique(patterns)
+  patts <- c("High.High", "High.Low", "Low.High", "Low.Low", "Not significant")
+  colors <- c("#DE2D26","#FCBBA1","#C6DBEF", "#3182BD", "#D3D3D3")
+  mat <- matrix(c(patts,colors), ncol = 2)
+  logi <- patts %in% classes
+  pre_col <- matrix(mat[logi], ncol = 2)
+  pal <- pre_col[,2]
+  
+  # Making the map
+  tm_shape(us.homocides) +
+  tm_fill("patterns", palette = pal) +
+  tm_borders() 
+}
+```
+
+
+
+
+
+
+
+```{r}
+significance_map <- function(polys, pvalue_vector, permutations, sig = .05){
+  # function to create significance map
+  # arguments:
+  #    polys: sf dataframe
+  #    pvalue_vector: a vector of p-values
+  #    permutations: the number of permuations used to calculate the pvalues
+  #    min.sig: the alpha level required for significance
+  # returns:
+  #    a significance map in GeoDa style
+  
+  target_p <- 1 / (1 + permutations)
+  potential_brks <- c(.00001, .0001, .001, .01)
+  brks <- potential_brks[which(potential_brks > target_p & potential_brks < sig)]
+  brks2 <- c(target_p, brks, sig)
+  labels <- c(as.character(brks2), "Not Significant")
+  brks3 <- c(-.000001, brks2, 1)
+  
+  cuts <- cut(pvalue_vector, breaks = brks3,labels = labels)
+  polys <- polys %>% mutate(significance = cuts)
+  
+  
+  pal <- rev(brewer.pal(length(labels), "Greens"))
+  pal[length(pal)] <- "#D3D3D3"
+  
+  tm_shape(polys) +
+    tm_fill("significance", palette = pal) +
+    tm_borders() +
+    tm_layout(title = "significance map")
+}
+
+
+get_p_value <- function(mat, observed) {
+  nperm <- ncol(mat)
+  nlocs <- nrow(mat)
+  p_value <- rep(NA,nlocs)
+  for(i in 1:nlocs){
+    num_greater <- length(which(df[i,] > observed))
+    p_value[i] <- (num_greater + 1) / (nperm + 1)
+  }
+  p_value
+}
+
+```
+
+
+
+
+#### Interpretation
+
+As mentioned, the interpretation of the bivariate local Moran cluster map warrants some
+caution, since it does not control for the correlation between the two variables at each
+location (i.e., the correlation between $x_i$ and $y_i$).  To illustrate this issue, 
+consider the space-time case, where one can interpret the results of the high-high and
+low-low clusters in Figure 3 as locations where high/low values at time t (in our example,
+homicide rates in 1990) were surrounded by high/low values at time t−1 (homicide rates in
+1980) more so than would be the case randomly. This could either be attributed to the
+surrounding locations in the past affecting the central location at the current time (a form
+of a diffusion effect), but could also be due to a strong inertia, in which case there would
+be no diffusion. More precisely, if the homicide rates in all locations are highly 
+correlated over time, then if the surrounding values in t−1 were correlated with the value
+at i in t−1, then they would also tend to be correlated with the value at i in t (through
+the correlation between $y_{j,t-1}$ and $y_{j,t}$). Hence, while these findings could be
+compatible with diffusion, this is not necessarily the case. The same complication affects 
+the interpretation of the bivariate local Moran coefficient between two variables at the 
+same point in time.
+
+
+
+
+
+### Differential Local Moran's I
+
+
+
+
+
+
+#### Concept
+
+
+The differential local Moran statistic is the local counterpart to the differential Moran
+scatter plot, discussed in an earlier chapter. Instead of using the observations on a
+variable at two different time periods, this statistic is based on the change over time,
+i.e., the difference between $y_t$ and $y_{t-1}$. Note that this is the actual difference
+and not the absolute difference, so that a positive change will be viewed as high, and a
+negative change as low. The differences are used in standardized form, i.e., they are not
+the differences between the standardized variable at two points in time, but the
+standardized differences between the original values for the variable.
+
+
+The formal expression for this statistic follows the same logic as before, and consists of
+the cross product of the difference between $y_t$ and $y_{t-1}$ at i with the associated
+spatial lag:
+
+$$I_{D,i} = c(y_{i,t} - y_{i,t-1})\Sigma_jw_{ij}(y_{j,t} - y_{j,t-1})$$
+
+The scaling constant c can be ignored. Inference is based on conditional permutation. All
+the usual caveats hold about multiple comparisons, etc.
+
+
+#### Implementation
+
+
+
+To start we need the difference between the two temporal variables, which we will use
+as the variable for a univariate local moran.
+```{r}
+us.homocides$differ <- us.homocides$HR90 - us.homocides$HR80
+```
+
+To make the differential Local Moran's I map, we use the `bivariate_lisa_map` function
+that we created earlier in the notebook. This function works for the univariate case,
+we just need to enter the x variable as the y as well and it will output the
+univariate LISA map. Additionally, we can use the `+` operator and additonal **tmap**
+function with this function. Below we use `tm_layout` to give the map a title.
+
+```{r}
+bivariate_lisa_map(us.homocides, us.homocides$differ, y =us.homocides$differ,queen.weights,999,.05 ) +
+  tm_layout(main.title = "Differential Local Moran's I")
+```
+
+
+
+
+#### Interpretation
+
+
+
+The first aspect of the results is a much smaller number of significant locations compared
+to the univariate and bivariate cluster maps. These are locations where the change in the
+variable over time is matched by similar/dissimilar changes in the surrounding locations. It
+is important to keep in mind that the focus is on change, and there is no direct connection
+to whether this changes is from high or low values.
+
+Two situations can be distinguished, depending on whether the change variable takes on both
+positive and negative values, or when all the changes are of the same sign (i.e., all
+observations either increase or decrease over time).
+
+When both positive and negative change values are present, the high-high locations will tend
+to be locations with a large increase (positive change), surrounded by locations with
+similar large increases. The low-low locations will be observations with a large decrease
+(negative change), surrounded by locations with similar large decreases. Spatial outliers
+will be locations where an increase is surrounded by a decrease and vice versa.
+
+When all changes are of the same sign, the interpretation of high-high and low-low depends
+on the sign. Due to the standardization, large positive values will be considered high
+(above the mean), whereas large negative values will be labeled low (below the mean). This
+should be kept in mind when interpreting the results.
+
+
+
+
+
+### Local Moran with EB Rate
+
+#### Concept
+
+
+The last of the extensions of the local Moran’s I pertains to the special case where the
+variable of interest is a rate or proportion. As discussed for the Moran scatter plot, the
+resulting variance instability can cause problems for the Moran statistic. The EB
+standardization suggested by Assunção and Reis (1999) for the global case can be extended to
+the local statistic in a straightforward manner. The statistic has the usual form, but is
+computed for the standardized rates, z.
+
+$$I_{EB,i} = cz_i\Sigma_jw_{ij}z_j$$
+
+The standardization of the raw rate $r_i$ is the same as before, and is repeated here for
+completeness (for a more detailed discussion, see the relevant chapter):
+
+
+$$z_i = \frac{r_i-\beta}{\sqrt{\alpha+(\beta/P_i)}}$$
+
+with $\beta$ as an estimate of the mean and the denominator as an estimate of the 
+standard error.
+
+All inference and interpretation is the same as for the univariate case and is not further
+pursued here.
+
+
+
+#### Implementation
+
+To get the EB standardized score each location, we will need to know $\beta$ and $\alpha$
+are. These are covered in the second global spatial autocorrelation notebook, but since
+we have to calculate them explicitly here we will go through the formula for both.
+
+$\beta$ is the total event count over the total population,
+
+$$\beta = \Sigma_iO_i/\Sigma_iP_i$$
+
+$$\alpha = [\Sigma_iP_i(r_i-\beta)^2]/P - \beta/(P/n)$$
+
+
+To implement this, we will need to use base R vectorized operations to calculate the standardized
+scores. To start we calculate each of the variables necessary for computing $\alpha$.
+
+```{r}
+beta <- sum(us.homocides$HC90) / sum(us.homocides$PO90)
+r_i <- us.homocides$HC90 / us.homocides$PO90
+P_i <- us.homocides$PO90
+n <- ncol(us.homocides)
+P <- sum(us.homocides$PO90)
+```
+
+With the variables computed above, we have everything from the formula for $\alpha$.
+```{r}
+alpha <- sum(P_i * (r_i - beta)^2) / P - beta/(P/n)
+```
+
+Now that we have $\alpha$ we can compute the standard error.
+```{r}
+se <- sqrt(alpha + beta/P_i)
+```
+
+Lastly we compute the standardized scores based on the formula from earlier.
+```{r}
+z_i <- (r_i - beta) / se
+```
+
+
+
+
+```{r}
+bivariate_lisa_map(us.homocides, z_i, y =z_i,queen.weights,999,.05 ) +
+  tm_layout(main.title = "Differential Local Moran's I")
+```
+
+
+
+
+
+## Bivariate and Multivariate Local Join Count Statistics
+
+
+In addition to introducing a univariate local Join Count statistic, Anselin and Li (2019)
+also include extensions to a bivariate and multivariate setting. In each instance, the
+variables under consideration, say x and z, only take on a value of 0 and 1.
+
+We distinguish between two cases, referred to as co-location and no co-location. In the
+first, it is possible for both variables to take the same value at a location. In other
+words, at location i, it is possible to have $x_i$ = $z_i$ = 1. For example, this would be
+the case when the variables pertain to two different types of events that can occur in all
+locations, such as the presence of several non-exclusive characteristics (e.g., a city block
+that is both low-density and commercial). In the second instance, whenever $x_i = 1$, then
+$z_i = 1$ and vice versa. In other words, the two events cannot happen in the same location.
+This would be case where the classification of a location is exclusive, i.e., if a location
+is of one type, it cannot be of another type (e.g., a zoning classification).
+
+In GeoDa, the co-location case is treated under Multivariate Local Join Count (which
+includes the bivariate setup as a special case), whereas the no co-location case is
+implemented under Bivariate Local Join Count.
+
+While the natural application of Join Count statistics is to deal with binary variables,
+they can also be extended to a notion of quantile spatial autocorrelation, which is further
+elaborated upon below.
+
+
+### Bivariate - No Co-Location
+
+
+
+
+
+#### Preliminaries
+
+
+##### Getting the data from the GeoDa website
+
+
+
+
+
+
+
+##### Unique values
+
+
+
+
+
+
+
+
+##### Making the weights
+
+
+
+
+
+
+
+
+
+
+
+#### Concept
+
+In its general form, the expression for a bivariate local join count statistic is
+
+$$BJC_i = x_i(1-z_i)\Sigma_jw_{ij}z_j(1-x_j)$$
+
+with $w_{ij}$ as unstandardized (binary) spatial weights.
+
+The roles of x and z may be reversed, but the statistic is not symmetric, so that the
+results will tend to differ whether x or z is the focus. In addition, it is important to
+keep in mind that the statistic will only be meaningful when the proportion of the second
+variable (for the neighbors) in the population is small.
+
+Since the condition of no co-location ensures that $1-z_i = 0$ whenever $x_i = 1$, and
+vice versa, the statistic simplifies to:
+
+$$BJC_i = x_i\Sigma_jw_{ij}z_j$$
+
+
+
+#### Implementation
+
+
+
+
+
+#### Interpretation
+
+
+
+
+
+
+### Bivariate and Multivariate - Co-Location
+
+
+
+
+
+#### Preliminaries
+
+
+##### Getting the data from the GeoDa website
+
+To get the data for this notebook, you will and to go to [Guerry](https://geodacenter.github.io/data-and-lab/Guerry/) The download format is a
+zipfile, so you will need to unzip it by double clicking on the file in your file
+finder. From there move the resulting folder titled: nyc into your working directory
+to continue. Once that is done, you can use the **sf** function: `st_read()` to read
+the shapefile into your R environment. 
+
+
+```{r}
+guerry <- st_read("guerry/guerry.shp")
+```
+
+
+
+
+##### Exploratory maps
+
+In this section we will select the top quintile of each variable for the construction of our
+binary variables. To get an illustration of these location, we will make basic choropleth maps
+with the `quantile` style for the variables **Donatns** and **Infants**
+
+
+```{r}
+tm_shape(guerry) +
+  tm_fill("Infants", n = 5, style = "quantile") +
+  tm_borders() +
+  tm_layout(legend.outside = TRUE)
+```
+
+
+
+```{r}
+tm_shape(guerry) +
+  tm_fill("Donatns", n = 5, style = "quantile") +
+  tm_borders() +
+  tm_layout(legend.outside = TRUE)
+```
+
+
+To get the break for the top quintile of both variables, we use `quantile` with the variables as 
+inputs and .8 to get the top quintile break, or 80th percentile.
+```{r}
+doncatbreak <- quantile(guerry$Donatns, .8)
+infantbreak <- quantile(guerry$Infants, .8)
+```
+
+Next, we create two vectors to store the binary variables by using `rep` and starting with all
+0 values. We use conditional indexing to assign 1 to all values that are greater than the
+80th percentile break that we computed above.
+```{r}
+doncat <- rep(0,85)
+infcat <- rep(0,85)
+doncat[guerry$Donatns > doncatbreak] <- 1
+infcat[guerry$Infants > infantbreak] <- 1
+```
+
+With both binary variables, we can create a co-location variable to get a sense of the potential
+significant locations under the bivariate local joint count.
+
+```{r}
+guerry$coloc <- rep(0,85)
+guerry$coloc[doncat == 1 & infcat == 1] <- 1
+```
+
+Here we map the co-location variable in the GeoDa style and see the same co-location output.
+
+```{r}
+tm_shape(guerry) +
+  tm_fill("coloc", palette = c("white", "blue"), style = "cat") +
+  tm_borders()
+```
+
+
+
+
+
+
+
+##### Making the weights
+
+
+
+```{r}
+queen.sgbp <- st_queen(guerry)
+queen.nb <- as.nb.sgbp(queen.sgbp)
+binary.w <- lapply(queen.nb, function(x) 0*x + 1)
+queen.weights <- nb2listw(queen.nb, style = "B",glist = binary.w, zero.policy = TRUE)
+```
+
+
+
+```{r}
+W  <- as(queen.weights, "symmetricMatrix")
+W  <- as.matrix(W/rowSums(W))
+W[which(is.na(W))] <- 0
+```
+
+
+#### Concept
+
+A bivariate co-location cluster requires that $x_i=z_i=1$ coincides with
+neighbors for which also $x_j=z_j=1$. For the bivariate case, the corresponding
+local Join Count statistic takes the form: 
+
+$$CLC_i = x_iz_i\Sigma_jw_{ij}x_jz_j$$
+
+with $w_{ij}$ as unstandardized (binary) spatial weights.
+
+As before, a conditional permutation approach can be constructed for those locations
+with $x_i=z_i=1$. We draw $k_i$ pairs of observations $(x_j,z_j)$ from the set of
+N - 1 (this contains P - 1 observations with $x_j = 1$ and Q - 1 observations
+with $z_j=1$). In a one sided test, we again count the number of times the statistic
+equals or exceeds the observed join count value at i.
+
+The extension to more than two variables is mathematically straightforward. We
+consider m variables at each location i, i.e., $x_{hi}$ for h = 1 ,…, m, with 
+$\Pi_{h=1}^mx_{hi} = 1$, which enforces the co-location requirement.
+
+The corresponding statistic is then:
+
+$$CLC_i = \Pi_{h=1}^mx_{hi}\Sigma_jw_{ij}\Pi_{h=1}^mx_{hj}$$
+
+The implementation of a conditional permutation strategy follows as a direct
+generalization of the bivariate co-location cluster. However, for a large number of
+variables, such co-locations become less and less likely, and a different conceptual
+framework may be more appropriate.
+
+#### Quantile Local Spatial Autocorrelation
+
+
+The local Join Count statistics are designed to deal with binary variables. However, as we
+illustrate with our example, they can also be applied to assess the spatial autocorrelation
+between quantiles of a continuous variable, something that can be referred to as quantile
+local spatial autocorrelation. As mentioned, the continuous (linear) association between
+two variables that is measured by the bivariate local Moran suffers from the problem of
+in-situ correlation. The quantile local spatial autocorrelation sidesteps this problem by
+converting the continuous variable to a binary variable that takes the value of 1 for a
+specific quantile. For example, as in our illustration, the spatial assocation between two
+continuous variables can be simplified by focusing on the local autocorrelation between
+binary variables for the upper quintile. Since the bivariate (or multivariate) local Join
+Count statistic enforces co-location, the problem of in-situ correlation is controlled for.
+This provides an alternative to other bivariate and multivariate local spatial
+autocorrelation statistics, albeit with a loss of information (going from the continuous
+variable to a binary category).
+
+
+
+#### Implementation
+
+
+To start we make a function that computes the bivariate join count statistic. This is pretty
+simple as all we need is to multiply the two vectors, then compute the statistic in the same way
+that we would for the univariate local moran. It is importnat to note that you must have the correct 
+set up for this function to yield accurate results. The input weights matrix must be binary and
+the x and z variables need to also be binary.
+```{r}
+bivariate_jc <- function(x,z,W){
+  xz <- x*z
+  jc <- xz * (W %*% xz)
+  jc
+}
+```
+
+
+
+
+```{r}
+x <- doncat
+z <- infcat
+observed <- bivariate_jc(x,z,W)
+```
+
+Next we create a function for the conditional permutations. This follows the same process as the 
+one we made for the bivariate local moran simulations. First we get the number of observations
+and a vector of id numbers. Next we create data structures to store the sample draws. Then we 
+loop through and sample from all the id numbers except at location i as GeoDa does. Lastly
+we compute the **xz.sample** matrix, which we will use in the final calculation of the reference
+statistics. **xz.sample** is only used for the neighbor portion of the computation, as the value at 
+location i of $x_iz_i$ is held constant throughout the permutations.
+
+```{r}
+bivariate_join_count_sims <- function(x, z, W, permutations = 999){
+
+        n   <- nrow(W)
+        id  <- 1:n
+
+        #place to store results
+        local.sims  <- matrix(NA, nrow = n, ncol=permutations)
+        x.sample = matrix(NA, nrow = n, ncol = permutations)
+        z.sample = matrix(NA, nrow = n, ncol = permutations)
+        
+        # filling each column of the sample matrices
+        for(i in 1:n){
+          sample.indices <- sample(id[-i], permutations, replace = TRUE)
+          x.sample[i,] <- x[sample.indices]
+          z.sample[i,] <- z[sample.indices]
+        }
+      
+        #standardizing x
+        xz.sample <- x.sample * z.sample
+        xz <- x * z
+        
+        #calculating the local statistics
+        local.sims  <- (xz*W%*%xz.sample)
+        local.sims
+}
+```
+
+
+```{r}
+sims <- bivariate_join_count_sims(x,z, W)
+```
+
+
+
+
+With the simulations and the observed local statistics, we will need a function to compute the 
+p-values. This is used in the previous notebook on Local Spatial Autocrrelation. For most
+of the local spatial statistics, we use a two sided test, but in this case we will be working 
+with a one-sided test as in GeoDa.
+
+```{r}
+get_p_value <- function(mat, observed,type) {
+  nperm <- ncol(mat)
+  nlocs <- nrow(mat)
+  p_value <- rep(NA,nlocs)
+  for(i in 1:nlocs){
+    num_greater <- length(which(mat[i,] >= observed[i]))
+    p_value[i] <- (num_greater + 1) / (nperm + 1)
+  }
+  if (type == "two-sided"){
+    p_value <- ifelse(p_value > .5, 1-p_value, p_value)
+    p_value
+  } else {
+    p_value
+  }
+}
+```
+
+
+
+
+```{r}
+p_values <- get_p_value(sims, observed)
+p_values
+```
+
+
+```{r}
+significance_map(guerry, p_values,999)
+```
+
+
+
+
+### Multivariate Local Geary
+
+
+
+
+
+#### Preliminaries
+
+
+
+
+
+
+#### Concept
+
+The multivariate local Geary statistic is formally the sum of individual local Geary
+statistics for each of the variables under consideration. For example, with m variables,
+indexed by h, the corresponding expression is:
+
+$$c_i = \Sigma_{h=1}^m\Sigma_jw_{ij}(x_{hi}-x_{hj})^2$$
+
+This measure corresponds to a weighted average of the squared distances in multidimensional
+attribute space between the values observed at a given geographic location i and those at its
+geographic neighbors j.
+
+Inference can again be based on a conditional permutation approach. This consists of holding
+the tuple of values observed at i fixed, and computing the statistic for a number of
+permutations of the remaining tuples over the other locations. This results in an empirical
+reference distribution that represents a computational approach at obtaining the distribution
+of the statistic under the null. The resulting pseudo p-value corresponds to the fraction of
+statistics in the empirical reference distribution that are equal to or more extreme than the
+observed statistic.
+
+uch an approach suffers from the same problem of multiple comparisons mentioned for all the other local statistics. In addition, there is a further complication. When comparing the
+results for m univariate Local Geary statistics, these multiple comparisons need to be
+accounted for as well. For example, for each univariate test, the target p-value of
+$\alpha$ would typically be adjusted to $\alpha/m$  (with m variables, each with a univariate
+test), as a Bonferroni bound. Since the multivariate statistic is in essence a sum of the
+statistics for the univariate cases, this would suggest a similar approach by dividing the
+target p-value by the number of variables (m). Alternatively, and preferable, a FDR strategy
+can be pursued. The extent to which this actually compensates for the two dimensions of
+multiple comparison (multiple variables and multiple observations) remains to be further
+investigated.
+
+#### Implementation
+
+
+##### Preliminaries
+
+
+
+
+```{r}
+queen.weights <- nb2listw(queen.nb, style = "B", zero.policy = TRUE)
+W  <- as(queen.weights, "symmetricMatrix")
+W  <- as.matrix(W/rowSums(W))
+W[which(is.na(W))] <- 0
+```
+
+
+
+```{r}
+x <- guerry$Donatns
+y <- guerry$Infants
+x2 <-  guerry$Donatns ^ 2
+y2 <- guerry$Infants ^ 2
+lg_x <- x2 - 2*x*(W%*%x) + W%*%x2
+lg_y <- y2 - 2*y*(W%*%y) + W%*%y2
+observed_lg <- lg_x + lg_y
+```
+
+
+
+```{r}
+bivariate_local_geary <- function(x,y,W){
+  x2 <- x^2
+  y2 <- y^2
+  lg_x <- x2 - 2*x*(W%*%x) + W%*%x2
+  lg_y <- y2 - 2*y*(W%*%y) + W%*%y2
+  lg <- lg_x + lg_y
+  lg
+} 
+```
+
+
+
+
+
+
+
+
+
+```{r}
+bivariate_local_geary_sims <- function(x,y,W,permutations = 999){
+  n <- nrow(W)
+  id  <- 1:n
+  
+  local.sims  <- matrix(NA, nrow = n, ncol=permutations)
+  x.sample = matrix(NA, nrow = n, ncol = permutations)
+  y.sample = matrix(NA, nrow = n, ncol = permutations)
+  
+  for(i in 1:n){
+    sample.indices <- sample(id[-i], permutations, replace = TRUE)
+    x.sample[i,] <- x[sample.indices]
+    y.sample[i,] <- y[sample.indices]
+  }
+  x2 <- x^2
+  y2 <- y^2
+  x2.sample <- x.sample ^ 2
+  y2.sample <- y.sample ^ 2
+  
+  local.sims <- (x2 - 2*x*W%*%x.sample + W%*%x2.sample) + (y2 - 2*y*W%*%y.sample + W%*%y2.sample)
+  local.sims
+}
+```
+
+
+
+
+
+```{r}
+mlg.sims <- bivariate_local_geary_sims(x,y,W)
+p.values <- get_p_value(mlg.sims,observed_lg, type = "two-sided")
+```
+
+
+
+
+
+
+```{r}
+significance_map(guerry,p.values,999)
+```
+
+
+
+
+
+```{r}
+mean_lg <- rep(NA, 85)
+for (i in 1:85){
+  mean_lg[i] <- mean(mlg.sims[i,]) 
+}
+```
+
+
+
+
+
+```{r}
+patterns <- as.character(interaction(mean_lg > observed_lg))
+patterns <- patterns %>% 
+        str_replace_all("TRUE","Positive") %>% 
+        str_replace_all("FALSE","Negative")
+patterns[p.values > .05] <- "Not Significant"
+```
+
+
+```{r}
+guerry <- guerry %>% mutate(lg_classifications = patterns)
+```
+
+
+```{r}
+tm_shape(guerry) +
+  tm_fill("lg_classifications", palette = c("#C6DBEF","#D3D3D3","#3182BD")) +
+  tm_borders()
+```
+
+
+
+
+
+```{r}
+bivariate_local_geary_map <- function(area, x, y, weights, nperms,sig_cutoff){
+  if(is.null(y)) y = x
+  
+  # Converting the weights
+  W <- as(weights, "symmetricMatrix")
+  W  <- as.matrix(W/rowSums(W))
+  W[which(is.na(W))] <- 0
+  
+  # Computing the observed statistics and reference distributions
+  observed <- bivariate_local_geary(x,y,W)
+  sims <- bivariate_local_geary_sims(x,y, W, nperms)
+  
+  # Assessing significance
+  alpha <- sig_cutoff  # for a 90% confidence interval
+  probs <- c(alpha/2, 1-alpha/2)
+  intervals <- t( apply(sims, 1, function(x) quantile(x, probs=probs)))
+  sig <- ( observed < intervals[,1] )  | ( observed > intervals[,2] )
+  
+  mean_lg <- rep(NA, 85)
+  for (i in 1:85){
+    mean_lg[i] <- mean(sims[i,]) 
+  }
+  
+  #Assigning classifications
+  patterns <- as.character(interaction(mean_lg > observed))
+  patterns <- patterns %>% 
+        str_replace_all("TRUE","Positive") %>% 
+        str_replace_all("FALSE","Negative")
+  patterns[sig == 0] <- "Not Significant"
+  
+  # Adding the classifications to the data frame
+  area <- area %>% mutate(lg_classifications = patterns)
+  
+  
+  # Constructing the correct palette based on presense of classifications
+  classes <- unique(patterns)
+  patts <- c("Positive", "Negative", "Not Significant")
+  colors <- c("#C6DBEF","#3182BD","#D3D3D3")
+  mat <- matrix(c(patts,colors), ncol = 2)
+  logi <- patts %in% classes
+  pre_col <- matrix(mat[logi], ncol = 2)
+  pal <- pre_col[,2]
+  
+  # Making the map
+  tm_shape(area) +
+  tm_fill("patterns", palette = pal) +
+  tm_borders() 
+}
+```
+
+
+```{r}
+tm_shape(guerry) +
+  tm_fill("lg_classifications", palette = c("#C6DBEF","#D3D3D3","#3182BD")) +
+  tm_borders()
+```
+
+
+```{r}
+bivariate_local_geary_map(guerry,x,y,queen.weights,999,.05)
+```
+
+
+
+
+
+
+
+
+#### Interpretation
+
+The results of the multivariate local Geary significance or cluster map are not always easy to
+interpret. Mainly, this is because we tend to simply superimpose the results of the univariate tests,
+whereas the multivariate statistic involves different tradeoffs.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
