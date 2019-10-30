@@ -89,6 +89,7 @@ their dependencies.^[Use
 library(sf)
 library(spdep)
 library(purrr)
+library(ggplot2)
 ```
 
 
@@ -102,7 +103,7 @@ the shapefile into your R environment.
 
 
 ```{r}
-us.bound <- st_read("ncovr/NAT.shp")
+us.bound <- geodaData::ncovr
 ```
 
 
@@ -315,7 +316,7 @@ str(sf.nb.queen)
 
 
 
-```{r}
+```{r eval=FALSE}
 plot(sf.nb.rook, coords, lwd=.2, col="blue", cex = .5)
 ```
 
