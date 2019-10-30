@@ -499,7 +499,7 @@ it is a similar contruction as the others.
 
 ```{r}
 gaussian.w <- lapply(kernalw.distances, function(x) sqrt(2*pi)*exp((-(x/critical.threshold)^2)/2))
-gaussian_w[1]
+gaussian.w[1]
 ```
 
 ```{r}
