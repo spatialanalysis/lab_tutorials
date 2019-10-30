@@ -87,7 +87,7 @@ the shapefile into your R environment.
 
 
 ```{r}
-clev.points <- st_read("cleveland/clev_sls_154_core.shp")
+clev.points <- geodaData::clev_pts
 ```
 
 
