@@ -89,7 +89,6 @@ their dependencies.^[Use
 library(sf)
 library(spdep)
 library(purrr)
-library(ggplot2)
 ```
 
 
@@ -103,7 +102,7 @@ the shapefile into your R environment.
 
 
 ```{r}
-us.bound <- geodaData::ncovr
+us.bound <- st_read("ncovr/NAT.shp")
 ```
 
 
@@ -293,7 +292,6 @@ we don't really need to go into why the pattern is what it is for our purposes, 
 
 
 ```{r}
-#alternative method for getting queen contiguity neighbors in sf
 st_queen <- function(a, b = a) st_relate(a, b, pattern = "F***T****")
 ```
 
@@ -304,6 +302,8 @@ Now we use our `st_queen` function to get another **sgbp** neighbour list
 sf.sgbp.queen <- st_queen(us.bound)
 ```
 
+To convert to type **nb** we use `as.nb.sgbp`, which we created earlier.
+
 
 ```{r}
 sf.nb.queen <- as.nb.sgbp(sf.sgbp.queen)
@@ -313,13 +313,6 @@ sf.nb.queen <- as.nb.sgbp(sf.sgbp.queen)
 ```{r}
 str(sf.nb.queen)
 ```
-
-
-
-```{r eval=FALSE}
-plot(sf.nb.rook, coords, lwd=.2, col="blue", cex = .5)
-```
-
 
 
 ## Higher Order Contiguity
