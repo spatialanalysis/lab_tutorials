@@ -55,7 +55,9 @@ After completing the notebook, you should know how to carry out the following ta
 
 - **ggplot2**: To make a connectivity histogram
 
-` **spdep**: Save weights files and create neighbors lists of higher order
+- **spdep**: Save weights files and create neighbors lists of higher order
+
+- **geodaData: Load the data for the notebook.
 
 #### R Commands used
 
@@ -89,28 +91,24 @@ their dependencies.^[Use
 library(sf)
 library(spdep)
 library(purrr)
+library(ggplot2)
+library(geodaData)
 ```
 
 
-### Obtaining the Data from the GeoDa website
+### geodaData
 
-To get the data for this notebook, you will and to go to [US Homocides](https://geodacenter.github.io/data-and-lab/ncovr/) The download format is a
-zipfile, so you will need to unzip it by double clicking on the file in your file
-finder. From there move the resulting folder titled: nyc into your working directory
-to continue. Once that is done, you can use the **sf** function: `st_read()` to read
-the shapefile into your R environment. 
+All of the data for the R notebooks is available in the **geodaData**
+package. We loaded the library earlier, now to access the individual
+data sets, we use the double colon notation. This works similar to
+to accessing a variable with `$`, in that a drop down menu will 
+appear with a list of the datasets included in the package. For this
+notebook, we use `ncovr`.
 
 
 ```{r}
-us.bound <- st_read("ncovr/NAT.shp")
+us.bound  <- geodaData::ncovr
 ```
-
-
-```{r}
-plot(us.bound)
-```
-
-
 
 ## Contiguity Weights
 
@@ -133,7 +131,7 @@ the polygons. This is implemented through the spatial weights functionality in
 GeoDa. We will do this with **sf** and **spdep** libraries.
 
 We will create our neighbours using **sf** first, as the **spdep** library doesn't 
-allow us to create neighbours lists directy with as with the older **sp** library. 
+allow us to create neighbours lists directy as with the older **sp** library. 
 When we create neighbours in **sf** we will get a class of **sgbp**(sparse geometry binary predicate), which is similar
 to the standard **nb** class used in **spdep**, but is not quite compatible. We will
 have to convert from **sgbp** to **nb**, which is not too difficult, as the classes are
@@ -152,14 +150,14 @@ but this is a routine operation in most GIS software.
 
 ### Rook Contiguity
 
-We first start with rook contiguity, whic will be neighbours that are connected by a
-common side. To create our neighbours list we first start by making a 
+We first start with rook contiguity, which are neighbours that are connected by a
+common side. To create our neighbours list we start by making a 
 function that will do the rook contiguity. To do this we start with the `function`
 command and use `a, a = b` for our inputs. We do this reduce unnecessary typing,
 as the two parameters are both going to be our **sf** object. From here we just
 need `st_relate`. `st_relate` computes relationships between pairs of geometries,
-or match it to a given pattern. This function also has a parameter for a specified 
-pattern. This pattern will  refer to a DE9-IM relationship between x[i] and y[j]. We
+or matches it to a given pattern. This function also has a parameter for a specified 
+pattern. This pattern will refer to a DE9-IM relationship between x[i] and y[j]. We
 don't need to go into detail on this to utilize rook contiguity, but you can check
 out the basics of DE9-IM at [DE9-IM](https://en.wikipedia.org/wiki/DE-9IM). All we
 need for rook contiguity is the pattern input `"F***1****"`. This gives us the
@@ -178,8 +176,8 @@ sf.sgbp.rook <- st_rook(us.bound)
 
 
 
-We now check the class of our resulting object from the the `st_intersect` function
-with the base R function `class`. It is **sgbp**, which we will have to change to
+We now check the class of our resulting object from the the `st_rook` function
+with the base R function `class`. It is **sgbp**, which we will have to convert in order to
 work with **spdep** and the `plot` function later on.
 
 ```{r}
@@ -188,7 +186,7 @@ class(sf.sgbp.rook)
 
 
 We can get a comprehensive view of what the **sgbp** data structure looks like with
-the `str` command. We will se a list of 3085 lists that contain the id numbers of
+the `str` command. We will see a list of 3085 vectors that contain the id numbers of
 each observation's neighbours. Along with this we will see some attributes. These
 are the same attributes as an **nb** and the data structure follows the same form
 as **nb**. This is important for later operations where we will need to convert
@@ -199,8 +197,8 @@ to type **nb**.
 str(sf.sgbp.rook)
 ```
 
-Now we will we start our conversion from class **sgbp** to **nb**. To do this,
-we need to change the class explicitly and take the precaution to represent 
+Now we will start our conversion from class **sgbp** to **nb**. To do this,
+we need to change the class explicitly, and take the precaution to represent 
 observations with no neighbours with the integer 0. Our data set doesn't have
 any observations without neighbours, but in ones with these, it will mess everything
 up, if not dealt with. 
@@ -250,7 +248,7 @@ this one, and it is important for these things to work across the board.
 str(sf.nb.rook)
 ```
 
-Now that we are converted to **nb**, we can use the summary command to give us more
+Now that we are converted to **nb**, we can use the `summary` command to give us more
 useful information about the neighbours list.
 
 ```{r}
@@ -325,14 +323,14 @@ The `nblag` function takes a neighbour list of class **nb** and an order as para
 It will give us a list of neighbours lists. One for 1st order neighbors and one for
 second order neighbours. We can select from this data structure by double bracket
 notation, for instance `[[1]]` will give the **nb** object for first order neighbours.
-Using a `2` instead of a 1 will give us the second order neighbours
+Using a `2` instead of a `1` will give us the second order neighbours.
 
 
 ```{r}
 second.order.queen <- nblag(sf.nb.queen, 2)
 ```
 
-We will first take a comprehensive look at **second.order.queen** to see the resulting
+We first take a comprehensive look at **second.order.queen** to see the resulting
 data structure from `nblag`. As said earlier, it is a list of 2 **nb** objects. One
 for 1st order neighbours and one for 2nd order. It is important to examine this, so
 we can make use of specific elements of the data structure in our visualizations
@@ -361,7 +359,7 @@ sf.nb.queen2 <- second.order.queen[[2]]
 
 Now if we want to include both 1st and 2nd order neighbours in our visualizations, we
 need the `nblag_cumul` function. This will give us an **nb** object with both 1st and 2nd order neighbours, instead of separating them as in the result of `nblag`. To use this
-function, we need a resulting object from the `nblag` function. It conglomerates the two sepatae **nb** objects from the `nblag` function into one.
+function, we need the resulting object from the `nblag` function. `nblag_cumul` combines the two sepatae **nb** objects from the `nblag` function into one.
 
 
 ```{r}
@@ -384,7 +382,7 @@ str(second.order.queen.cumul)
 
 ### Connectivity Graph
 
-A connectivity graph takes a point and displays line to each neighboring point. We are
+A connectivity graph takes a point and displays a line to each neighboring point. We are
 working with polygons at the moment, so we will need to get points in order to make
 our connectivity graphs. The most typically method for this will be polygon centroids.
 We will calculate these in the **sf** package before moving onto the graphs.
@@ -396,7 +394,7 @@ We will calculate these in the **sf** package before moving onto the graphs.
 We will need points to associate with each polygon before we can make our connectivity
 graph. It will be a little more complicated than just running `st_centroid` on
 the **sf** object: **us.bound**. We need the coordinates in a separate data frame
-for this to work. To do this we will us a mapping function. The mapping function
+for this to work. To do this we will use a mapping function. The mapping function
 applies a given function to each element of a vector and returns a vector of the 
 same length. Our input vector will be the geometry column of **us.bound**. Our
 function will be `st_centroid`. We will be using `map_dbl` variation of `map` from
@@ -438,10 +436,10 @@ head(coords)
 
 #### Rook Connectivity Graphs
 
-Now that we have coordinates for each of our observations, we can plot our neighbours
+Now that we have coordinates for each of our observations, we can plot the neighbours
 through a connectivity graph. We just need the basic `plot` function and to enter
 our neighbour list as the first parameter, then our coordinates as the second. We
-add further customizations, so we can actually see what is going on in the graph.
+add extra customizations, so we can actually see what is going on in the graph.
 We use `lwd = .2` to make the line length less thick, we set the `col ="blue"`, and 
 finally `cex = .5` to make the point symbols smaller. The default options make the
 graph near indecipherable, so it is important to add these extra parameters.
@@ -456,8 +454,8 @@ plot(sf.nb.rook, coords, lwd=.2, col="blue", cex = .5)
 
 Now we will do the same for queen contiguity. The queen variation will have more lines,
 as there are more neighbours due to shared vertices counting in the neighbours
-relationship. It is hard to spot the differences between the two plots, as they
-both are visually busy 
+relationship. It is hard to spot the differences between the two plots, as they are
+both visually busy 
 
 ##### First Order 
 
@@ -471,7 +469,7 @@ plot(sf.nb.queen, coords, lwd=.2, col="blue", cex = .5)
 ##### Second Order
 
 Here we take a look at a connectivity graph for second order neighbours. All we need
-is the second order **nb** object that we created earlier with our coordinates. This
+is the second order **nb** object that we created earlier and our coordinates. This
 graph will look significantly different from the ones we've made so far, as second 
 order tends to have more neighbours than first order.
 
@@ -495,7 +493,7 @@ plot(second.order.queen.cumul, coords, lwd=.2, col="blue", cex = .5)
 
 ### Connectivity Histogram
 
-A connectivity histogram shows the number of observations for each value of the
+A connectivity histogram shows the number of observations for each 
 cardinality of neighbours(how many observations have the same number of neighbours).
 We first have to get the cardianlity before we can make the histograms. We can
 do this by using the `card` function from the **spdep** package. This will give
