@@ -1,5 +1,5 @@
 ---
-title: "Contiguity-Based Spatial Weights"
+title: "Distance-Based Spatial Weights"
 subtitle: "R Notes"
 author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
 date: "09/07/2018"
@@ -20,7 +20,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction {-}
 
-This notebook cover the functionality of the [Distance-Band Spatial Weights](https://geodacenter.github.io/workbook/4b_dist_weights/lab4b.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.
+This notebook cover the functionality of the [Distance-Based Spatial Weights](https://geodacenter.github.io/workbook/4b_dist_weights/lab4b.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.
 
 The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments
 on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).
@@ -66,6 +66,8 @@ and convert from **sp**,
 
 _ **purr**:  Used for a mapping function
 
+- **geodaData**: To get the data for this notebook
+
 
 #### R Commands used {-}
 
@@ -90,7 +92,6 @@ and a comprehensive list of options, please consult the
 
 _ **purr**: `map_dbl`
 
-
 ## Preliminaries {-}
 
 Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not
@@ -111,16 +112,18 @@ library(ggplot2)
 library(deldir)
 library(sp)
 library(purrr)
+library(geodaData)
 ```
 
-### Obtaining the Data from the GeoDa website {-}
+### geodaData {-}
 
-To get the data for this notebook, you will and to go to [Cleveland Home Sales](https://geodacenter.github.io/data-and-lab//clev_sls_154_core/) The download format is a
-zipfile, so you will need to unzip it by double clicking on the file in your file
-finder. From there move the resulting folder titled: nyc into your working directory
-to continue. Once that is done, you can use the **sf** function: `st_read()` to read
-the shapefile into your R environment. 
 
+All of the data for the R notebooks is available in the **geodaData**
+package. We loaded the library earlier, now to access the individual
+data sets, we use the double colon notation. This works similar to
+to accessing a variable with `$`, in that a drop down menu will 
+appear with a list of the datasets included in the package. For this
+notebook, we use `ncovr`.
 
 ```{r}
 clev.points <- geodaData::clev_pts
@@ -135,25 +138,21 @@ plot(clev.points)
 
 ## Visualizing point data {-}
 
-To get a cursory look at the pojnt data with a basemap, we will use **tmap**. To get 
-this done we first ahve to switch from mode `plot` to mode `view` with the function
+To get a cursory look at the point data with a basemap, we will use **tmap**. To get 
+this done we first have to switch from mode `plot` to mode `view` with the function
 `tmap_mode`. From there we use `tm_shape` and `tm_dots` to display our points on the
 basemap. The only argument we need to pass is the shapefile into the `tm_shape` function.
 
 ```{r}
-
 tmap_mode("view")
-
 tm_shape(clev.points) +
   tm_dots()
 ```
 
+Now we switch back to `plot` mode for the rest of the notebook with `tmap_mode("plot")`.
 ```{r}
 tmap_mode("plot")
 ```
-
-
-
 
 ## Distance-Band Weights {-}
 
@@ -201,19 +200,27 @@ $$d_{ij} = R * arccos[cos(\Delta Lon) * cos(Lat_{r(i)}) * cos(Lat_{r(j)}) + sin(
 
 where R is the radius of the earth. In GeoDa, the arc distance is obtained in miles with R = 3959, and in kilometers with R = 6371.
 
-These calculated distance values are only approximate, since the radius of the earth is taken at the equator. A more precise measure would take into account the actual latitude at which the distance is measured. In addition, the earth’s shape is much more complex than a sphere, but the approximation serves our purposes.
+These calculated distance values are only approximate, since the radius of the earth is taken
+at the equator. A more precise measure would take into account the actual latitude at which
+the distance is measured. In addition, the earth’s shape is much more complex than a sphere,
+but the approximation serves our purposes.
 
 #### Distance-band weights {-}
 
-The most straightforward spatial weights matrix constructed from a distance measure is obtained when i and j are considered neighbors whenever j falls within a critical distance band from i. More precisely, $w_{ij}=1$ when $d_{ij} \leq \delta $ , and $w_{ij}=0$ otherwise, where δ is a preset critical distance cutoff.
+The most straightforward spatial weights matrix constructed from a distance measure is
+obtained when i and j are considered neighbors whenever j falls within a critical distance
+band from i. More precisely, $w_{ij}=1$ when $d_{ij} \leq \delta $ , and $w_{ij}=0$ otherwise,
+where $\delta$ is a preset critical distance cutoff.
 
-In order to avoid isolates (islands) that would result from too stringent a critical distance, the distance must be chosen such that each location has at least one neighbor. Such a distance conforms to a max-min criterion, i.e., it is the largest of the nearest neighbor distances.4
+In order to avoid isolates (islands) that would result from too stringent a critical distance,
+the distance must be chosen such that each location has at least one neighbor. Such a distance
+conforms to a max-min criterion, i.e., it is the largest of the nearest neighbor distances.
 
-In practice, the max-min criterion often leads to too many neighbors for locations that are somewhat clustered, since the critical distance is determined by the points that are furthest apart. This problem frequently occurs when the density of the points is uneven across the data set, such as when some of the points are clustered and others more spread out. We revisit this problem in the illustrations below.
-
-
-
-
+In practice, the max-min criterion often leads to too many neighbors for locations that are
+somewhat clustered, since the critical distance is determined by the points that are
+furthest apart. This problem frequently occurs when the density of the points is uneven
+across the data set, such as when some of the points are clustered and others more spread
+out. We revisit this problem in the illustrations below.
 
 
 ### Creating distance-band weights {-}
@@ -236,13 +243,10 @@ puts together vectors as columns in a matrix, so it is perfect for this task.
 coords <- cbind(clev.points$x,clev.points$y)
 ```
 
-
-
 To find the critical threshold, we first find the k-nearest neighbors for k = 1. This
-will give us a list, where each point has exactly one neighbor. To do this, we first
-use the 'knearneigh` function from **spdep** library. This will give us a class of
-**knn**, which is similar to class **nb**, but we will need to convert anyways.
-
+will give us a list, where each point has exactly one neighbor. To do this, we
+use the 'knearneigh` function from **spdep** library. This will give a class of
+**knn**, which is similar to class **nb**, but will need to be converted anyways.
 
 ```{r}
 knn1 <- knearneigh(coords)
@@ -254,14 +258,13 @@ str(knn1)
 ```
 
 Now we convert to **nb**. This simple, as there is a built in function for it in
-the **spdep** library.
-
+the **spdep** library: `knn2nb`.
 ```{r}
 k1 <- knn2nb(knn1)
 ```
 
 
-Computing the critcal threshold will require a few functions now that we have a neighbors
+Computing the critcal threshold will require a few functions, now that we have a neighbors
 list. First step is to get the distances between each point and it's closest neighbor.
 This can be done with the `nbdists`. With these distances, we just need to find the 
 maximum. For this we use the `max` command. However, we cannot do this with lists, so we must 
@@ -272,16 +275,14 @@ critical.threshold <- max(unlist(nbdists(k1,coords)))
 critical.threshold
 ```
 
-
-
 #### Computing distance-band weights {-}
 
 With our critical threshold, we have a baseline value to work with for our distance-band
-neighbors. To make this neighbors list we use `dnearneigh` from the **spdep** package.
+neighbors. To make this neighbor's list we use `dnearneigh` from the **spdep** package.
 The parameters necessary are the coordinates, the lower distance bound, and the upper
-distance bound. We enter these in the the above order. Another impoartant paramter is
+distance bound. We enter these in the the above order. Another impoartant parameter is
 the `longlat`. This is used for point data in longitude and latitude form. It is
-necessary to use this to great circle distance instead of euclidean, for accuracy
+necessary to use this to get great circle distance instead of euclidean for accuracy
 purposes.
 
 ```{r}
@@ -309,7 +310,7 @@ summary(nb.dist.band)
 Our method for making connectivity histograms will be the same as for contiguity
 based weights. We first need to get the cardinality for each observation(the number of neighbors for each observation). This is done by the `card` function from the 
 **spdep** library. Our result from this function will be a vector of the number
-of neighbors for each observation.
+of neighbors for each location.
 
 ```{r}
 dist.band.card <- card(nb.dist.band)
@@ -320,16 +321,15 @@ Once, we have our cardinality, we can make a histogram to see the distribution
 of the number of neighbors. we will do this with **ggplot2**, though base R also has a 
 built in histogram function. To make our histogram, we start with the `ggplot` function,
 then add a histogram layer. We add the additional layer with the `+` operator. Next,
-we use `geom_histogram` to add our histogram. The only paramter we need is an aes.
+we use `geom_histogram` to add our histogram. The only paramter we need is an `aes`.
 We use the `aes` function and enter our cardinality(**dist.band.card**) as the variable
-for the x-axis. Beyond this we change the x-axis label to be more informative with 
+for the x-axis. Beyond this, we change the x-axis label to be more informative with 
 the `xlab` function.
 
 ```{r}
 ggplot() +
   geom_histogram(aes(x=dist.band.card)) +
   xlab("Number of Neighbors")
-
 ```
 
 
@@ -353,7 +353,7 @@ of points.
 ### Isolates {-}
 
 So far, we have used the default cut-off value for the distance band. However, the
-dialog is flexible enough that we can type in any value for the cut-off, or use the
+function is flexible enough that we can type in any value for the cut-off, or use the
 moveable button to drag to any value larger than the minimum. Sometimes, theoretical
 or policy considerations suggest a specific value for the cut-off that may be smaller
 than the max-min distance.
@@ -387,9 +387,8 @@ iso.card <- card(dist.band.iso)
 ggplot() +
   geom_histogram(aes(x=iso.card)) +
   xlab("Number of Neighbors")
-
 ```
-Our resulting histogram has 24 isolates and is much more compact than the original
+Our resulting histogram has 24 isolates, and is much more compact than the original
 one with the critical threshold as the upper distance bound in our distance-band
 weights.
 
@@ -434,7 +433,7 @@ As mentioned, an alternative type of distance-based spatial weights that avoids 
 problem of isolates are k-nearest neighbor weights. In contrast to the distance band,
 this is not a symmetric relation. The fact that B is the nearest neighbor to A does
 not imply that A is the nearest neighbor to B. There may be another point C that is
-actually closer to B than A. This asymmetry can cause problems in analyses that depend
+actually closer to B than A. This asymmetry can cause problems in analysis that depend
 on the instrinsic symmetry of the weights (e.g., some algorithms to estimate spatial
 regression models). One solution is to replace the original weights matrix **W** by
 (**W**+**W′**)/2, which is symmetric by construction. GeoDa currently does not
@@ -475,9 +474,8 @@ shown by our histogram.
 
 ```{r}
 k6.card <- card(k6)
-
 ggplot() +
-  geom_histogram(aes(x=k6.card)) +
+  geom_histogram(aes(x=k6.card), binwidth = .01) +
   xlab("Number of Neighbors")
 ```
 
@@ -489,16 +487,6 @@ the collection of sub-graphs for the distance band.
 ```{r}
 plot(k6, coords, lwd=.2, col="blue", cex = .5)
 ```
-
-### KNN and distance {-}
-
-One drawback of the k-nearest neighbor approach is that it ignores the distances
-involved. The first k neighbors are selected, irrespective of how near or how far they
-may be. This suggests a notion of distance decay that is not absolute, but relative,
-in the sense of intervening opportunities (e.g., you consider the two closest grocery
-stores, irrespective of how far they may be).
-
-
 
 ## Generalizing the Concept of Contiguity {-}
 
@@ -537,8 +525,8 @@ neighbors. From this, the most compact polygon is created.
 
 
 To create the thiessen polygons, we will use the **deldir** package, then will
-convert to a data form we can use for the contiguity weights. We won't go into
-too much detail about the **deldir** package other than how to create the polygons
+convert them to a data form that we can use for the contiguity weights. We won't go into
+too much detail about the **deldir** package, other than how to create the polygons
 and convert them to **sp**, then **sf**. For more information on the **deldir**, visit
 [deldir documentation](https://cran.r-project.org/web/packages/deldir/deldir.pdf).
 
@@ -557,11 +545,11 @@ plot(vtess, wlines="tess", wpoints="none",
 ```
 
 
-
-
+The function below converts class **deldir** to **sp**. We will not go in depth on the
+structure and set up of this function because it goes to heavy into **sp**, and these
+notebooks are primarily focused on **sf**. 
 ```{r}
 voronoipolygons = function(thiess) {
-
 w = tile.list(thiess)
 polys = vector(mode='list', length=length(w))
 for (i in seq(along=polys)) {
@@ -576,9 +564,7 @@ SP = SpatialPolygons(polys)
 ```
 
 
-
-
-The result of our function is a SpatialPolygonsDataFrame, which is a class from the
+The result of our function is a `SpatialPolygonsDataFrame`, which is a class from the
 **sp** package. We will convert again to get to the **sf** class, since **sf** is more 
 efficient and accurate. We check our function by plotting the result and get something
 similar to what we plotted earlier, just now it is a different data structure.
@@ -588,24 +574,20 @@ v <- voronoipolygons(vtess)
 plot(v)
 ```
 
-Using the **sf** function `st_as_sf`, we can convert to **sf** from our SpatialPolygonsDaraFrame.
+Using the **sf** function `st_as_sf`, we can convert to **sf** from our `SpatialPolygonsDataFrame`.
 Again, we use the plot command to check our result.
-
 
 ```{r}
 vtess.sf <- st_as_sf(v)
 plot(vtess.sf$geometry)
 ```
 
-
-
-
 ### Contiguity weights for Thiessen polygons {-}
 
 
 To make our queen contiguity weights, we make a function using `st_relate` and 
 specifying a DE9-IM pattern. For queen contiguity, our pattern is `"F***T****"`. We
-we don't really need to go into why the pattern is what it is for our purposes, but
+don't really need to go into why the pattern is what it is for our purposes, but
 [DE9-IM](https://en.wikipedia.org/wiki/DE-9IM) and [st_relate documentation](https://www.rdocumentation.org/packages/sf/versions/0.6-3/topics/st_relate) can help explain this to a degree.
 
 ```{r}
@@ -637,9 +619,9 @@ input function, we make one that checks the length of an element of our list for
 otherwise. This can be a bit confusing, for more information on `lapply`, check out 
 [lapply documentaion](https://www.rdocumentation.org/packages/base/versions/3.5.1/topics/lapply)
 
-From here we will have dealt with observation with no neighbors, but will need to 
+From here we will have dealt with observations with no neighbors, but will need to 
 reapply our attributes to the resulting structure from the `lapply` function. This 
-is done by calling the `attributes` function and assigning our stored attributes.
+is done by calling the `attributes` function and assigning the stored attributes.
 The final step is to explictly change the class to **nb** by using the `class` function
 and assigning `"nb"`. We then return our object **x**.
 
@@ -653,7 +635,7 @@ as.nb.sgbp <- function(x, ...) {
 }
 ```
 
-With our conversion fucntion, we can covert to class **nb**.
+With our conversion function, we can covert to class **nb**.
 
 ```{r}
 queen.nb <- as.nb.sgbp(queen.sgbp)
@@ -702,7 +684,7 @@ As we can do contiguity-based weights for point data, we use distance-based weig
 for polygons. To illustrate this, we will use U.S homocide data from a previous
 notebook(the contiguity-based weights notebook).
 
-To implement this we will start by computing shape center coordinates for the
+To implement this we start by computing shape center coordinates for the
 polygons. Once we get the coordinates, we will follow the procedure for making
 distance-band weights. There will be one key difference, as we will be working
 with nonprojected data. We will have to use great circle distance instead of
@@ -713,12 +695,12 @@ distance-band neighbors.
 
 ### Getting the data {-}
 
-To get the data for this notebook, you will and to go to [US Homocides](https://geodacenter.github.io/data-and-lab/ncovr/) The download format is a
-zipfile, so you will need to unzip it by double clicking on the file in your file
-finder. From there move the resulting folder titled: nyc into your working directory
-to continue. Once that is done, you can use the **sf** function: `st_read()` to read
-the shapefile into your R environment.
 
+
+To get the data, we will use the geodaData package again. 
+Additionally, the data for this notebook can be found at [US Homocides](https://geodacenter.github.io/data-and-lab/ncovr/).
+If the data is downloaded directly, then you must put it in your working directory
+and load it with `st_read`.
 
 ```{r}
 us.bound <- geodaData::ncovr
@@ -728,20 +710,16 @@ us.bound <- geodaData::ncovr
 
 ### Computing the centroids {-}
 
-Getting our coordinate data is a little more complicate dthan just using `st_centroid`
+Getting our coordinate data is a little more complicate than just using `st_centroid`
 on our shapefile. We need to do this to get coordinates in a supported format for
-the neighbor functions in the *spdep** package. We are going to get a vector for
-latitude and one for longitude, then will bind the columns for later use.
+the neighbor functions in the *spdep** package. We are going to get vectors for
+latitude and longitude, then will bind the columns for later use.
 
 To get our centroid coordinates, we will map the function `st_centroid` over the
-geometry column of **us.bound**. The mapping functionapplies a given function to each 
+geometry column of **us.bound**. The mapping function applies a given function to each 
 element of a vector and returns a vector of the same length. Our input vector will be 
-the geometry column of **us.bound**. Our function will be `st_centroid`. We will be using `map_dbl` variation of `map` from the **purrr** package. For more documentation, check out [map documentation](https://www.rdocumentation.org/packages/purrr/versions/0.2.5/topics/map)
-
-To get longitude values, we need double bracket notation  and 1 to access the first
-value.
-
-
+the geometry column of **us.bound**. Our function will be `st_centroid`. We will use the 
+`map_dbl` variation of `map` from the **purrr** package. For more documentation, check out [map documentation](https://www.rdocumentation.org/packages/purrr/versions/0.2.5/topics/map)
 
 ```{r}
 latitude <- map_dbl(us.bound$geometry, ~st_centroid(.x)[[1]])
