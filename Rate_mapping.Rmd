@@ -35,11 +35,15 @@ For this notebook, we use Cleveland house price data. Our goal in this lab is sh
 
 After completing the notebook, you should know how to carry out the following tasks:
 
-- Compute inverse distance functions
+- Obtain a coordinate reference system
 
-- Compute kernal weights functions
+- Create thematic maps for rates
 
-- Assess the characteristics of weights based on distance functions
+- Assess extreme value rate values by means of an excess risk map
+
+- Understand the principle behind shrinkage estimation or smoothing rates
+
+- Use base R to compute rates with bivariate operations
 
 #### R Packages used
 
@@ -47,7 +51,7 @@ After completing the notebook, you should know how to carry out the following ta
 
 - **tmap**: To create various rate maps and build up the necessary custom specifications for the box map classification
 
-- **ggplot2**: 
+- **geodaData**: To load the dataset for the notebook.
 
 #### R Commands used
 
@@ -59,14 +63,11 @@ and a comprehensive list of options, please consult the
 
 - **sf**: `st_read`, `plot`, `st_crs`, `st_set_geometry`
 
-- **tmap**: `tm_shape`, `tm_fill`, `tm_border`, `tm_layout`, `tmap_mode`, 
+- **tmap**: `tm_shape`, `tm_fill`, `tm_borders`, `tm_layout`, `tmap_mode`, `tm_basemap`
 
-- **ggplot2**:
 
 ## Preliminaries
 
-Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not
-actually be saving any files.^[Use `setwd(directorypath)` to specify the working directory.]
 
 ### Load packages
 
@@ -78,40 +79,26 @@ their dependencies.^[Use
 ```{r}
 library(sf)
 library(tmap)
-library(tidyverse)
-library(ggplot2)
-library(openEBGM)
+library(geodaData)
 ```
 
+### geodaData
 
-
-### Obtaining the Data from the GeoDa website {-}
-
-To get the data for this notebook, you will and to go to [Ohio Lung Cancer](https://geodacenter.github.io/data-and-lab/ohiolung/) The download format is a
-zipfile, so you will need to unzip it by double clicking on the file in your file
-finder. From there move the resulting folder titled: nyc into your working directory
-to continue. Once that is done, you can use the **sf** function: `st_read()` to read
-the shapefile into your R environment. 
-
+All of the data for the R notebooks is available in the **geodaData**
+package. We loaded the library earlier, now to access the individual
+data sets, we use the double colon notation. This works similar to
+to accessing a variable with `$`, in that a drop down menu will 
+appear with a list of the datasets included in the package. For this
+notebook, we use `ohio_lung`.
 
 ```{r}
-ohio_lung <- st_read("ohiolung/ohlung.shp")
+ohio_lung <- geodaData::ohio_lung
 ```
-
-### Setting the project
-
-```{r}
-st_crs(ohio_lung) <- 32617
-```
-
-
 
 
 
 
 ## Choropleth Map for Rates
-
-
 
 
 ### Spatially extensive and intensive variables
@@ -128,6 +115,10 @@ allows for the calculation of a rate (a spatially intensive variable).
 #### Setting up the Boxmap option
 
 
+Throughout this notebook, we will be using the `boxmap` function, created in the 
+previous notebook: Basic Mapping. We won't into depth on how the function was created,
+but for this information, check out the Basic Mapping notebook chapter.
+
 ```{r}
 get.var <- function(vname,df) {
   # function to extract a variable as a vector out of an sf data frame
@@ -141,10 +132,6 @@ get.var <- function(vname,df) {
   return(v)
 }
 ```
-
-
-
-
 
 ```{r}
 boxbreaks <- function(v,mult=1.5) {
@@ -164,14 +151,14 @@ boxbreaks <- function(v,mult=1.5) {
   # logic for lower and upper fences
   if (lofence < qv[1]) {  # no lower outliers
     bb[1] <- lofence
-    bb[2] <- floor(qv[1])
+    bb[2] <- qv[1]
   } else {
     bb[2] <- lofence
     bb[1] <- qv[1]
   }
   if (upfence > qv[5]) { # no upper outliers
     bb[7] <- upfence
-    bb[6] <- ceiling(qv[5])
+    bb[6] <- qv[5]
   } else {
     bb[6] <- upfence
     bb[7] <- qv[5]
@@ -256,7 +243,8 @@ where $\pi_i$ is the underlying risk in area i. This implies that the larger
 the population of an area ($P_i$ in the denominator), the smaller the
 variance for the estimator, or, in other words, the greater the precision.
 
-The flip side of this result is that for areas with sparse populations (small $P_i$), the estimate for the risk will be imprecise (large variance).
+The flip side of this result is that for areas with sparse populations 
+(small $P_i$), the estimate for the risk will be imprecise (large variance).
 Moreover, since the population typically varies across the areas under
 consideration, the precision of each rate will vary as well. This variance
 instability needs to somehow be reflected in the map, or corrected for, to
@@ -268,14 +256,17 @@ below.
 
 ### Raw rate map
 
-
+To compute the raw rate, we just divide the count of events by the population for each
+county.
 ```{r}
 ohio_lung$raw_rate <- ohio_lung$LFW68 / ohio_lung$POPFW68
 ```
 
 
-
-
+We don't need the basemap for the rest of the notebook, so we switch back to plot
+mode in **tmap**. This is done with `tmap_mode` plot. Using the `boxmap` function
+from earlier we make a map of the lung cancer counts and the raw population based 
+rates.
 
 ```{r}
 tmap_mode("plot")
@@ -284,13 +275,13 @@ p2 <- boxmap("raw_rate", ohio_lung)
 p2
 ```
 
-
-
-
+With `tmap_arrange`, we can get a side by side comparason of the two maps.
 ```{r}
 tmap_arrange(p1,p2,ncol = 2)
 ```
-
+With the adjustment for populations, the map becomes more meaningful than just
+the raw counts. We see different upper outliers and a new spatial distribution after
+this adjustment.
 
 
 
@@ -331,41 +322,51 @@ $$SMR_i=\frac{O_i}{E_i}$$
 ### Excess risk map
 
 To calculate the excess risk of each county, we need to do a series of computations
-first as opposed to GeoDa which does it automatically. We start by calculating
-
+first as opposed to GeoDa, which does it automatically. We start by calculating the 
+reference rate, which is just the sum of events over the sum of the population.
 ```{r}
 sum_observed <- sum(ohio_lung$LFW68)
 sum_population <- sum(ohio_lung$POPFW68)
-pi <- sum_observed / sum_population
+p_i <- sum_observed / sum_population
 ```
 
 
+Next we calculate the expected number of events for each county based on the reference rate
+for the whole state and the population for each county.
 ```{r}
-E_i <- pi * ohio_lung$POPFW68
+E_i <- p_i * ohio_lung$POPFW68
+```
+
+Lasty, we divide the actual count by the expected count to get the relative risk rate.
+This ratio will show us which counties have a higher than expected number of lung
+cancer cases, and which counties have a lower than expected count.
+```{r}
 ohio_lung$smr <- ohio_lung$LFW68 / E_i
 ```
 
 
-
-
-
+In the excess risk map, blue counties will indicate a risk lower than the state average, or
+$SMR_i < 1$. Red counties indicate a risk higher than the state average, or $SMR_i > 1$.
 ```{r}
 p1 <- tm_shape(ohio_lung) +
-     tm_fill("smr",title="Excess risk",breaks=c(-100,.25,.5,1,2,4,1000),labels = c("<.25", ".25 - .50", ".50 - 1.00","1.00 - 2.00", "2.00 - 4.00", "> 4.00" ),palette="-RdBu")  +
+     tm_fill("smr",title="Excess risk",breaks=c(-100,.25,.5,1,2,4,1000),labels = c("<.25", ".25 - .50", ".50 - 1.00","1.00 - 2.00", "2.00 - 4.00", "> 4.00" ), palette = "-RdBu")  +
   tm_borders() +
   tm_layout(legend.outside = TRUE, legend.outside.position = "right")
 p1
 ```
 
 
-
-
+Additionally, we can examine the excess risk rate in the form of a boxmap. The boxmap
+utilizes the full distribution of the rates to identify outliers, compared to the relative
+risk map, which identifies them as having a value greater than two.
 ```{r}
 p2 <- boxmap("smr",ohio_lung)
 p2
 ```
 
 
+
+Here we use `tmap_arrange` to get a side by side comparison again.
 ```{r}
 tmap_arrange(p1,p2,ncol = 2)
 ```
@@ -502,47 +503,56 @@ estimate to the reference rate.
 
 
 
-
-
-
 ## EB rate map
 
-
-
+We start by computing all of the necessary parameters for the variance formula above.
+This includes $\mu$, n , the crude rate, $r_i$, $O_i$, and $P_i$.
 ```{r}
-library(spdep)
-
-
-for(i in nrow(ohio_lung)){
-  
-}
-
-nb_matrix <- diag(length(ohio_lung$LFW68))
-
-weight_matrix <- mat2listw(nb_matrix)
-
-eb_bayes <- EBlocal(O_i, P_i, nb_matrix)
-
-
 mu <- sum(ohio_lung$LFW68) / sum(ohio_lung$POPFW68)
-O_i <- ohio_lung$POPFW68
-P_i <- ohio_lung$LFW68
+O_i <- ohio_lung$LFW68
+P_i <- ohio_lung$POPFW68
 n <- length(ohio_lung$POPFW68)
-r_i <- P_i / O_i
+r_i <- O_i / P_i
+```
+
+Next we compute the variance, to similify the code, we compute the top left portion or
+$$\Sigma_{i=1}^{i=n}P_i(r_i-\mu)^2$$ as **top_left**, then compute the variance with the
+next line.
+```{r}
 top_left <- sum(P_i * (r_i - mu)^2)
 variance <- top_left / sum(P_i) - mu / sum(P_i / n)
-variance <- (variance - abs(variance)/2)
-variance <- 0
-w_i <- variance / (variance + mu/P_i)
-ohio_lung$eb_bayes <- w_i * r_i + (1 - w_i) * mu
-ohio_lung$eb_bayes
-variance
 ```
 
 
+Now that we have the variance, we can compute the $w_i$ values.
+```{r}
+w_i <- variance / (variance + mu/P_i)
+```
+
+Here we use the final formula for the smoothed rates.
+```{r}
+ohio_lung$eb_bayes <- w_i * r_i + (1 - w_i) * mu 
+ohio_lung$eb_bayes
+```
+
+
+Lastly, we plot the EB smoothed rates with the `boxmap` function.
 ```{r}
 boxmap("eb_bayes",ohio_lung)
 ```
+
+
+In comparison to the box map for the crude rates and the excess rate map, none of the
+original outliers remain identified as such in the smoothed map. Instead, a new outlier is
+shown in the very southwestern corner of the state (Hamilton county).
+
+Since many of the original outlier counties have small populations at risk (check in the
+data table), their EB smoothed rates are quite different (lower) from the original. In
+contrast, Hamilton county is one of the most populous counties (it contains the city of
+Cincinnati), so that its raw rate is barely adjusted. Because of that, it percolates to the
+top of the distribution and becomes an outlier.
+
+
 
 
 
