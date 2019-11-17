@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+<meta name="author" content="Luc Anselin and Grant Morrison" />
+
+<meta name="date" content="2018-08-08" />
+
+<title>Contiguity-Based Spatial Weights</title>
+
+<script src="Contiguity_Spatial_Weights_files/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="Contiguity_Spatial_Weights_files/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="Contiguity_Spatial_Weights_files/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="Contiguity_Spatial_Weights_files/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="Contiguity_Spatial_Weights_files/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="Contiguity_Spatial_Weights_files/navigation-1.1/tabsets.js"></script>
+<link href="Contiguity_Spatial_Weights_files/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="Contiguity_Spatial_Weights_files/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+<link rel="stylesheet" href="tutor.css" type="text/css" />
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Contiguity-Based Spatial Weights</h1>
+<h3 class="subtitle"><em>R Notes</em></h3>
+<h4 class="author"><em>Luc Anselin and Grant Morrison<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a></em></h4>
+<h4 class="date"><em>08/08/2018</em></h4>
+
+</div>
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction">Introduction</a><ul>
+<li><a href="#objectives">Objectives</a><ul>
+<li><a href="#r-packages-used">R Packages used</a></li>
+<li><a href="#r-commands-used">R Commands used</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#preliminaries">Preliminaries</a><ul>
+<li><a href="#load-packages">Load packages</a></li>
+<li><a href="#geodadata">geodaData</a></li>
+</ul></li>
+<li><a href="#contiguity-weights">Contiguity Weights</a><ul>
+<li><a href="#rook-contiguity">Rook Contiguity</a></li>
+<li><a href="#queen-contiguity">Queen Contiguity</a></li>
+</ul></li>
+<li><a href="#higher-order-contiguity">Higher Order Contiguity</a></li>
+<li><a href="#visualizing-contiguity-neighbors">Visualizing Contiguity Neighbors</a><ul>
+<li><a href="#connectivity-graph">Connectivity Graph</a><ul>
+<li><a href="#getting-latitude-and-longitude-of-polygon-centroids">Getting Latitude and Longitude of Polygon Centroids</a></li>
+<li><a href="#rook-connectivity-graphs">Rook Connectivity Graphs</a></li>
+<li><a href="#queen-connectivity-graphs">Queen Connectivity Graphs</a></li>
+</ul></li>
+<li><a href="#connectivity-histogram">Connectivity Histogram</a></li>
+</ul></li>
+<li><a href="#saving-neighbors">Saving Neighbors</a><ul>
+<li><a href="#oldstyle">Oldstyle</a></li>
+<li><a href="#geoda-header-format">GeoDA Header Format</a></li>
+</ul></li>
+</ul>
+</div>
+
+<p><br></p>
+<div id="introduction" class="section level2 unnumbered">
+<h2>Introduction</h2>
+<p>This notebook cover the functionality of the <a href="https://geodacenter.github.io/workbook/4a_contig_weights/lab4a.html">Contiguity-Based Spatial Weights</a> section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.</p>
+<p>The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).</p>
+<p>For this notebook, we use U.S. Homocide data. Our goal in this lab is show how to implement contiguity based spatial weights</p>
+<div id="objectives" class="section level3 unnumbered">
+<h3>Objectives</h3>
+<p>After completing the notebook, you should know how to carry out the following tasks:</p>
+<ul>
+<li><p>Construct rook and queen contiguity-based spatial weights</p></li>
+<li><p>Compute higher order contiguity weights</p></li>
+<li><p>Save weights information</p></li>
+<li><p>Assess the characteristics of spatial weights</p></li>
+<li><p>Visualize the graph structure of spatial weights</p></li>
+<li><p>Identify the neighbors of selected observations</p></li>
+</ul>
+<div id="r-packages-used" class="section level4 unnumbered">
+<h4>R Packages used</h4>
+<ul>
+<li><p><strong>sf</strong>: To read in the shapefile, add centroids, and create the neighbors lists</p></li>
+<li><p><strong>purrr</strong>: Used to map a function over each element of a vector</p></li>
+<li><p><strong>ggplot2</strong>: To make a connectivity histogram</p></li>
+<li><p><strong>spdep</strong>: Save weights files and create neighbors lists of higher order</p></li>
+<li><p>**geodaData: Load the data for the notebook.</p></li>
+</ul>
+</div>
+<div id="r-commands-used" class="section level4 unnumbered">
+<h4>R Commands used</h4>
+<p>Below follows a list of the commands used in this notebook. For further details and a comprehensive list of options, please consult the <a href="https://www.rdocumentation.org">R documentation</a>.</p>
+<ul>
+<li><p><strong>Base R</strong>: <code>install.packages</code>, <code>library</code>, <code>setwd</code>, <code>class</code>, <code>str</code>, <code>lapply</code>, <code>attributes</code>, <code>summary</code>, <code>head</code>, <code>seq</code></p></li>
+<li><p><strong>sf</strong>: <code>st_read</code>, <code>plot</code>, <code>st_centroid</code>, <code>st_relate</code></p></li>
+<li><p><strong>purrr</strong>: <code>map_dbl</code></p></li>
+<li><p><strong>ggplot2</strong>: <code>ggplot</code>, <code>geom_histogram</code>, <code>aes</code>, <code>xlab</code></p></li>
+<li><p><strong>spdep</strong>: <code>write.nb.gal</code>, <code>nblag</code>, <code>nblag_cumul</code>, <code>card</code></p></li>
+</ul>
+</div>
+</div>
+</div>
+<div id="preliminaries" class="section level2 unnumbered">
+<h2>Preliminaries</h2>
+<p>Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not actually be saving any files.<a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a></p>
+<div id="load-packages" class="section level3 unnumbered">
+<h3>Load packages</h3>
+<p>First, we load all the required packages using the <code>library</code> command. If you don’t have some of these in your system, make sure to install them first as well as their dependencies.<a href="#fn3" class="footnoteRef" id="fnref3"><sup>3</sup></a> You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.</p>
+<pre class="r"><code>library(sf)</code></pre>
+<pre><code>## Linking to GEOS 3.6.1, GDAL 2.1.3, PROJ 4.9.3</code></pre>
+<pre class="r"><code>library(spdep)</code></pre>
+<pre><code>## Loading required package: sp</code></pre>
+<pre><code>## Loading required package: Matrix</code></pre>
+<pre><code>## Loading required package: spData</code></pre>
+<pre><code>## To access larger datasets in this package, install the spDataLarge
+## package with: `install.packages(&#39;spDataLarge&#39;,
+## repos=&#39;https://nowosad.github.io/drat/&#39;, type=&#39;source&#39;)`</code></pre>
+<pre class="r"><code>library(purrr)
+library(ggplot2)
+library(geodaData)</code></pre>
+</div>
+<div id="geodadata" class="section level3 unnumbered">
+<h3>geodaData</h3>
+<p>All of the data for the R notebooks is available in the <strong>geodaData</strong> package. We loaded the library earlier, now to access the individual data sets, we use the double colon notation. This works similar to to accessing a variable with <code>$</code>, in that a drop down menu will appear with a list of the datasets included in the package. For this notebook, we use <code>ncovr</code>.</p>
+<pre class="r"><code>us.bound  &lt;- geodaData::ncovr</code></pre>
+</div>
+</div>
+<div id="contiguity-weights" class="section level2 unnumbered">
+<h2>Contiguity Weights</h2>
+<p>Contiguity means that two spatial units share a common border of non-zero length. Operationally, we can further distinguish between a rook and a queen criterion of contiguity, in analogy to the moves allowed for the such-named pieces on a chess board.</p>
+<p>The rook criterion defines neighbors by the existence of a common edge between two spatial units. The queen criterion is somewhat more encompassing and defines neighbors as spatial units sharing a common edge or a common vertex.4 Therefore, the number of neighbors according to the queen criterion will always be at least as large as for the rook criterion.</p>
+<p>In practice, the construction of the spatial weights from the geometry of the data cannot be done by visual inspection or manual calculation, except in the most trivial of situations. To assess whether two polygons are contiguous requires the use of explicit spatial data structures to deal with the location and arrangement of the polygons. This is implemented through the spatial weights functionality in GeoDa. We will do this with <strong>sf</strong> and <strong>spdep</strong> libraries.</p>
+<p>We will create our neighbors using <strong>sf</strong> first, as the <strong>spdep</strong> library doesn’t allow us to create neighbors lists directy as with the older <strong>sp</strong> library. When we create neighbors in <strong>sf</strong> we will get a class of <strong>sgbp</strong>(sparse geometry binary predicate), which is similar to the standard <strong>nb</strong> class used in <strong>spdep</strong>, but is not quite compatible. We will have to convert from <strong>sgbp</strong> to <strong>nb</strong>, which is not too difficult, as the classes are very similar.</p>
+<p>It is important to keep in mind that the spatial weights are critically dependent on the quality of the spatial data source (GIS) from which they are constructed. Problems with the topology in the GIS (e.g., slivers) will result in inaccuracies for the neighbor relations included in the spatial weights. In practice, it is essential to check the characteristics of the weights for any evidence of problems. When problems are detected, the solution is to go back to the GIS and fix or clean the topology of the data set. Editing of spatial layers is not implemented in GeoDa, but this is a routine operation in most GIS software.</p>
+<div id="rook-contiguity" class="section level3 unnumbered">
+<h3>Rook Contiguity</h3>
+<p>We first start with rook contiguity, which are neighbors that are connected by a common side. To create our neighbors list we start by making a function that will do the rook contiguity. To do this we start with the <code>function</code> command and use <code>a, a = b</code> for our inputs. We do this reduce unnecessary typing, as the two parameters are both going to be our <strong>sf</strong> object. From here we just need <code>st_relate</code>. <code>st_relate</code> computes relationships between pairs of geometries, or matches it to a given pattern. This function also has a parameter for a specified pattern. This pattern will refer to a DE9-IM relationship between x[i] and y[j]. We don’t need to go into detail on this to utilize rook contiguity, but you can check out the basics of DE9-IM at <a href="https://en.wikipedia.org/wiki/DE-9IM">DE9-IM</a>. All we need for rook contiguity is the pattern input <code>&quot;F***1****&quot;</code>. This gives us the correct DE9-IM relationship for rook contiguity. For more documentation on <code>st_relate</code> check out <a href="https://www.rdocumentation.org/packages/sf/versions/0.6-3/topics/st_relate">st_relate documentation</a></p>
+<pre class="r"><code>st_rook = function(a, b = a) st_relate(a, b, pattern = &quot;F***1****&quot;)</code></pre>
+<pre class="r"><code>sf.sgbp.rook &lt;- st_rook(us.bound)</code></pre>
+<pre><code>## although coordinates are longitude/latitude, st_relate_pattern assumes that they are planar</code></pre>
+<p>We now check the class of our resulting object from the the <code>st_rook</code> function with the base R function <code>class</code>. It is <strong>sgbp</strong>, which we will have to convert in order to work with <strong>spdep</strong> and the <code>plot</code> function later on.</p>
+<pre class="r"><code>class(sf.sgbp.rook)</code></pre>
+<pre><code>## [1] &quot;sgbp&quot;</code></pre>
+<p>We can get a comprehensive view of what the <strong>sgbp</strong> data structure looks like with the <code>str</code> command. We will see a list of 3085 vectors that contain the id numbers of each observation’s neighbors. Along with this we will see some attributes. These are the same attributes as an <strong>nb</strong> and the data structure follows the same form as <strong>nb</strong>. This is important for later operations where we will need to convert to type <strong>nb</strong>.</p>
+<pre class="r"><code>str(sf.sgbp.rook)</code></pre>
+<pre><code>## List of 3085
+##  $ : int [1:3] 23 31 41
+##  $ : int [1:3] 3 4 70
+##  $ : int [1:4] 2 5 63 70
+##  $ : int [1:7] 2 28 32 43 56 69 70
+##  $ : int [1:4] 3 6 29 63
+##  $ : int [1:3] 5 7 29
+##  $ : int [1:4] 6 8 29 50
+##  $ : int [1:9] 7 9 44 50 60 64 71 87 89
+##  $ : int [1:3] 8 10 44
+##  $ : int [1:3] 9 11 44
+##  $ : int [1:4] 10 12 44 47
+##  $ : int [1:3] 11 24 47
+##  $ : int [1:4] 14 27 33 36
+##  $ : int [1:3] 13 15 33
+##  $ : int [1:5] 14 16 30 33 37
+##  $ : int [1:4] 15 17 30 34
+##  $ : int [1:4] 16 18 34 42
+##  $ : int [1:3] 17 19 42
+##  $ : int [1:5] 18 20 39 42 46
+##  $ : int [1:4] 19 21 39 40
+##  $ : int [1:3] 20 22 40
+##  $ : int [1:4] 21 23 38 40
+##  $ : int [1:4] 1 22 38 41
+##  $ : int [1:4] 12 25 47 79
+##  $ : int [1:5] 24 26 67 79 88
+##  $ : int [1:5] 25 27 36 61 67
+##  $ : int [1:3] 13 26 36
+##  $ : int [1:2] 4 32
+##  $ : int [1:7] 5 6 7 50 62 63 66
+##  $ : int [1:5] 15 16 34 37 76
+##  $ : int [1:4] 1 35 41 73
+##  $ : int [1:4] 4 28 43 48
+##  $ : int [1:6] 13 14 15 36 37 57
+##  $ : int [1:6] 16 17 30 42 74 76
+##  $ : int [1:5] 31 51 73 121 134
+##  $ : int [1:6] 13 26 27 33 59 61
+##  $ : int [1:6] 15 30 33 57 76 78
+##  $ : int [1:7] 22 23 40 41 53 54 55
+##  $ : int [1:5] 19 20 40 46 52
+##  $ : int [1:7] 20 21 22 38 39 52 53
+##  $ : int [1:9] 1 23 31 38 55 65 73 97 100
+##  $ : int [1:7] 17 18 19 34 46 74 75
+##  $ : int [1:6] 4 32 48 56 81 90
+##  $ : int [1:6] 8 9 10 11 47 60
+##  $ : int 58
+##  $ : int [1:6] 19 39 42 52 75 77
+##  $ : int [1:8] 11 12 24 44 60 79 82 99
+##  $ : int [1:4] 32 43 49 81
+##  $ : int 48
+##  $ : int [1:7] 7 8 29 62 64 87 96
+##  $ : int [1:2] 35 2892
+##  $ : int [1:7] 39 40 46 53 77 83 84
+##  $ : int [1:6] 38 40 52 54 84 85
+##  $ : int [1:8] 38 53 55 65 68 85 94 95
+##  $ : int [1:5] 38 41 54 65 68
+##  $ : int [1:4] 4 43 69 90
+##  $ : int [1:7] 33 37 59 78 102 103 104
+##  $ : int [1:3] 45 86 93
+##  $ : int [1:5] 36 57 61 80 102
+##  $ : int [1:5] 8 44 47 71 82
+##  $ : int [1:6] 26 36 59 67 80 114
+##  $ : int [1:7] 29 50 66 96 101 118 125
+##  $ : int [1:7] 3 5 29 66 70 101 111
+##  $ : int [1:3] 8 50 87
+##  $ : int [1:6] 41 54 55 95 100 115
+##  $ : int [1:4] 29 62 63 101
+##  $ : int [1:7] 25 26 61 88 114 126 127
+##  $ : int [1:2] 54 55
+##  $ : int [1:8] 4 56 70 90 110 120 139 140
+##  $ : int [1:7] 2 3 4 63 69 110 111
+##  $ : int [1:7] 8 60 82 89 119 133 162
+##  $ : int [1:2] 86 108
+##  $ : int [1:5] 31 35 41 97 121
+##  $ : int [1:6] 34 42 75 76 106 107
+##  $ : int [1:7] 42 46 74 77 91 105 106
+##  $ : int [1:8] 30 34 37 74 78 92 107 109
+##  $ : int [1:5] 46 52 75 83 91
+##  $ : int [1:6] 37 57 76 92 104 122
+##  $ : int [1:8] 24 25 47 88 99 135 137 138
+##  $ : int [1:4] 59 61 102 114
+##  $ : int [1:4] 43 48 90 108
+##  $ : int [1:5] 47 60 71 99 119
+##  $ : int [1:6] 52 77 84 91 105 112
+##  $ : int [1:6] 52 53 83 85 112 113
+##  $ : int [1:5] 53 54 84 94 113
+##  $ : int [1:5] 58 72 93 108 117
+##  $ : int [1:9] 8 50 64 89 96 125 128 145 146
+##  $ : int [1:5] 25 67 79 127 137
+##  $ : int [1:6] 8 71 87 128 162 180
+##  $ : int [1:6] 43 56 69 81 108 120
+##  $ : int [1:4] 75 77 83 105
+##  $ : int [1:5] 76 78 109 122 123
+##  $ : int [1:5] 58 86 117 131 132
+##  $ : int [1:6] 54 85 95 113 115 116
+##  $ : int [1:4] 54 65 94 115
+##  $ : int [1:4] 50 62 87 125
+##  $ : int [1:8] 41 73 100 121 129 130 173 174
+##  $ : int [1:4] 160 161 169 229
+##  $ : int [1:5] 47 79 82 119 138
+##   [list output truncated]
+##  - attr(*, &quot;predicate&quot;)= chr &quot;relate_pattern&quot;
+##  - attr(*, &quot;region.id&quot;)= chr [1:3085] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...
+##  - attr(*, &quot;ncol&quot;)= int 3085
+##  - attr(*, &quot;class&quot;)= chr &quot;sgbp&quot;</code></pre>
+<p>Now we will start our conversion from class <strong>sgbp</strong> to <strong>nb</strong>. To do this, we need to change the class explicitly, and take the precaution to represent observations with no neighbors with the integer 0. Our data set doesn’t have any observations without neighbors, but in ones with these, it will mess everything up, if not dealt with.</p>
+<p>We start with the <code>function</code> operator. The input for our function will be an object of class <strong>sgbp</strong>, denoted by <strong>x</strong>. We store the attributes in <strong>attrs</strong>, as we will need to reapply them later. Now we deal we observation with no neighbors. We will use <code>lapply</code>, which applies a function to each element of a list or vector. As for the input function, we make one that checks the length of an element of our list for 0(meaning no neighbors) and returns 0 if the element is empty and the element otherwise. This can be a bit confusing, for more information on <code>lapply</code>, check out <a href="https://www.rdocumentation.org/packages/base/versions/3.5.1/topics/lapply">lapply documentaion</a></p>
+<p>From here we will have dealt with observation with no neighbors, but will need to reapply our attributes to the resulting structure from the <code>lapply</code> function. This is done by calling the <code>attributes</code> function and assigning our stored attributes. The final step is to explictly change the class to <strong>nb</strong> by using the <code>class</code> function and assigning <code>&quot;nb&quot;</code>. We then return our object <strong>x</strong>.</p>
+<pre class="r"><code>as.nb.sgbp &lt;- function(x, ...) {
+  attrs &lt;- attributes(x)
+  x &lt;- lapply(x, function(i) { if(length(i) == 0L) 0L else i } )
+  attributes(x) &lt;- attrs
+  class(x) &lt;- &quot;nb&quot;
+  x
+}</code></pre>
+<p>Now we use the function we created to convert our <strong>sgbp</strong> object to <strong>nb</strong>.</p>
+<pre class="r"><code>sf.nb.rook &lt;- as.nb.sgbp(sf.sgbp.rook)</code></pre>
+<p>Now we take a comprehensive look at our resulting <strong>nb</strong> object with the <code>str</code> command. It is essentially the same as before, just the class now says <strong>nb</strong> instead of <strong>sgbp</strong>. This makes our earlier steps seem a bit unnecesssary and overcomplicated, but they are important, as all datasets, will not have the same circumstances as this one, and it is important for these things to work across the board.</p>
+<pre class="r"><code>str(sf.nb.rook)</code></pre>
+<pre><code>## List of 3085
+##  $ : int [1:3] 23 31 41
+##  $ : int [1:3] 3 4 70
+##  $ : int [1:4] 2 5 63 70
+##  $ : int [1:7] 2 28 32 43 56 69 70
+##  $ : int [1:4] 3 6 29 63
+##  $ : int [1:3] 5 7 29
+##  $ : int [1:4] 6 8 29 50
+##  $ : int [1:9] 7 9 44 50 60 64 71 87 89
+##  $ : int [1:3] 8 10 44
+##  $ : int [1:3] 9 11 44
+##  $ : int [1:4] 10 12 44 47
+##  $ : int [1:3] 11 24 47
+##  $ : int [1:4] 14 27 33 36
+##  $ : int [1:3] 13 15 33
+##  $ : int [1:5] 14 16 30 33 37
+##  $ : int [1:4] 15 17 30 34
+##  $ : int [1:4] 16 18 34 42
+##  $ : int [1:3] 17 19 42
+##  $ : int [1:5] 18 20 39 42 46
+##  $ : int [1:4] 19 21 39 40
+##  $ : int [1:3] 20 22 40
+##  $ : int [1:4] 21 23 38 40
+##  $ : int [1:4] 1 22 38 41
+##  $ : int [1:4] 12 25 47 79
+##  $ : int [1:5] 24 26 67 79 88
+##  $ : int [1:5] 25 27 36 61 67
+##  $ : int [1:3] 13 26 36
+##  $ : int [1:2] 4 32
+##  $ : int [1:7] 5 6 7 50 62 63 66
+##  $ : int [1:5] 15 16 34 37 76
+##  $ : int [1:4] 1 35 41 73
+##  $ : int [1:4] 4 28 43 48
+##  $ : int [1:6] 13 14 15 36 37 57
+##  $ : int [1:6] 16 17 30 42 74 76
+##  $ : int [1:5] 31 51 73 121 134
+##  $ : int [1:6] 13 26 27 33 59 61
+##  $ : int [1:6] 15 30 33 57 76 78
+##  $ : int [1:7] 22 23 40 41 53 54 55
+##  $ : int [1:5] 19 20 40 46 52
+##  $ : int [1:7] 20 21 22 38 39 52 53
+##  $ : int [1:9] 1 23 31 38 55 65 73 97 100
+##  $ : int [1:7] 17 18 19 34 46 74 75
+##  $ : int [1:6] 4 32 48 56 81 90
+##  $ : int [1:6] 8 9 10 11 47 60
+##  $ : int 58
+##  $ : int [1:6] 19 39 42 52 75 77
+##  $ : int [1:8] 11 12 24 44 60 79 82 99
+##  $ : int [1:4] 32 43 49 81
+##  $ : int 48
+##  $ : int [1:7] 7 8 29 62 64 87 96
+##  $ : int [1:2] 35 2892
+##  $ : int [1:7] 39 40 46 53 77 83 84
+##  $ : int [1:6] 38 40 52 54 84 85
+##  $ : int [1:8] 38 53 55 65 68 85 94 95
+##  $ : int [1:5] 38 41 54 65 68
+##  $ : int [1:4] 4 43 69 90
+##  $ : int [1:7] 33 37 59 78 102 103 104
+##  $ : int [1:3] 45 86 93
+##  $ : int [1:5] 36 57 61 80 102
+##  $ : int [1:5] 8 44 47 71 82
+##  $ : int [1:6] 26 36 59 67 80 114
+##  $ : int [1:7] 29 50 66 96 101 118 125
+##  $ : int [1:7] 3 5 29 66 70 101 111
+##  $ : int [1:3] 8 50 87
+##  $ : int [1:6] 41 54 55 95 100 115
+##  $ : int [1:4] 29 62 63 101
+##  $ : int [1:7] 25 26 61 88 114 126 127
+##  $ : int [1:2] 54 55
+##  $ : int [1:8] 4 56 70 90 110 120 139 140
+##  $ : int [1:7] 2 3 4 63 69 110 111
+##  $ : int [1:7] 8 60 82 89 119 133 162
+##  $ : int [1:2] 86 108
+##  $ : int [1:5] 31 35 41 97 121
+##  $ : int [1:6] 34 42 75 76 106 107
+##  $ : int [1:7] 42 46 74 77 91 105 106
+##  $ : int [1:8] 30 34 37 74 78 92 107 109
+##  $ : int [1:5] 46 52 75 83 91
+##  $ : int [1:6] 37 57 76 92 104 122
+##  $ : int [1:8] 24 25 47 88 99 135 137 138
+##  $ : int [1:4] 59 61 102 114
+##  $ : int [1:4] 43 48 90 108
+##  $ : int [1:5] 47 60 71 99 119
+##  $ : int [1:6] 52 77 84 91 105 112
+##  $ : int [1:6] 52 53 83 85 112 113
+##  $ : int [1:5] 53 54 84 94 113
+##  $ : int [1:5] 58 72 93 108 117
+##  $ : int [1:9] 8 50 64 89 96 125 128 145 146
+##  $ : int [1:5] 25 67 79 127 137
+##  $ : int [1:6] 8 71 87 128 162 180
+##  $ : int [1:6] 43 56 69 81 108 120
+##  $ : int [1:4] 75 77 83 105
+##  $ : int [1:5] 76 78 109 122 123
+##  $ : int [1:5] 58 86 117 131 132
+##  $ : int [1:6] 54 85 95 113 115 116
+##  $ : int [1:4] 54 65 94 115
+##  $ : int [1:4] 50 62 87 125
+##  $ : int [1:8] 41 73 100 121 129 130 173 174
+##  $ : int [1:4] 160 161 169 229
+##  $ : int [1:5] 47 79 82 119 138
+##   [list output truncated]
+##  - attr(*, &quot;predicate&quot;)= chr &quot;relate_pattern&quot;
+##  - attr(*, &quot;region.id&quot;)= chr [1:3085] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...
+##  - attr(*, &quot;ncol&quot;)= int 3085
+##  - attr(*, &quot;class&quot;)= chr &quot;nb&quot;</code></pre>
+<p>Now that we are converted to <strong>nb</strong>, we can use the <code>summary</code> command to give us more useful information about the neighbours list.</p>
+<pre class="r"><code>summary(sf.nb.rook)</code></pre>
+<pre><code>## Neighbour list object:
+## Number of regions: 3085 
+## Number of nonzero links: 17188 
+## Percentage nonzero weights: 0.1805989 
+## Average number of links: 5.571475 
+## Link number distribution:
+## 
+##    1    2    3    4    5    6    7    8    9   10   11   13 
+##   24   41  108  377  863 1007  484  136   37    6    1    1 
+## 24 least connected regions:
+## 45 49 585 643 837 1197 1377 1402 1442 1464 1470 1523 1531 1532 1543 1596 1605 1653 1737 1767 1775 2892 2893 2919 with 1 link
+## 1 most connected region:
+## 606 with 13 links</code></pre>
+<p>We use the <code>class</code> command to check and make sure we have <strong>nb</strong>.</p>
+<pre class="r"><code>class(sf.nb.rook)</code></pre>
+<pre><code>## [1] &quot;nb&quot;</code></pre>
+<p>We check the length to make sure it corresponds with the GeoDa tutorial example.</p>
+<pre class="r"><code>length(sf.nb.rook)</code></pre>
+<pre><code>## [1] 3085</code></pre>
+</div>
+<div id="queen-contiguity" class="section level3 unnumbered">
+<h3>Queen Contiguity</h3>
+<p>We proceed in the same fashion to construct queen contiguity weights. The difference between the rook and queen criterion to determine neighbors is that the latter also includes common vertices. This makes the greatest difference for regular grids (square polygons), where the rook criterion will result in four neighbors (except for edge cases) and the queen criterion will yield eight. For irregular polygons (like most areal units encountered in practice), the differences will be slight. In order to deal with potential inaccuracies in the polygon file (such as rounding errors), using the queen criterion is recommended in practice. Hence it is also the default for contiguity weights.</p>
+<p>To make our queen contiguity weights, we make a function using <code>st_relate</code> and specifying a DE9-IM pattern. For queen contiguity, our pattern is <code>&quot;F***T****&quot;</code>. We we don’t really need to go into why the pattern is what it is for our purposes, but <a href="https://en.wikipedia.org/wiki/DE-9IM">DE9-IM</a> and <a href="https://www.rdocumentation.org/packages/sf/versions/0.6-3/topics/st_relate">st_relate documentation</a> can help explain this to a degree.</p>
+<pre class="r"><code>st_queen &lt;- function(a, b = a) st_relate(a, b, pattern = &quot;F***T****&quot;)</code></pre>
+<p>Now we use our <code>st_queen</code> function to get another <strong>sgbp</strong> neighbour list</p>
+<pre class="r"><code>sf.sgbp.queen &lt;- st_queen(us.bound)</code></pre>
+<pre><code>## although coordinates are longitude/latitude, st_relate_pattern assumes that they are planar</code></pre>
+<p>To convert to type <strong>nb</strong> we use <code>as.nb.sgbp</code>, which we created earlier.</p>
+<pre class="r"><code>sf.nb.queen &lt;- as.nb.sgbp(sf.sgbp.queen)</code></pre>
+<pre class="r"><code>str(sf.nb.queen)</code></pre>
+<pre><code>## List of 3085
+##  $ : int [1:3] 23 31 41
+##  $ : int [1:3] 3 4 70
+##  $ : int [1:4] 2 5 63 70
+##  $ : int [1:7] 2 28 32 43 56 69 70
+##  $ : int [1:4] 3 6 29 63
+##  $ : int [1:3] 5 7 29
+##  $ : int [1:4] 6 8 29 50
+##  $ : int [1:9] 7 9 44 50 60 64 71 87 89
+##  $ : int [1:3] 8 10 44
+##  $ : int [1:3] 9 11 44
+##  $ : int [1:4] 10 12 44 47
+##  $ : int [1:3] 11 24 47
+##  $ : int [1:4] 14 27 33 36
+##  $ : int [1:3] 13 15 33
+##  $ : int [1:5] 14 16 30 33 37
+##  $ : int [1:4] 15 17 30 34
+##  $ : int [1:4] 16 18 34 42
+##  $ : int [1:3] 17 19 42
+##  $ : int [1:5] 18 20 39 42 46
+##  $ : int [1:4] 19 21 39 40
+##  $ : int [1:3] 20 22 40
+##  $ : int [1:4] 21 23 38 40
+##  $ : int [1:4] 1 22 38 41
+##  $ : int [1:4] 12 25 47 79
+##  $ : int [1:5] 24 26 67 79 88
+##  $ : int [1:5] 25 27 36 61 67
+##  $ : int [1:3] 13 26 36
+##  $ : int [1:2] 4 32
+##  $ : int [1:7] 5 6 7 50 62 63 66
+##  $ : int [1:5] 15 16 34 37 76
+##  $ : int [1:4] 1 35 41 73
+##  $ : int [1:4] 4 28 43 48
+##  $ : int [1:7] 13 14 15 36 37 57 59
+##  $ : int [1:6] 16 17 30 42 74 76
+##  $ : int [1:5] 31 51 73 121 134
+##  $ : int [1:7] 13 26 27 33 57 59 61
+##  $ : int [1:6] 15 30 33 57 76 78
+##  $ : int [1:7] 22 23 40 41 53 54 55
+##  $ : int [1:5] 19 20 40 46 52
+##  $ : int [1:7] 20 21 22 38 39 52 53
+##  $ : int [1:9] 1 23 31 38 55 65 73 97 100
+##  $ : int [1:7] 17 18 19 34 46 74 75
+##  $ : int [1:6] 4 32 48 56 81 90
+##  $ : int [1:6] 8 9 10 11 47 60
+##  $ : int 58
+##  $ : int [1:6] 19 39 42 52 75 77
+##  $ : int [1:8] 11 12 24 44 60 79 82 99
+##  $ : int [1:4] 32 43 49 81
+##  $ : int 48
+##  $ : int [1:7] 7 8 29 62 64 87 96
+##  $ : int [1:2] 35 2892
+##  $ : int [1:7] 39 40 46 53 77 83 84
+##  $ : int [1:6] 38 40 52 54 84 85
+##  $ : int [1:8] 38 53 55 65 68 85 94 95
+##  $ : int [1:5] 38 41 54 65 68
+##  $ : int [1:4] 4 43 69 90
+##  $ : int [1:8] 33 36 37 59 78 102 103 104
+##  $ : int [1:3] 45 86 93
+##  $ : int [1:6] 33 36 57 61 80 102
+##  $ : int [1:5] 8 44 47 71 82
+##  $ : int [1:6] 26 36 59 67 80 114
+##  $ : int [1:7] 29 50 66 96 101 118 125
+##  $ : int [1:7] 3 5 29 66 70 101 111
+##  $ : int [1:3] 8 50 87
+##  $ : int [1:6] 41 54 55 95 100 115
+##  $ : int [1:4] 29 62 63 101
+##  $ : int [1:7] 25 26 61 88 114 126 127
+##  $ : int [1:2] 54 55
+##  $ : int [1:8] 4 56 70 90 110 120 139 140
+##  $ : int [1:7] 2 3 4 63 69 110 111
+##  $ : int [1:7] 8 60 82 89 119 133 162
+##  $ : int [1:2] 86 108
+##  $ : int [1:5] 31 35 41 97 121
+##  $ : int [1:6] 34 42 75 76 106 107
+##  $ : int [1:7] 42 46 74 77 91 105 106
+##  $ : int [1:8] 30 34 37 74 78 92 107 109
+##  $ : int [1:5] 46 52 75 83 91
+##  $ : int [1:6] 37 57 76 92 104 122
+##  $ : int [1:8] 24 25 47 88 99 135 137 138
+##  $ : int [1:4] 59 61 102 114
+##  $ : int [1:4] 43 48 90 108
+##  $ : int [1:5] 47 60 71 99 119
+##  $ : int [1:6] 52 77 84 91 105 112
+##  $ : int [1:6] 52 53 83 85 112 113
+##  $ : int [1:5] 53 54 84 94 113
+##  $ : int [1:5] 58 72 93 108 117
+##  $ : int [1:9] 8 50 64 89 96 125 128 145 146
+##  $ : int [1:5] 25 67 79 127 137
+##  $ : int [1:6] 8 71 87 128 162 180
+##  $ : int [1:6] 43 56 69 81 108 120
+##  $ : int [1:4] 75 77 83 105
+##  $ : int [1:5] 76 78 109 122 123
+##  $ : int [1:5] 58 86 117 131 132
+##  $ : int [1:6] 54 85 95 113 115 116
+##  $ : int [1:4] 54 65 94 115
+##  $ : int [1:4] 50 62 87 125
+##  $ : int [1:8] 41 73 100 121 129 130 173 174
+##  $ : int [1:4] 160 161 169 229
+##  $ : int [1:5] 47 79 82 119 138
+##   [list output truncated]
+##  - attr(*, &quot;predicate&quot;)= chr &quot;relate_pattern&quot;
+##  - attr(*, &quot;region.id&quot;)= chr [1:3085] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...
+##  - attr(*, &quot;ncol&quot;)= int 3085
+##  - attr(*, &quot;class&quot;)= chr &quot;nb&quot;</code></pre>
+</div>
+</div>
+<div id="higher-order-contiguity" class="section level2 unnumbered">
+<h2>Higher Order Contiguity</h2>
+<p>Now we move on to higher order contiguity weights. To make these we will need the <strong>spdep</strong> package. We will use the <code>nblag</code> and <code>nblag_cumul</code> functions to compute the higher order weights.</p>
+<p>The <code>nblag</code> function takes a neighbor list of class <strong>nb</strong> and an order as parameters. It will give us a list of neighbors lists. One for 1st order neighbors and one for second order neighbors. We can select from this data structure by double bracket notation, for instance <code>[[1]]</code> will give the <strong>nb</strong> object for first order neighbors. Using a <code>2</code> instead of a <code>1</code> will give us the second order neighbors.</p>
+<pre class="r"><code>second.order.queen &lt;- nblag(sf.nb.queen, 2)</code></pre>
+<p>We first take a comprehensive look at <strong>second.order.queen</strong> to see the resulting data structure from <code>nblag</code>. As said earlier, it is a list of 2 <strong>nb</strong> objects. One for 1st order neighbors and one for 2nd order. It is important to examine this, so we can make use of specific elements of the data structure in our visualizations of the neighbors.</p>
+<pre class="r"><code>str(second.order.queen)</code></pre>
+<pre><code>## List of 2
+##  $ :List of 3085
+##   ..$ : int [1:3] 23 31 41
+##   ..$ : int [1:3] 3 4 70
+##   ..$ : int [1:4] 2 5 63 70
+##   ..$ : int [1:7] 2 28 32 43 56 69 70
+##   ..$ : int [1:4] 3 6 29 63
+##   ..$ : int [1:3] 5 7 29
+##   ..$ : int [1:4] 6 8 29 50
+##   ..$ : int [1:9] 7 9 44 50 60 64 71 87 89
+##   ..$ : int [1:3] 8 10 44
+##   ..$ : int [1:3] 9 11 44
+##   ..$ : int [1:4] 10 12 44 47
+##   ..$ : int [1:3] 11 24 47
+##   ..$ : int [1:4] 14 27 33 36
+##   ..$ : int [1:3] 13 15 33
+##   ..$ : int [1:5] 14 16 30 33 37
+##   ..$ : int [1:4] 15 17 30 34
+##   ..$ : int [1:4] 16 18 34 42
+##   ..$ : int [1:3] 17 19 42
+##   ..$ : int [1:5] 18 20 39 42 46
+##   ..$ : int [1:4] 19 21 39 40
+##   ..$ : int [1:3] 20 22 40
+##   ..$ : int [1:4] 21 23 38 40
+##   ..$ : int [1:4] 1 22 38 41
+##   ..$ : int [1:4] 12 25 47 79
+##   ..$ : int [1:5] 24 26 67 79 88
+##   ..$ : int [1:5] 25 27 36 61 67
+##   ..$ : int [1:3] 13 26 36
+##   ..$ : int [1:2] 4 32
+##   ..$ : int [1:7] 5 6 7 50 62 63 66
+##   ..$ : int [1:5] 15 16 34 37 76
+##   ..$ : int [1:4] 1 35 41 73
+##   ..$ : int [1:4] 4 28 43 48
+##   ..$ : int [1:7] 13 14 15 36 37 57 59
+##   ..$ : int [1:6] 16 17 30 42 74 76
+##   ..$ : int [1:5] 31 51 73 121 134
+##   ..$ : int [1:7] 13 26 27 33 57 59 61
+##   ..$ : int [1:6] 15 30 33 57 76 78
+##   ..$ : int [1:7] 22 23 40 41 53 54 55
+##   ..$ : int [1:5] 19 20 40 46 52
+##   ..$ : int [1:7] 20 21 22 38 39 52 53
+##   ..$ : int [1:9] 1 23 31 38 55 65 73 97 100
+##   ..$ : int [1:7] 17 18 19 34 46 74 75
+##   ..$ : int [1:6] 4 32 48 56 81 90
+##   ..$ : int [1:6] 8 9 10 11 47 60
+##   ..$ : int 58
+##   ..$ : int [1:6] 19 39 42 52 75 77
+##   ..$ : int [1:8] 11 12 24 44 60 79 82 99
+##   ..$ : int [1:4] 32 43 49 81
+##   ..$ : int 48
+##   ..$ : int [1:7] 7 8 29 62 64 87 96
+##   ..$ : int [1:2] 35 2892
+##   ..$ : int [1:7] 39 40 46 53 77 83 84
+##   ..$ : int [1:6] 38 40 52 54 84 85
+##   ..$ : int [1:8] 38 53 55 65 68 85 94 95
+##   ..$ : int [1:5] 38 41 54 65 68
+##   ..$ : int [1:4] 4 43 69 90
+##   ..$ : int [1:8] 33 36 37 59 78 102 103 104
+##   ..$ : int [1:3] 45 86 93
+##   ..$ : int [1:6] 33 36 57 61 80 102
+##   ..$ : int [1:5] 8 44 47 71 82
+##   ..$ : int [1:6] 26 36 59 67 80 114
+##   ..$ : int [1:7] 29 50 66 96 101 118 125
+##   ..$ : int [1:7] 3 5 29 66 70 101 111
+##   ..$ : int [1:3] 8 50 87
+##   ..$ : int [1:6] 41 54 55 95 100 115
+##   ..$ : int [1:4] 29 62 63 101
+##   ..$ : int [1:7] 25 26 61 88 114 126 127
+##   ..$ : int [1:2] 54 55
+##   ..$ : int [1:8] 4 56 70 90 110 120 139 140
+##   ..$ : int [1:7] 2 3 4 63 69 110 111
+##   ..$ : int [1:7] 8 60 82 89 119 133 162
+##   ..$ : int [1:2] 86 108
+##   ..$ : int [1:5] 31 35 41 97 121
+##   ..$ : int [1:6] 34 42 75 76 106 107
+##   ..$ : int [1:7] 42 46 74 77 91 105 106
+##   ..$ : int [1:8] 30 34 37 74 78 92 107 109
+##   ..$ : int [1:5] 46 52 75 83 91
+##   ..$ : int [1:6] 37 57 76 92 104 122
+##   ..$ : int [1:8] 24 25 47 88 99 135 137 138
+##   ..$ : int [1:4] 59 61 102 114
+##   ..$ : int [1:4] 43 48 90 108
+##   ..$ : int [1:5] 47 60 71 99 119
+##   ..$ : int [1:6] 52 77 84 91 105 112
+##   ..$ : int [1:6] 52 53 83 85 112 113
+##   ..$ : int [1:5] 53 54 84 94 113
+##   ..$ : int [1:5] 58 72 93 108 117
+##   ..$ : int [1:9] 8 50 64 89 96 125 128 145 146
+##   ..$ : int [1:5] 25 67 79 127 137
+##   ..$ : int [1:6] 8 71 87 128 162 180
+##   ..$ : int [1:6] 43 56 69 81 108 120
+##   ..$ : int [1:4] 75 77 83 105
+##   ..$ : int [1:5] 76 78 109 122 123
+##   ..$ : int [1:5] 58 86 117 131 132
+##   ..$ : int [1:6] 54 85 95 113 115 116
+##   ..$ : int [1:4] 54 65 94 115
+##   ..$ : int [1:4] 50 62 87 125
+##   ..$ : int [1:8] 41 73 100 121 129 130 173 174
+##   ..$ : int [1:4] 160 161 169 229
+##   ..$ : int [1:5] 47 79 82 119 138
+##   .. [list output truncated]
+##   ..- attr(*, &quot;predicate&quot;)= chr &quot;relate_pattern&quot;
+##   ..- attr(*, &quot;region.id&quot;)= chr [1:3085] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...
+##   ..- attr(*, &quot;ncol&quot;)= int 3085
+##   ..- attr(*, &quot;class&quot;)= chr &quot;nb&quot;
+##   ..- attr(*, &quot;sym&quot;)= logi TRUE
+##  $ :List of 3085
+##   ..$ : int [1:8] 22 35 38 55 65 73 97 100
+##   ..$ : int [1:9] 5 28 32 43 56 63 69 110 111
+##   ..$ : int [1:8] 4 6 29 66 69 101 110 111
+##   ..$ : int [1:10] 3 48 63 81 90 110 111 120 139 140
+##   ..$ : int [1:8] 2 7 50 62 66 70 101 111
+##   ..$ : int [1:6] 3 8 50 62 63 66
+##   ..$ : int [1:12] 5 9 44 60 62 63 64 66 71 87 ...
+##   ..$ : int [1:16] 6 10 11 29 47 62 82 96 119 125 ...
+##   ..$ : int [1:9] 7 11 47 50 60 64 71 87 89
+##   ..$ : int [1:4] 8 12 47 60
+##   ..$ : int [1:7] 8 9 24 60 79 82 99
+##   ..$ : int [1:7] 10 25 44 60 79 82 99
+##   ..$ : int [1:6] 15 26 37 57 59 61
+##   ..$ : int [1:7] 16 27 30 36 37 57 59
+##   ..$ : int [1:8] 13 17 34 36 57 59 76 78
+##   ..$ : int [1:7] 14 18 33 37 42 74 76
+##   ..$ : int [1:7] 15 19 30 46 74 75 76
+##   ..$ : int [1:7] 16 20 34 39 46 74 75
+##   ..$ : int [1:8] 17 21 34 40 52 74 75 77
+##   ..$ : int [1:7] 18 22 38 42 46 52 53
+##   ..$ : int [1:6] 19 23 38 39 52 53
+##   ..$ : int [1:8] 1 20 39 41 52 53 54 55
+##   ..$ : int [1:10] 21 31 40 53 54 55 65 73 97 100
+##   ..$ : int [1:11] 11 26 44 60 67 82 88 99 135 137 ...
+##   ..$ : int [1:12] 12 27 36 47 61 99 114 126 127 135 ...
+##   ..$ : int [1:11] 13 24 33 57 59 79 80 88 114 126 ...
+##   ..$ : int [1:7] 14 25 33 57 59 61 67
+##   ..$ : int [1:6] 2 43 48 56 69 70
+##   ..$ : int [1:10] 3 8 64 70 87 96 101 111 118 125
+##   ..$ : int [1:10] 14 17 33 42 57 74 78 92 107 109
+##   ..$ : int [1:9] 23 38 51 55 65 97 100 121 134
+##   ..$ : int [1:7] 2 49 56 69 70 81 90
+##   ..$ : int [1:11] 16 26 27 30 61 76 78 80 102 103 ...
+##   ..$ : int [1:11] 15 18 19 37 46 75 78 92 106 107 ...
+##   ..$ : int [1:9] 1 41 97 130 136 168 181 189 2892
+##   ..$ : int [1:11] 14 15 25 37 67 78 80 102 103 104 ...
+##   ..$ : int [1:14] 13 14 16 34 36 59 74 92 102 103 ...
+##   ..$ : int [1:15] 1 20 21 31 39 52 65 68 73 84 ...
+##   ..$ : int [1:10] 18 21 22 38 42 53 75 77 83 84
+##   ..$ : int [1:10] 19 23 41 46 54 55 77 83 84 85
+##   ..$ : int [1:13] 22 35 40 53 54 68 95 115 121 129 ...
+##   ..$ : int [1:11] 16 20 30 39 52 76 77 91 105 106 ...
+##   ..$ : int [1:7] 2 28 49 69 70 108 120
+##   ..$ : int [1:11] 7 12 24 50 64 71 79 82 87 89 ...
+##   ..$ : int [1:2] 86 93
+##   ..$ : int [1:12] 17 18 20 34 40 53 74 83 84 91 ...
+##   ..$ : int [1:10] 8 9 10 25 71 88 119 135 137 138
+##   ..$ : int [1:5] 4 28 56 90 108
+##   ..$ : int [1:3] 32 43 81
+##   ..$ : int [1:15] 5 6 9 44 60 63 66 71 89 101 ...
+##   ..$ : int [1:4] 31 73 121 134
+##   ..$ : int [1:13] 19 20 21 22 38 42 54 75 85 91 ...
+##   ..$ : int [1:16] 20 21 22 23 39 41 46 55 65 68 ...
+##   ..$ : int [1:10] 22 23 40 41 52 84 100 113 115 116
+##   ..$ : int [1:13] 1 22 23 31 40 53 73 85 94 95 ...
+##   ..$ : int [1:11] 2 28 32 48 70 81 108 110 120 139 ...
+##   ..$ : int [1:14] 13 14 15 26 27 30 61 76 80 92 ...
+##   ..$ : int [1:5] 72 108 117 131 132
+##   ..$ : int [1:12] 13 14 15 26 27 37 67 78 103 104 ...
+##   ..$ : int [1:15] 7 9 10 11 12 24 50 64 79 87 ...
+##   ..$ : int [1:10] 13 25 27 33 57 88 102 126 127 144
+##   ..$ : int [1:11] 5 6 7 8 63 64 87 111 145 156 ...
+##   ..$ : int [1:14] 2 4 6 7 50 62 69 110 118 139 ...
+##   ..$ : int [1:13] 7 9 29 44 60 62 71 89 96 125 ...
+##   ..$ : int [1:13] 1 23 31 38 53 68 73 85 94 97 ...
+##   ..$ : int [1:10] 3 5 6 7 50 70 96 111 118 125
+##   ..$ : int [1:14] 24 27 36 59 79 80 102 137 144 163 ...
+##   ..$ : int [1:7] 38 41 53 65 85 94 95
+##   ..$ : int [1:16] 2 3 28 32 43 63 81 108 111 132 ...
+##   ..$ : int [1:17] 5 28 29 32 43 56 66 90 101 118 ...
+##   ..$ : int [1:15] 7 9 44 47 50 64 87 99 128 138 ...
+##   ..$ : int [1:7] 58 81 90 93 117 120 132
+##   ..$ : int [1:15] 1 23 38 51 55 65 100 129 130 134 ...
+##   ..$ : int [1:16] 16 17 18 19 30 37 46 77 78 91 ...
+##   ..$ : int [1:13] 17 18 19 34 39 52 76 83 107 112 ...
+##   ..$ : int [1:12] 15 16 17 33 42 57 75 104 106 122 ...
+##   ..$ : int [1:10] 19 39 40 42 53 74 84 105 106 112
+##   ..$ : int [1:15] 15 30 33 34 36 59 74 102 103 107 ...
+##   ..$ : int [1:12] 11 12 26 44 60 67 82 119 127 163 ...
+##   ..$ : int [1:8] 26 33 36 57 67 103 126 144
+##   ..$ : int [1:10] 4 32 49 56 69 72 86 117 120 132
+##   ..$ : int [1:12] 8 11 12 24 44 79 89 133 138 162 ...
+##   ..$ : int [1:11] 39 40 46 53 75 85 106 113 148 150 ...
+##   ..$ : int [1:13] 38 39 40 46 54 77 91 94 105 116 ...
+##   ..$ : int [1:13] 38 40 52 55 65 68 83 95 112 115 ...
+##   ..$ : int [1:6] 45 81 90 120 131 132
+##   ..$ : int [1:17] 7 9 29 44 60 62 71 118 156 162 ...
+##   ..$ : int [1:13] 24 26 47 61 99 114 126 135 138 163 ...
+##   ..$ : int [1:17] 7 9 44 50 60 64 82 96 119 125 ...
+##   ..$ : int [1:13] 4 32 48 70 72 86 110 117 132 139 ...
+##   ..$ : int [1:9] 42 46 52 74 84 106 112 148 150
+##   ..$ : int [1:12] 30 34 37 57 74 104 107 141 149 151 ...
+##   ..$ : int [1:7] 45 72 108 120 170 171 172
+##   ..$ : int [1:13] 38 53 55 65 68 84 100 112 129 142 ...
+##   ..$ : int [1:11] 38 41 53 55 68 85 100 113 116 129 ...
+##   ..$ : int [1:13] 7 8 29 64 66 89 101 118 128 145 ...
+##   ..$ : int [1:16] 1 23 31 35 38 55 65 115 134 142 ...
+##   ..$ : int [1:4] 230 307 312 343
+##   ..$ : int [1:13] 11 12 24 25 44 60 71 88 133 135 ...
+##   .. [list output truncated]
+##   ..- attr(*, &quot;class&quot;)= chr &quot;nb&quot;
+##   ..- attr(*, &quot;region.id&quot;)= chr [1:3085] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...
+##   ..- attr(*, &quot;sym&quot;)= logi TRUE
+##  - attr(*, &quot;call&quot;)= language nblag(neighbours = sf.nb.queen, maxlag = 2)</code></pre>
+<p>Now we can look at, specifically, the 2nd order neighbors by using the double bracket selection.</p>
+<pre class="r"><code>str(second.order.queen[[2]])</code></pre>
+<pre><code>## List of 3085
+##  $ : int [1:8] 22 35 38 55 65 73 97 100
+##  $ : int [1:9] 5 28 32 43 56 63 69 110 111
+##  $ : int [1:8] 4 6 29 66 69 101 110 111
+##  $ : int [1:10] 3 48 63 81 90 110 111 120 139 140
+##  $ : int [1:8] 2 7 50 62 66 70 101 111
+##  $ : int [1:6] 3 8 50 62 63 66
+##  $ : int [1:12] 5 9 44 60 62 63 64 66 71 87 ...
+##  $ : int [1:16] 6 10 11 29 47 62 82 96 119 125 ...
+##  $ : int [1:9] 7 11 47 50 60 64 71 87 89
+##  $ : int [1:4] 8 12 47 60
+##  $ : int [1:7] 8 9 24 60 79 82 99
+##  $ : int [1:7] 10 25 44 60 79 82 99
+##  $ : int [1:6] 15 26 37 57 59 61
+##  $ : int [1:7] 16 27 30 36 37 57 59
+##  $ : int [1:8] 13 17 34 36 57 59 76 78
+##  $ : int [1:7] 14 18 33 37 42 74 76
+##  $ : int [1:7] 15 19 30 46 74 75 76
+##  $ : int [1:7] 16 20 34 39 46 74 75
+##  $ : int [1:8] 17 21 34 40 52 74 75 77
+##  $ : int [1:7] 18 22 38 42 46 52 53
+##  $ : int [1:6] 19 23 38 39 52 53
+##  $ : int [1:8] 1 20 39 41 52 53 54 55
+##  $ : int [1:10] 21 31 40 53 54 55 65 73 97 100
+##  $ : int [1:11] 11 26 44 60 67 82 88 99 135 137 ...
+##  $ : int [1:12] 12 27 36 47 61 99 114 126 127 135 ...
+##  $ : int [1:11] 13 24 33 57 59 79 80 88 114 126 ...
+##  $ : int [1:7] 14 25 33 57 59 61 67
+##  $ : int [1:6] 2 43 48 56 69 70
+##  $ : int [1:10] 3 8 64 70 87 96 101 111 118 125
+##  $ : int [1:10] 14 17 33 42 57 74 78 92 107 109
+##  $ : int [1:9] 23 38 51 55 65 97 100 121 134
+##  $ : int [1:7] 2 49 56 69 70 81 90
+##  $ : int [1:11] 16 26 27 30 61 76 78 80 102 103 ...
+##  $ : int [1:11] 15 18 19 37 46 75 78 92 106 107 ...
+##  $ : int [1:9] 1 41 97 130 136 168 181 189 2892
+##  $ : int [1:11] 14 15 25 37 67 78 80 102 103 104 ...
+##  $ : int [1:14] 13 14 16 34 36 59 74 92 102 103 ...
+##  $ : int [1:15] 1 20 21 31 39 52 65 68 73 84 ...
+##  $ : int [1:10] 18 21 22 38 42 53 75 77 83 84
+##  $ : int [1:10] 19 23 41 46 54 55 77 83 84 85
+##  $ : int [1:13] 22 35 40 53 54 68 95 115 121 129 ...
+##  $ : int [1:11] 16 20 30 39 52 76 77 91 105 106 ...
+##  $ : int [1:7] 2 28 49 69 70 108 120
+##  $ : int [1:11] 7 12 24 50 64 71 79 82 87 89 ...
+##  $ : int [1:2] 86 93
+##  $ : int [1:12] 17 18 20 34 40 53 74 83 84 91 ...
+##  $ : int [1:10] 8 9 10 25 71 88 119 135 137 138
+##  $ : int [1:5] 4 28 56 90 108
+##  $ : int [1:3] 32 43 81
+##  $ : int [1:15] 5 6 9 44 60 63 66 71 89 101 ...
+##  $ : int [1:4] 31 73 121 134
+##  $ : int [1:13] 19 20 21 22 38 42 54 75 85 91 ...
+##  $ : int [1:16] 20 21 22 23 39 41 46 55 65 68 ...
+##  $ : int [1:10] 22 23 40 41 52 84 100 113 115 116
+##  $ : int [1:13] 1 22 23 31 40 53 73 85 94 95 ...
+##  $ : int [1:11] 2 28 32 48 70 81 108 110 120 139 ...
+##  $ : int [1:14] 13 14 15 26 27 30 61 76 80 92 ...
+##  $ : int [1:5] 72 108 117 131 132
+##  $ : int [1:12] 13 14 15 26 27 37 67 78 103 104 ...
+##  $ : int [1:15] 7 9 10 11 12 24 50 64 79 87 ...
+##  $ : int [1:10] 13 25 27 33 57 88 102 126 127 144
+##  $ : int [1:11] 5 6 7 8 63 64 87 111 145 156 ...
+##  $ : int [1:14] 2 4 6 7 50 62 69 110 118 139 ...
+##  $ : int [1:13] 7 9 29 44 60 62 71 89 96 125 ...
+##  $ : int [1:13] 1 23 31 38 53 68 73 85 94 97 ...
+##  $ : int [1:10] 3 5 6 7 50 70 96 111 118 125
+##  $ : int [1:14] 24 27 36 59 79 80 102 137 144 163 ...
+##  $ : int [1:7] 38 41 53 65 85 94 95
+##  $ : int [1:16] 2 3 28 32 43 63 81 108 111 132 ...
+##  $ : int [1:17] 5 28 29 32 43 56 66 90 101 118 ...
+##  $ : int [1:15] 7 9 44 47 50 64 87 99 128 138 ...
+##  $ : int [1:7] 58 81 90 93 117 120 132
+##  $ : int [1:15] 1 23 38 51 55 65 100 129 130 134 ...
+##  $ : int [1:16] 16 17 18 19 30 37 46 77 78 91 ...
+##  $ : int [1:13] 17 18 19 34 39 52 76 83 107 112 ...
+##  $ : int [1:12] 15 16 17 33 42 57 75 104 106 122 ...
+##  $ : int [1:10] 19 39 40 42 53 74 84 105 106 112
+##  $ : int [1:15] 15 30 33 34 36 59 74 102 103 107 ...
+##  $ : int [1:12] 11 12 26 44 60 67 82 119 127 163 ...
+##  $ : int [1:8] 26 33 36 57 67 103 126 144
+##  $ : int [1:10] 4 32 49 56 69 72 86 117 120 132
+##  $ : int [1:12] 8 11 12 24 44 79 89 133 138 162 ...
+##  $ : int [1:11] 39 40 46 53 75 85 106 113 148 150 ...
+##  $ : int [1:13] 38 39 40 46 54 77 91 94 105 116 ...
+##  $ : int [1:13] 38 40 52 55 65 68 83 95 112 115 ...
+##  $ : int [1:6] 45 81 90 120 131 132
+##  $ : int [1:17] 7 9 29 44 60 62 71 118 156 162 ...
+##  $ : int [1:13] 24 26 47 61 99 114 126 135 138 163 ...
+##  $ : int [1:17] 7 9 44 50 60 64 82 96 119 125 ...
+##  $ : int [1:13] 4 32 48 70 72 86 110 117 132 139 ...
+##  $ : int [1:9] 42 46 52 74 84 106 112 148 150
+##  $ : int [1:12] 30 34 37 57 74 104 107 141 149 151 ...
+##  $ : int [1:7] 45 72 108 120 170 171 172
+##  $ : int [1:13] 38 53 55 65 68 84 100 112 129 142 ...
+##  $ : int [1:11] 38 41 53 55 68 85 100 113 116 129 ...
+##  $ : int [1:13] 7 8 29 64 66 89 101 118 128 145 ...
+##  $ : int [1:16] 1 23 31 35 38 55 65 115 134 142 ...
+##  $ : int [1:4] 230 307 312 343
+##  $ : int [1:13] 11 12 24 25 44 60 71 88 133 135 ...
+##   [list output truncated]
+##  - attr(*, &quot;class&quot;)= chr &quot;nb&quot;
+##  - attr(*, &quot;region.id&quot;)= chr [1:3085] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...
+##  - attr(*, &quot;sym&quot;)= logi TRUE</code></pre>
+<p>We store the second order neighbours in <strong>sf.nb.queen2</strong> to make things simpler for our visuals.</p>
+<pre class="r"><code>sf.nb.queen2 &lt;- second.order.queen[[2]]</code></pre>
+<p>Now if we want to include both 1st and 2nd order neighbors in our visualizations, we need the <code>nblag_cumul</code> function. This will give us an <strong>nb</strong> object with both 1st and 2nd order neighbors, instead of separating them as in the result of <code>nblag</code>. To use this function, we need the resulting object from the <code>nblag</code> function. <code>nblag_cumul</code> combines the two sepatae <strong>nb</strong> objects from the <code>nblag</code> function into one.</p>
+<pre class="r"><code>second.order.queen.cumul &lt;- nblag_cumul(second.order.queen)</code></pre>
+<p>Here we take another in depth look at result. We can see that, we now have one <strong>nb</strong> object with both 1st and 2nd order neighbors.</p>
+<pre class="r"><code>str(second.order.queen.cumul)</code></pre>
+<pre><code>## List of 3085
+##  $ : int [1:11] 22 23 31 35 38 41 55 65 73 97 ...
+##  $ : int [1:12] 3 4 5 28 32 43 56 63 69 70 ...
+##  $ : int [1:12] 2 4 5 6 29 63 66 69 70 101 ...
+##  $ : int [1:17] 2 3 28 32 43 48 56 63 69 70 ...
+##  $ : int [1:12] 2 3 6 7 29 50 62 63 66 70 ...
+##  $ : int [1:9] 3 5 7 8 29 50 62 63 66
+##  $ : int [1:16] 5 6 8 9 29 44 50 60 62 63 ...
+##  $ : int [1:25] 6 7 9 10 11 29 44 47 50 60 ...
+##  $ : int [1:12] 7 8 10 11 44 47 50 60 64 71 ...
+##  $ : int [1:7] 8 9 11 12 44 47 60
+##  $ : int [1:11] 8 9 10 12 24 44 47 60 79 82 ...
+##  $ : int [1:10] 10 11 24 25 44 47 60 79 82 99
+##  $ : int [1:10] 14 15 26 27 33 36 37 57 59 61
+##  $ : int [1:10] 13 15 16 27 30 33 36 37 57 59
+##  $ : int [1:13] 13 14 16 17 30 33 34 36 37 57 ...
+##  $ : int [1:11] 14 15 17 18 30 33 34 37 42 74 ...
+##  $ : int [1:11] 15 16 18 19 30 34 42 46 74 75 ...
+##  $ : int [1:10] 16 17 19 20 34 39 42 46 74 75
+##  $ : int [1:13] 17 18 20 21 34 39 40 42 46 52 ...
+##  $ : int [1:11] 18 19 21 22 38 39 40 42 46 52 ...
+##  $ : int [1:9] 19 20 22 23 38 39 40 52 53
+##  $ : int [1:12] 1 20 21 23 38 39 40 41 52 53 ...
+##  $ : int [1:14] 1 21 22 31 38 40 41 53 54 55 ...
+##  $ : int [1:15] 11 12 25 26 44 47 60 67 79 82 ...
+##  $ : int [1:17] 12 24 26 27 36 47 61 67 79 88 ...
+##  $ : int [1:16] 13 24 25 27 33 36 57 59 61 67 ...
+##  $ : int [1:10] 13 14 25 26 33 36 57 59 61 67
+##  $ : int [1:8] 2 4 32 43 48 56 69 70
+##  $ : int [1:17] 3 5 6 7 8 50 62 63 64 66 ...
+##  $ : int [1:15] 14 15 16 17 33 34 37 42 57 74 ...
+##  $ : int [1:13] 1 23 35 38 41 51 55 65 73 97 ...
+##  $ : int [1:11] 2 4 28 43 48 49 56 69 70 81 ...
+##  $ : int [1:18] 13 14 15 16 26 27 30 36 37 57 ...
+##  $ : int [1:17] 15 16 17 18 19 30 37 42 46 74 ...
+##  $ : int [1:14] 1 31 41 51 73 97 121 130 134 136 ...
+##  $ : int [1:18] 13 14 15 25 26 27 33 37 57 59 ...
+##  $ : int [1:20] 13 14 15 16 30 33 34 36 57 59 ...
+##  $ : int [1:22] 1 20 21 22 23 31 39 40 41 52 ...
+##  $ : int [1:15] 18 19 20 21 22 38 40 42 46 52 ...
+##  $ : int [1:17] 19 20 21 22 23 38 39 41 46 52 ...
+##  $ : int [1:22] 1 22 23 31 35 38 40 53 54 55 ...
+##  $ : int [1:18] 16 17 18 19 20 30 34 39 46 52 ...
+##  $ : int [1:13] 2 4 28 32 48 49 56 69 70 81 ...
+##  $ : int [1:17] 7 8 9 10 11 12 24 47 50 60 ...
+##  $ : int [1:3] 58 86 93
+##  $ : int [1:18] 17 18 19 20 34 39 40 42 52 53 ...
+##  $ : int [1:18] 8 9 10 11 12 24 25 44 60 71 ...
+##  $ : int [1:9] 4 28 32 43 49 56 81 90 108
+##  $ : int [1:4] 32 43 48 81
+##  $ : int [1:22] 5 6 7 8 9 29 44 60 62 63 ...
+##  $ : int [1:6] 31 35 73 121 134 2892
+##  $ : int [1:20] 19 20 21 22 38 39 40 42 46 53 ...
+##  $ : int [1:22] 20 21 22 23 38 39 40 41 46 52 ...
+##  $ : int [1:18] 22 23 38 40 41 52 53 55 65 68 ...
+##  $ : int [1:18] 1 22 23 31 38 40 41 53 54 65 ...
+##  $ : int [1:15] 2 4 28 32 43 48 69 70 81 90 ...
+##  $ : int [1:22] 13 14 15 26 27 30 33 36 37 59 ...
+##  $ : int [1:8] 45 72 86 93 108 117 131 132
+##  $ : int [1:18] 13 14 15 26 27 33 36 37 57 61 ...
+##  $ : int [1:20] 7 8 9 10 11 12 24 44 47 50 ...
+##  $ : int [1:16] 13 25 26 27 33 36 57 59 67 80 ...
+##  $ : int [1:18] 5 6 7 8 29 50 63 64 66 87 ...
+##  $ : int [1:21] 2 3 4 5 6 7 29 50 62 66 ...
+##  $ : int [1:16] 7 8 9 29 44 50 60 62 71 87 ...
+##  $ : int [1:19] 1 23 31 38 41 53 54 55 68 73 ...
+##  $ : int [1:14] 3 5 6 7 29 50 62 63 70 96 ...
+##  $ : int [1:21] 24 25 26 27 36 59 61 79 80 88 ...
+##  $ : int [1:9] 38 41 53 54 55 65 85 94 95
+##  $ : int [1:24] 2 3 4 28 32 43 56 63 70 81 ...
+##  $ : int [1:24] 2 3 4 5 28 29 32 43 56 63 ...
+##  $ : int [1:22] 7 8 9 44 47 50 60 64 82 87 ...
+##  $ : int [1:9] 58 81 86 90 93 108 117 120 132
+##  $ : int [1:20] 1 23 31 35 38 41 51 55 65 97 ...
+##  $ : int [1:22] 16 17 18 19 30 34 37 42 46 75 ...
+##  $ : int [1:20] 17 18 19 34 39 42 46 52 74 76 ...
+##  $ : int [1:20] 15 16 17 30 33 34 37 42 57 74 ...
+##  $ : int [1:15] 19 39 40 42 46 52 53 74 75 83 ...
+##  $ : int [1:21] 15 30 33 34 36 37 57 59 74 76 ...
+##  $ : int [1:20] 11 12 24 25 26 44 47 60 67 82 ...
+##  $ : int [1:12] 26 33 36 57 59 61 67 102 103 114 ...
+##  $ : int [1:14] 4 32 43 48 49 56 69 72 86 90 ...
+##  $ : int [1:17] 8 11 12 24 44 47 60 71 79 89 ...
+##  $ : int [1:17] 39 40 46 52 53 75 77 84 85 91 ...
+##  $ : int [1:19] 38 39 40 46 52 53 54 77 83 85 ...
+##  $ : int [1:18] 38 40 52 53 54 55 65 68 83 84 ...
+##  $ : int [1:11] 45 58 72 81 90 93 108 117 120 131 ...
+##  $ : int [1:26] 7 8 9 29 44 50 60 62 64 71 ...
+##  $ : int [1:18] 24 25 26 47 61 67 79 99 114 126 ...
+##  $ : int [1:23] 7 8 9 44 50 60 64 71 82 87 ...
+##  $ : int [1:19] 4 32 43 48 56 69 70 72 81 86 ...
+##  $ : int [1:13] 42 46 52 74 75 77 83 84 105 106 ...
+##  $ : int [1:17] 30 34 37 57 74 76 78 104 107 109 ...
+##  $ : int [1:12] 45 58 72 86 108 117 120 131 132 170 ...
+##  $ : int [1:19] 38 53 54 55 65 68 84 85 95 100 ...
+##  $ : int [1:15] 38 41 53 54 55 65 68 85 94 100 ...
+##  $ : int [1:17] 7 8 29 50 62 64 66 87 89 101 ...
+##  $ : int [1:24] 1 23 31 35 38 41 55 65 73 100 ...
+##  $ : int [1:8] 160 161 169 229 230 307 312 343
+##  $ : int [1:18] 11 12 24 25 44 47 60 71 79 82 ...
+##   [list output truncated]
+##  - attr(*, &quot;region.id&quot;)= chr [1:3085] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...
+##  - attr(*, &quot;call&quot;)= language nblag_cumul(nblags = second.order.queen)
+##  - attr(*, &quot;class&quot;)= chr &quot;nb&quot;</code></pre>
+</div>
+<div id="visualizing-contiguity-neighbors" class="section level2 unnumbered">
+<h2>Visualizing Contiguity Neighbors</h2>
+<div id="connectivity-graph" class="section level3 unnumbered">
+<h3>Connectivity Graph</h3>
+<p>A connectivity graph takes a point and displays a line to each neighboring point. We are working with polygons at the moment, so we will need to get points in order to make our connectivity graphs. The most typically method for this will be polygon centroids. We will calculate these in the <strong>sf</strong> package before moving onto the graphs.</p>
+<div id="getting-latitude-and-longitude-of-polygon-centroids" class="section level4 unnumbered">
+<h4>Getting Latitude and Longitude of Polygon Centroids</h4>
+<p>We will need points to associate with each polygon before we can make our connectivity graph. It will be a little more complicated than just running <code>st_centroid</code> on the <strong>sf</strong> object: <strong>us.bound</strong>. We need the coordinates in a separate data frame for this to work. To do this we will use a mapping function. The mapping function applies a given function to each element of a vector and returns a vector of the same length. Our input vector will be the geometry column of <strong>us.bound</strong>. Our function will be <code>st_centroid</code>. We will be using <code>map_dbl</code> variation of <code>map</code> from the <strong>purrr</strong> package. For more documentation, check out <a href="https://www.rdocumentation.org/packages/purrr/versions/0.2.5/topics/map">map documentation</a></p>
+<p>To get our longitude values we map the <code>st_centroid</code> function over the geometry column of <strong>us.bound</strong> and access the longitude value through double bracket notation [[]] and 1. This allows us to get only the longitude, which is the first value in each centroid.</p>
+<pre class="r"><code>longitude &lt;- map_dbl(us.bound$geometry, ~st_centroid(.x)[[1]])</code></pre>
+<p>We do the same for latitude with one key difference. We access the second value per each centroid with <code>[[2]]</code>.</p>
+<pre class="r"><code>latitude &lt;- map_dbl(us.bound$geometry, ~st_centroid(.x)[[2]])</code></pre>
+<p>Now that we have latitude and longitude, we use <code>cbind</code> to put longitude and latitude into the same object.</p>
+<pre class="r"><code>coords &lt;- cbind(longitude, latitude)</code></pre>
+<p>We check the first few observations to see if things are formatted correctly.</p>
+<pre class="r"><code>head(coords)</code></pre>
+<pre><code>##       longitude latitude
+## [1,]  -94.90337 48.77173
+## [2,] -118.51718 48.46959
+## [3,] -117.85532 48.39591
+## [4,] -119.73944 48.54843
+## [5,] -117.27400 48.53280
+## [6,] -116.47029 48.76502</code></pre>
+</div>
+<div id="rook-connectivity-graphs" class="section level4 unnumbered">
+<h4>Rook Connectivity Graphs</h4>
+<p>Now that we have coordinates for each of our observations, we can plot the neighbours through a connectivity graph. We just need the basic <code>plot</code> function and to enter our neighbour list as the first parameter, then our coordinates as the second. We add extra customizations, so we can actually see what is going on in the graph. We use <code>lwd = .2</code> to make the line length less thick, we set the <code>col =&quot;blue&quot;</code>, and finally <code>cex = .5</code> to make the point symbols smaller. The default options make the graph near indecipherable, so it is important to add these extra parameters.</p>
+<pre class="r"><code>plot(sf.nb.rook, coords, lwd=.2, col=&quot;blue&quot;, cex = .5)</code></pre>
+<p><img src="Contiguity_Spatial_Weights_files/figure-html/unnamed-chunk-28-1.png" width="672" /></p>
+</div>
+<div id="queen-connectivity-graphs" class="section level4 unnumbered">
+<h4>Queen Connectivity Graphs</h4>
+<p>Now we will do the same for queen contiguity. The queen variation will have more lines, as there are more neighbors due to shared vertices counting in the neighbors relationship. It is hard to spot the differences between the two plots, as they are both visually busy</p>
+<div id="first-order" class="section level5 unnumbered">
+<h5>First Order</h5>
+<p>The same form is followed for queen contiguity as we are working with the same class: a <strong>nb</strong> object and a corresponding list of coordinates.</p>
+<pre class="r"><code>plot(sf.nb.queen, coords, lwd=.2, col=&quot;blue&quot;, cex = .5)</code></pre>
+<p><img src="Contiguity_Spatial_Weights_files/figure-html/unnamed-chunk-29-1.png" width="672" /></p>
+</div>
+<div id="second-order" class="section level5 unnumbered">
+<h5>Second Order</h5>
+<p>Here we take a look at a connectivity graph for second order neighbors. All we need is the second order <strong>nb</strong> object that we created earlier and our coordinates. This graph will look significantly different from the ones we’ve made so far, as second order tends to have more neighbors than first order.</p>
+<pre class="r"><code>plot(sf.nb.queen2, coords, lwd=.2, col=&quot;blue&quot;, cex = .5)</code></pre>
+<p><img src="Contiguity_Spatial_Weights_files/figure-html/unnamed-chunk-30-1.png" width="672" /></p>
+</div>
+<div id="cumulative" class="section level5 unnumbered">
+<h5>Cumulative</h5>
+<p>We will take a look a plot with both second and first order neighbors here. It will be a very busy graph.</p>
+<pre class="r"><code>plot(second.order.queen.cumul, coords, lwd=.2, col=&quot;blue&quot;, cex = .5)</code></pre>
+<p><img src="Contiguity_Spatial_Weights_files/figure-html/unnamed-chunk-31-1.png" width="672" /></p>
+</div>
+</div>
+</div>
+<div id="connectivity-histogram" class="section level3 unnumbered">
+<h3>Connectivity Histogram</h3>
+<p>A connectivity histogram shows the number of observations for each cardinality of neighbors(how many observations have the same number of neighbors). We first have to get the cardianlity before we can make the histograms. We can do this by using the <code>card</code> function from the <strong>spdep</strong> package. This will give us a vector of 3085 observations with each one containing the corresponding number of neighbors from the input neighbors list.</p>
+<pre class="r"><code>rook.card &lt;- card(sf.nb.rook)</code></pre>
+<p>We take a look at the first few observation with the <code>head</code> function and as we can see, it is a vector with number of neighbors for each observation of the <strong>nb</strong> object.</p>
+<pre class="r"><code>head(rook.card)</code></pre>
+<pre><code>## [1] 3 3 4 7 4 3</code></pre>
+<p>Now we check the length and it is what we expected.</p>
+<pre class="r"><code>length(rook.card)</code></pre>
+<pre><code>## [1] 3085</code></pre>
+<p>We can visualize the cardinality through a <strong>ggplot2</strong> histogram. For this we just need to call the <code>ggplot</code> function and add <code>geom_histogram</code> as a layer. We specify the <code>aes()</code> in <code>geom_histogram</code> to be our rook cardinality. This will give us a basic plot, which we will customize further a little later.</p>
+<pre class="r"><code>ggplot() +
+  geom_histogram(aes(x=rook.card))</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="Contiguity_Spatial_Weights_files/figure-html/unnamed-chunk-35-1.png" width="672" /></p>
+<p>Here we will add a few customizations to make the plot nicer. The most important is with the <code>breaks =</code> parameter, as the bars are spaced out kind of weirdly in our opening plot. We can avoid manuelly typing in the breaks by using the <code>seq</code> function, which will give us a list of numbers 0 to 13, incrementing by 1 each time. We specify the range in the first two arguments and then use <code>by =</code> to pick the number to increment by. In our case, 1 makes the most sense as you cannot have half of a neighbor.</p>
+<pre class="r"><code>ggplot() +
+  geom_histogram(aes(x=rook.card), breaks = seq(0,13, by = 1)) +
+  xlab(&quot;number of neighbours&quot;)</code></pre>
+<p><img src="Contiguity_Spatial_Weights_files/figure-html/unnamed-chunk-36-1.png" width="672" /></p>
+<p>With the <code>summary</code> command we can get a look at the summary statistics for the cardinality of the neighbors list.</p>
+<pre class="r"><code>summary(rook.card)</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##   1.000   5.000   6.000   5.571   6.000  13.000</code></pre>
+</div>
+</div>
+<div id="saving-neighbors" class="section level2 unnumbered">
+<h2>Saving Neighbors</h2>
+<p>To save our neighbors list, we use the <code>write.nb.gal</code> function from the <strong>spdep</strong> package. The file format is a GAL Lattice file. We input our neighbors list, and the the filename second. We have two options from this point. We can save the file with the old style or the new GeoDa header style.</p>
+<div id="oldstyle" class="section level3 unnumbered">
+<h3>Oldstyle</h3>
+<p>The oldstyle just saves the neighbor list with then number of observations at the top of the file. We can save in this format by setting <code>oldstyle =</code> to <code>TRUE</code>.</p>
+<pre class="r"><code>write.nb.gal(sf.nb.rook, &quot;rook_contiguity_old.gal&quot;, oldstyle = TRUE)</code></pre>
+</div>
+<div id="geoda-header-format" class="section level3 unnumbered">
+<h3>GeoDA Header Format</h3>
+<p>The new GeoDA header style, also takes the shapefile name taken from GAL file for the dataset and the region id indicator variable name. It puts this information in a header for the file. All we have to do is set <code>oldstyle =</code> to FALSE and enter names for <code>shpfile</code> and <code>ind</code> parameters.</p>
+<pre class="r"><code>write.nb.gal(sf.nb.rook, &quot;rook_contiguity_new.gal&quot;, oldstyle = FALSE,shpfile =&quot;NAT.shp&quot;, ind =&quot;region id&quot;)</code></pre>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>University of Chicago, Center for Spatial Data Science – <a href="mailto:anselin@uchicago.edu">anselin@uchicago.edu</a>,<a href="mailto:morrisonge@uchicago.edu">morrisonge@uchicago.edu</a><a href="#fnref1">↩</a></p></li>
+<li id="fn2"><p>Use <code>setwd(directorypath)</code> to specify the working directory.<a href="#fnref2">↩</a></p></li>
+<li id="fn3"><p>Use <code>install.packages(packagename)</code>.<a href="#fnref3">↩</a></p></li>
+</ol>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
