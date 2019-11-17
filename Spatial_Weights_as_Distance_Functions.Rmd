@@ -1,15 +1,19 @@
 ---
 title: "Spatial Weights as Distance Functions"
-subtitle: "R Notes"
-author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
+author: Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial
+  Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]
 date: "09/17/2018"
 output:
   html_document:
+    css: tutor.css
     fig_caption: yes
     self_contained: no
     toc: yes
     toc_depth: 4
-    css: tutor.css
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+subtitle: R Notes
 ---
 
 ```{r setup, include=FALSE}
@@ -20,7 +24,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction {-}
 
-This notebook cover the functionality of the [Spatial Weights as Distance Functions](https://geodacenter.github.io/workbook/4c_distance_functions/lab4c.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.
+This notebook covers the functionality of the [Spatial Weights as Distance Functions](https://geodacenter.github.io/workbook/4c_distance_functions/lab4c.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.
 
 The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments
 on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).
@@ -31,7 +35,7 @@ For this notebook, we use Cleveland house price data. Our goal in this lab is sh
 ```{r}
 
 ```
-### Objectives
+### Objectives {-}
 
 After completing the notebook, you should know how to carry out the following tasks:
 
@@ -41,13 +45,15 @@ After completing the notebook, you should know how to carry out the following ta
 
 - Assess the characteristics of weights based on distance functions
 
-#### R Packages used
+#### R Packages used {-}
 
 - **sf**: To read in the shapefile.
 
 - **spdep**: To create k-nearest neighbors and distance-band neighbors, calculate distances between neighbors, convert to a weights structure, and coercion methods to sparse matrices.
 
-#### R Commands used
+- **geodaData**: To access the data for this notebook.
+
+#### R Commands used {-}
 
 Below follows a list of the commands used in this notebook. For further details
 and a comprehensive list of options, please consult the 
@@ -59,12 +65,12 @@ and a comprehensive list of options, please consult the
 
 - **spdep**: `knn2nb`, `dnearneigh`, `knearneigh`, `nb2listw`, `mat2listw` 
 
-## Preliminaries
+## Preliminaries {-}
 
 Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not
 actually be saving any files.^[Use `setwd(directorypath)` to specify the working directory.]
 
-### Load packages
+### Load packages {-}
 
 First, we load all the required packages using the `library` command. If you don't have some of these in your system, make sure to install them first as well as
 their dependencies.^[Use 
@@ -74,12 +80,20 @@ their dependencies.^[Use
 ```{r}
 library(sf)
 library(spdep)
+library(geodaData)
 ```
 
 
 ### Obtaining the Data from the GeoDa website {-}
 
-To get the data for this notebook, you will and to go to [Cleveland Home Sales](https://geodacenter.github.io/data-and-lab//clev_sls_154_core/) The download format is a
+All of the data for the R notebooks is available in the **geodaData**
+package. We loaded the library earlier, now to access the individual
+data sets, we use the double colon notation. This works similar to
+to accessing a variable with `$`, in that a drop down menu will 
+appear with a list of the datasets included in the package. For this
+notebook, we use `clev_pts`.
+
+Otherwise, Tt get the data for this notebook, you will and to go to [Cleveland Home Sales](https://geodacenter.github.io/data-and-lab//clev_sls_154_core/) The download format is a
 zipfile, so you will need to unzip it by double clicking on the file in your file
 finder. From there move the resulting folder titled: nyc into your working directory
 to continue. Once that is done, you can use the **sf** function: `st_read()` to read
@@ -92,31 +106,31 @@ clev.points <- geodaData::clev_pts
 
 
 
-## Inverse Distance Weights
+## Inverse Distance Weights {-}
 
 
-### Concepts
+### Concepts {-}
 
 One can readily view spatial weights based on a distance cut-off as representing a step
-function, with a value of 1 for neighbors with $d_{ij} < δ$, and a value of 0 for others. As before, 
-$d_{ij}$ stands for the distance between observations i and j, and δ is the bandwidth.
+function, with a value of 1 for neighbors with $d_{ij} < \delta$, and a value of 0 for others. As before, 
+$d_{ij}$ stands for the distance between observations i and j, and $\delta$ is the bandwidth.
 
 A straightforward extension of this principle is to consider a continuous parameterized 
 function of distance itself: 
-$$w_{ij}=f(d_{ij},θ)$$ 
-with f as a functional form and θ a vector of parameters.
+$$w_{ij}=f(d_{ij},\theta)$$ 
+with f as a functional form and $\theta$ a vector of parameters.
 
 In order to conform to Tobler’s first law of geography, a distance decay effect must be
 respected. In other words, the value of the function of distance needs to decrease with a 
 growing distance. More formally, the partial derivative of the distance function with respect 
-to distance should be negative, $∂wij/∂dij<0$
+to distance should be negative, $\partial{}w_{ij}/\partial{}d_{ij}<0$
 .
 
-Commonly used distance functions are the inverse, with $w_{ij}=1/d_{ij}^α$(and α as a parameter), and the negative exponential, with $w_{ij}=e^{−βd_{ij}}$(and β as a parameter). The functions are often 
-combined with a distance cut-off criterion, such that $w_{ij}=0$ for d_{ij}>δ.
+Commonly used distance functions are the inverse, with $w_{ij}=1/d_{ij}^\alpha$(and $\alpha$ as a parameter), and the negative exponential, with $w_{ij}=e^{-\beta d_{ij}}$(and $\beta$ as a parameter). The functions are often 
+combined with a distance cut-off criterion, such that $w_{ij}=0$ for $d_{ij}>\delta$.
 
 In practice, the parameters are seldom estimated, but typically set to a fixed value, such as 
-α=1 for inverse distance weights ($1/d_{ij}$), and α=2 for gravity weights ($1/d_{ij}^2$). By convention, 
+$\alpha=1$ for inverse distance weights ($1/d_{ij}$), and $\alpha=2$ for gravity weights ($1/d_{ij}^2$). By convention, 
 the diagonal elements of the spatial weights are set to zero and not computed. Plugging in a 
 value of $d_{ii}=0$ would yield division by zero for inverse distance weights.
 
@@ -140,13 +154,12 @@ To create our inverse disatnce weights, we follow the steps involved with creati
 distance-band neighbors along with a few additional steps to calculate and assign the 
 weight values. Here we will go over a basic outline of the steps to create the inverse
 distance weights. First we calculate our distance-band neighbors. Next we get the 
-distances between each neighbors stored in the same format as the neighbors. Then
+distances between each neighbors stored in the same format as the neighbors data structure. Then
 we apply a function to each element in this structure, giving us the inverse distances.
 Finally we assign these as the weight values when converting from class **nb** to
 class **listw**.
 
-
-Here we begin by putting our coordinates in a separate matrix from **clev.points**
+We begin by putting our coordinates in a separate matrix from **clev.points**
 ```{r}
 coords <- cbind(clev.points$x,clev.points$y)
 ```
@@ -214,16 +227,16 @@ length(invd1)
 
 We check the first element of the resulting data structure to make sure it is in line with 
 the neighbors list structure. This is important because we will need the structures to 
-correspond in order to assign the inverse disatnces as the weight values when converting from
+correspond in order to assign the inverse distances as the weight values when converting from
 a neighbors list or class **nb** to a weight structure: class **listw**.
 ```{r}
 invd1[1]
 ```
-A key insight from the first element of the inverse distance structure is that the values 
-very small, or too close to zero. The units of distance for our dataset is in feet. This
+A key insight from the first element of the inverse distance structure is that the values are
+very small, or too close to zero. The unit of distance for our dataset is in feet. This
 means distance values between points can be quite large and result in small inverses. To 
-correst for this scale dependence, we can rescale the distances by repeating the inverse
-calculates, while adjusting the scale. We can make this adjustment by dividing **x** in
+correct for this scale dependence, we can rescale the distances by repeating the inverse
+calculations, while adjusting the scale. We can make this adjustment by dividing **x** in
 our function by 100, before calculating the inverses. 
 
 ```{r}
@@ -232,7 +245,7 @@ invd1a[1]
 ```
 
 
-Now that we have properly scaled inverse disatnces, we can assign them as weight values. 
+Now that we have properly scaled inverse distances, we can assign them as weight values. 
 This is done in the conversion function `nb2listw`. To assign the weights, we use the
 `glist =` argument. For this to work we also have to specify `style = "B"`, otherwise the
 `listw` function will use the default row standardization.
@@ -241,7 +254,7 @@ invd.weights <- nb2listw(nb.dist.band,glist = invd1a,style = "B")
 ```
 
 
-Here we take a cursory look at our weights with `summary` to basic imformation and statistics.
+Here we take a cursory look at our weights with `summary` to get basic imformation and statistics.
 
 ```{r}
 summary(invd.weights)
@@ -254,7 +267,7 @@ invd.weights$weights[1]
 
 
 
-#### Properties of inverse distance weights
+#### Properties of inverse distance weights {-}
 
 
 Since the properties only pertain to the connectivity structure implied by the weights,
@@ -271,7 +284,7 @@ same as before as well.
 
 
 
-#### Using non-geographical coordinates
+#### Using non-geographical coordinates {-}
 
 So far we have been using x and y coordinates for the inputs into distance calculates, but
 it is important to note that you can use any two variables contained in the dataset in place
@@ -281,7 +294,7 @@ used as the distance metric. We don't do this in this notebook, as the only mean
 variable in our dataset is housing prices.
 
 
-### Creating inverse distance functions for k-nearest neighbors
+### Creating inverse distance functions for k-nearest neighbors {-}
 
 We can compute inverse distance weights for k-nearest neighbors using the same approach
 as for distance-band neighbors. The only difference being that we don't have to calculate
@@ -327,10 +340,10 @@ invd.weights.knn$weights[1]
 
 
 
-## Kernal Weights
+## Kernal Weights {-}
 
 
-### Concepts
+### Concepts {-}
 
 Kernel weights are used in non-parametric approaches to model spatial covariance, such
 as in the HAC method for heteroskedastic and spatial autocorrelation consistent
@@ -375,7 +388,7 @@ farthest apart.
 
 
 
-### Creating Kernal weights
+### Creating Kernal weights {-}
 
 In creating kernal weights, we will cover two important options: the fixed bandwidth
 and the variable bandwidth. For the fixed bandwidth, we will be using distance-band
@@ -422,7 +435,7 @@ When checking the first row of the distances, we see a 0. This is the distance v
 for the diagonal element.
 
 
-#### Uniform
+#### Uniform {-}
 
 $K(z) = 1/2$ for $\mid z \mid < 1$
 
@@ -444,7 +457,7 @@ uniform.weights <- nb2listw(kernal.nb,glist = uniform,style = "B")
 ```
 
 
-#### Triangular
+#### Triangular {-}
 
 $K(z) = (1 - \mid z \mid )$ for $\mid z \mid < 1$
 
@@ -461,7 +474,7 @@ triang.weights <- nb2listw(kernal.nb,glist = triangular,style = "B")
 triang.weights$weights[1]
 ```
 
-#### Epanechnikov
+#### Epanechnikov {-}
 
 Quadratic or Epanechnikov, $K(z) = (3/4)(1 - z^2)$ for $\mid z \mid < 1$
 
@@ -476,7 +489,7 @@ epan.weights$weights[1]
 ```
 
 
-#### Quartic
+#### Quartic {-}
 
 $K(z) = (15/16)(1 - z^2)^2$ for $\mid z \mid < 1$
 
@@ -490,7 +503,7 @@ quartic.weights <- nb2listw(kernal.nb,glist = quartic,style = "B")
 quartic.weights$weights[1]
 ```
 
-#### Gaussian
+#### Gaussian {-}
 
 $K(z) = (2\pi)^{1/2}\exp(-z^2/2)$
 
@@ -510,7 +523,7 @@ gaussian.weights$weights[1]
 
 
 
-#### Variable bandwidth
+#### Variable bandwidth {-}
 
 Now that we have covered the 5 types of kernal weight function, implemented by GeoDa, we 
 will work to emulate the example from the corresponding GeoDa workbook in R. The options
@@ -608,7 +621,7 @@ With our new weights structure all the neighbors included have a nonzero weight.
 
 
 
-#### Treatment of diagonal elements
+#### Treatment of diagonal elements {-}
 
 As of now, we have just been applying the kernal function to the diagonal elements. The
 default in GeoDa is to assign a value of 1 to these elements. For us to do this, we need
@@ -641,20 +654,18 @@ need one extra step to accomplish the conversion. We first need to convert **B**
 
 ```{r}
 var.band.w2 <- mat2listw(as(B, "dgTMatrix"))
-
-
 str(var.band.w2$weights)
 ```
 
 
 
-#### Properties of kernal weights
+#### Properties of kernal weights {-}
 
 The connectivity plot will be the same for kernal weights as the 6th nearest neighbors structure.
 This is because they have the same neighbors list and connectivity ignores the weights themselves.
 While our connectivity plot will be the same, the histogram and summary stats will be different
 from the ones in GeoDa. This is because we have to add the diagonal elements to the neighbors 
-structure when moving forward. This is seen below when our 6th-nearest neighbors has an average 
+structure before moving forward. This is seen below when our 6th-nearest neighbors has an average 
 of 7 links. To get a more accurate view of the connectivity properties, the structure will have to 
 be examined before the diagonal elements are added.
 

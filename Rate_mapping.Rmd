@@ -1,15 +1,19 @@
 ---
 title: "Rate Mapping"
-subtitle: "R Notes"
-author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
+author: Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial
+  Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]
 date: "04/22/2019"
 output:
   html_document:
+    css: tutor.css
     fig_caption: yes
     self_contained: no
     toc: yes
     toc_depth: 4
-    css: tutor.css
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+subtitle: R Notes
 ---
 
 ```{r setup, include=FALSE}
