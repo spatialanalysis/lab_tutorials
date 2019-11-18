@@ -24,17 +24,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction {-}
 
-This notebook cover the functionality of the [Rate Mapping](https://geodacenter.github.io/workbook/3b_rates/lab3b.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.
+This notebook covers the functionality of the [Rate Mapping](https://geodacenter.github.io/workbook/3b_rates/lab3b.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.
 
 The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments
 on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).
 
 For this notebook, we use Cleveland house price data. Our goal in this lab is show how to assign spatial weights based on different distance functions.
 
-
-```{r}
-
-```
 ### Objectives
 
 After completing the notebook, you should know how to carry out the following tasks:
@@ -65,7 +61,7 @@ and a comprehensive list of options, please consult the
 
 - **Base R**: `install.packages`, `library`, `setwd`, `class`, `str`, 
 
-- **sf**: `st_read`, `plot`, `st_crs`, `st_set_geometry`
+- **sf**: `plot`, `st_crs`, `st_set_geometry`
 
 - **tmap**: `tm_shape`, `tm_fill`, `tm_borders`, `tm_layout`, `tmap_mode`, `tm_basemap`
 
@@ -114,13 +110,11 @@ typically have access to a count of events, such as the number of cancer cases (
 spatially extensive variable), as well as to the relevant population at risk, which
 allows for the calculation of a rate (a spatially intensive variable).
 
-
-
 #### Setting up the Boxmap option
 
 
 Throughout this notebook, we will be using the `boxmap` function, created in the 
-previous notebook: Basic Mapping. We won't into depth on how the function was created,
+previous notebook: Basic Mapping. We won't go into depth on how the function was created,
 but for this information, check out the Basic Mapping notebook chapter.
 
 ```{r}
@@ -198,17 +192,6 @@ boxmap <- function(vnam,df,legtitle=NA,mtitle="Box Map",mult=1.5){
 
 
 
-
-
-
-
-We start our discussion of rate maps by illustrating something we should not be
-doing. This pertains to the important difference between a spatially extensive and a
-spatially intensive variable. In many applications that use public health data, we
-typically have access to a count of events, such as the number of cancer cases (a
-spatially extensive variable), as well as to the relevant population at risk, which
-allows for the calculation of a rate (a spatially intensive variable).
-
 ```{r}
 tmap_mode("view")
 boxmap("LFW68", ohio_lung) +
@@ -279,12 +262,13 @@ p2 <- boxmap("raw_rate", ohio_lung)
 p2
 ```
 
-With `tmap_arrange`, we can get a side by side comparason of the two maps.
+With `tmap_arrange`, we can get a side by side comparison of the two maps.
 ```{r}
 tmap_arrange(p1,p2,ncol = 2)
 ```
-With the adjustment for populations, the map becomes more meaningful than just
-the raw counts. We see different upper outliers and a new spatial distribution after
+
+With the adjustment for population, the map becomes more meaningful than just
+the raw count data. We see different upper outliers and a new spatial distribution after
 this adjustment.
 
 
@@ -555,54 +539,3 @@ data table), their EB smoothed rates are quite different (lower) from the origin
 contrast, Hamilton county is one of the most populous counties (it contains the city of
 Cincinnati), so that its raw rate is barely adjusted. Because of that, it percolates to the
 top of the distribution and becomes an outlier.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
