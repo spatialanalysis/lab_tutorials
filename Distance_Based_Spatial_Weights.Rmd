@@ -47,7 +47,7 @@ After completing the notebook, you should know how to carry out the following ta
 
 - Construct contiguity weights for points and distance weights for polygons
 
-- Understand the use of great cirlce distance
+- Understand the use of great circle distance
 
 #### R Packages used {-}
 
@@ -60,9 +60,9 @@ and convert from **sp**,
 
 - **ggplot2**: To make connectivity histograms
 
-- **deldir**: To make thiessen polygons.
+- **deldir**: To make Thiessen polygons.
 
-- **sp**: Used to get an intermediate data structure to get the thiessen polygons to **sf** class
+- **sp**: Used to get an intermediate data structure to get the Thiessen polygons to **sf** class
 
 _ **purr**:  Used for a mapping function
 
@@ -264,7 +264,7 @@ k1 <- knn2nb(knn1)
 ```
 
 
-Computing the critcal threshold will require a few functions, now that we have a neighbors
+Computing the critical threshold will require a few functions, now that we have a neighbors
 list. First step is to get the distances between each point and it's closest neighbor.
 This can be done with the `nbdists`. With these distances, we just need to find the 
 maximum. For this we use the `max` command. However, we cannot do this with lists, so we must 
@@ -280,7 +280,7 @@ critical.threshold
 With our critical threshold, we have a baseline value to work with for our distance-band
 neighbors. To make this neighbor's list we use `dnearneigh` from the **spdep** package.
 The parameters necessary are the coordinates, the lower distance bound, and the upper
-distance bound. We enter these in the the above order. Another impoartant parameter is
+distance bound. We enter these in the the above order. Another important parameter is
 the `longlat`. This is used for point data in longitude and latitude form. It is
 necessary to use this to get great circle distance instead of euclidean for accuracy
 purposes.
@@ -298,7 +298,7 @@ connectivity histogram, and summary statistics.
 #### Weights summary {-}
 
 We can use the base R `summary` command to get a comprehensive look at our distance-band
-weights object. This will give us alot of useful information, that we cannot get with
+weights object. This will give us a lot of useful information, that we cannot get with
 the `str` command.
 ```{r}
 summary(nb.dist.band)
@@ -321,7 +321,7 @@ Once, we have our cardinality, we can make a histogram to see the distribution
 of the number of neighbors. we will do this with **ggplot2**, though base R also has a 
 built in histogram function. To make our histogram, we start with the `ggplot` function,
 then add a histogram layer. We add the additional layer with the `+` operator. Next,
-we use `geom_histogram` to add our histogram. The only paramter we need is an `aes`.
+we use `geom_histogram` to add our histogram. The only parameter we need is an `aes`.
 We use the `aes` function and enter our cardinality(**dist.band.card**) as the variable
 for the x-axis. Beyond this, we change the x-axis label to be more informative with 
 the `xlab` function.
@@ -354,7 +354,7 @@ of points.
 
 So far, we have used the default cut-off value for the distance band. However, the
 function is flexible enough that we can type in any value for the cut-off, or use the
-moveable button to drag to any value larger than the minimum. Sometimes, theoretical
+movable button to drag to any value larger than the minimum. Sometimes, theoretical
 or policy considerations suggest a specific value for the cut-off that may be smaller
 than the max-min distance.
 
@@ -434,7 +434,7 @@ problem of isolates are k-nearest neighbor weights. In contrast to the distance 
 this is not a symmetric relation. The fact that B is the nearest neighbor to A does
 not imply that A is the nearest neighbor to B. There may be another point C that is
 actually closer to B than A. This asymmetry can cause problems in analysis that depend
-on the instrinsic symmetry of the weights (e.g., some algorithms to estimate spatial
+on the intrinsic symmetry of the weights (e.g., some algorithms to estimate spatial
 regression models). One solution is to replace the original weights matrix **W** by
 (**W**+**W′**)/2, which is symmetric by construction. GeoDa currently does not
 implement this approach.
@@ -524,15 +524,15 @@ neighbors. From this, the most compact polygon is created.
 #### Creating Thiessen polygons from a point layer {-}
 
 
-To create the thiessen polygons, we will use the **deldir** package, then will
+To create the Thiessen polygons, we will use the **deldir** package, then will
 convert them to a data form that we can use for the contiguity weights. We won't go into
 too much detail about the **deldir** package, other than how to create the polygons
 and convert them to **sp**, then **sf**. For more information on the **deldir**, visit
 [deldir documentation](https://cran.r-project.org/web/packages/deldir/deldir.pdf).
 
-To create our thiessen polygons from the `deldir` function, we just need a vector 
+To create our Thiessen polygons from the `deldir` function, we just need a vector 
 with x coordinates and a vector with y coordinates. From there we can use the `plot`
-command to visualize these because here is a built in method for **deldir** thiessen polygons. To get a good visual of our polygons, we need a few extra paramters.
+command to visualize these because here is a built in method for **deldir** Thiessen polygons. To get a good visual of our polygons, we need a few extra parameters.
 These are: `wlines`, `wpoints`,  and `lty`. `wlines = "tess"` gets us the
 basic polygons. `wpoints = "none"` keeps points off the map. `lty = 1` specifies
 a solid line type.
@@ -606,23 +606,23 @@ queen.sgbp <- st_queen(vtess.sf)
 
 Now we will we start our conversion from class **sgbp** to **nb**. To do this,
 we need to change the class explicitly and take the precaution to represent 
-observations with no neighbours with the integer 0. Our data set doesn't have
-any observations without neighbours, but in ones with these, it will mess everything
+observations with no neighbors with the integer 0. Our data set doesn't have
+any observations without neighbors, but in ones with these, it will mess everything
 up, if not dealt with. 
 
 We start with the `function` operator. The input for our function will be an object
 of class **sgbp**, denoted by **x**. We store the attributes in **attrs**, as we will
-need to reapply them later. Now we deal we observation with no neighbours. We will
+need to reapply them later. Now we deal we observation with no neighbors. We will
 use `lapply`, which applies a function to each element of a list or vector. As for the
 input function, we make one that checks the length of an element of our list for
-0(meaning no neighbours) and returns 0 if the element is empty and the element
+0(meaning no neighbors) and returns 0 if the element is empty and the element
 otherwise. This can be a bit confusing, for more information on `lapply`, check out 
-[lapply documentaion](https://www.rdocumentation.org/packages/base/versions/3.5.1/topics/lapply)
+[lapply documentation](https://www.rdocumentation.org/packages/base/versions/3.5.1/topics/lapply)
 
 From here we will have dealt with observations with no neighbors, but will need to 
 reapply our attributes to the resulting structure from the `lapply` function. This 
 is done by calling the `attributes` function and assigning the stored attributes.
-The final step is to explictly change the class to **nb** by using the `class` function
+The final step is to explicitly change the class to **nb** by using the `class` function
 and assigning `"nb"`. We then return our object **x**.
 
 ```{r}
@@ -642,8 +642,8 @@ queen.nb <- as.nb.sgbp(queen.sgbp)
 ```
 
 
-We can take a look at the distrubtion of the number of neighbors in our queen contiguity
-for the thiessen polygons with a connectivity histogram. The steps are the same as earlier
+We can take a look at the distribution of the number of neighbors in our queen contiguity
+for the Thiessen polygons with a connectivity histogram. The steps are the same as earlier
 for all the other connectivity histograms
 
 
@@ -681,7 +681,7 @@ plot(queen.nb,coords, lwd=.2, col="blue", cex = .5)
 
 
 As we can do contiguity-based weights for point data, we use distance-based weights 
-for polygons. To illustrate this, we will use U.S homocide data from a previous
+for polygons. To illustrate this, we will use U.S homicide data from a previous
 notebook(the contiguity-based weights notebook).
 
 To implement this we start by computing shape center coordinates for the
@@ -698,7 +698,7 @@ distance-band neighbors.
 
 
 To get the data, we will use the geodaData package again. 
-Additionally, the data for this notebook can be found at [US Homocides](https://geodacenter.github.io/data-and-lab/ncovr/).
+Additionally, the data for this notebook can be found at [US Homicides](https://geodacenter.github.io/data-and-lab/ncovr/).
 If the data is downloaded directly, then you must put it in your working directory
 and load it with `st_read`.
 
@@ -731,7 +731,7 @@ We do the same for latitude, using `[[2]]` to get the latitude values.
 longitude <- map_dbl(us.bound$geometry, ~st_centroid(.x)[[2]])
 ```
 
-Now we bind the coordinates together with `cbind`, so we can enter them as paramters
+Now we bind the coordinates together with `cbind`, so we can enter them as parameters
 in the neighbors functions.
 
 ```{r}
@@ -743,7 +743,7 @@ center.coords <- cbind(latitude,longitude)
 
 ### Computing the critical threshold {-}
 
-To get the critical threshold, we folllow the same steps as earlier, with one difference.
+To get the critical threshold, we follow the same steps as earlier, with one difference.
 This time we will set `longlat = TRUE` in three of the functions. This is important because our data is not
 projected and to get accurate results we must work with great circle distance.
 
@@ -779,7 +779,7 @@ nb.dist.band.poly <- dnearneigh(center.coords, 0, critical.threshold.poly, longl
 ```
 
 
-Once we have caluculated the distance-band weights, we can assess the distribution of the number of 
+Once we have calculated the distance-band weights, we can assess the distribution of the number of 
 neighbors through a connectivity histogram, following the same procedure used through the notebook.
 
 ```{r}

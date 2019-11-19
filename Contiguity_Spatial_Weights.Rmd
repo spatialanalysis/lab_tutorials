@@ -20,12 +20,12 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction {-}
 
-This notebook cover the functionality of the [Contiguity-Based Spatial Weights](https://geodacenter.github.io/workbook/4a_contig_weights/lab4a.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.
+This notebook covers the functionality of the [Contiguity-Based Spatial Weights](https://geodacenter.github.io/workbook/4a_contig_weights/lab4a.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.
 
 The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments
 on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).
 
-For this notebook, we use U.S. Homocide data. Our goal in this lab is show how to implement contiguity based spatial weights 
+For this notebook, we use U.S. Homicide data. Our goal in this lab is show how to implement contiguity based spatial weights 
 
 
 ```{r}
@@ -67,7 +67,7 @@ and a comprehensive list of options, please consult the
 
 - **Base R**: `install.packages`, `library`, `setwd`, `class`, `str`, `lapply`, `attributes`, `summary`, `head`, `seq`
 
-- **sf**: `st_read`, `plot`, `st_centroid`, `st_relate`
+- **sf**: `plot`, `st_centroid`, `st_relate`
 
 - **purrr**: `map_dbl`
 
@@ -131,7 +131,7 @@ the polygons. This is implemented through the spatial weights functionality in
 GeoDa. We will do this with **sf** and **spdep** libraries.
 
 We will create our neighbors using **sf** first, as the **spdep** library doesn't 
-allow us to create neighbors lists directy as with the older **sp** library. 
+allow us to create neighbors lists directly as with the older **sp** library. 
 When we create neighbors in **sf** we will get a class of **sgbp**(sparse geometry binary predicate), which is similar
 to the standard **nb** class used in **spdep**, but is not quite compatible. We will
 have to convert from **sgbp** to **nb**, which is not too difficult, as the classes are
@@ -210,12 +210,12 @@ use `lapply`, which applies a function to each element of a list or vector. As f
 input function, we make one that checks the length of an element of our list for
 0(meaning no neighbors) and returns 0 if the element is empty and the element
 otherwise. This can be a bit confusing, for more information on `lapply`, check out 
-[lapply documentaion](https://www.rdocumentation.org/packages/base/versions/3.5.1/topics/lapply)
+[lapply documentation](https://www.rdocumentation.org/packages/base/versions/3.5.1/topics/lapply)
 
 From here we will have dealt with observation with no neighbors, but will need to 
 reapply our attributes to the resulting structure from the `lapply` function. This 
 is done by calling the `attributes` function and assigning our stored attributes.
-The final step is to explictly change the class to **nb** by using the `class` function
+The final step is to explicitly change the class to **nb** by using the `class` function
 and assigning `"nb"`. We then return our object **x**.
 
 
@@ -240,7 +240,7 @@ sf.nb.rook <- as.nb.sgbp(sf.sgbp.rook)
 
 
 Now we take a comprehensive look at our resulting **nb** object with the `str` command.
-It is essentially the same as before, just the class now says **nb** instead of **sgbp**. This makes our earlier steps seem a bit unnecesssary and overcomplicated, 
+It is essentially the same as before, just the class now says **nb** instead of **sgbp**. This makes our earlier steps seem a bit unnecessary and overcomplicated, 
 but they are important, as all datasets, will not have the same circumstances as 
 this one, and it is important for these things to work across the board.
 
@@ -249,7 +249,7 @@ str(sf.nb.rook)
 ```
 
 Now that we are converted to **nb**, we can use the `summary` command to give us more
-useful information about the neighbours list.
+useful information about the neighbors list.
 
 ```{r}
 summary(sf.nb.rook)
@@ -294,7 +294,7 @@ st_queen <- function(a, b = a) st_relate(a, b, pattern = "F***T****")
 ```
 
 
-Now we use our `st_queen` function to get another **sgbp** neighbour list
+Now we use our `st_queen` function to get another **sgbp** neighbor list
 
 ```{r}
 sf.sgbp.queen <- st_queen(us.bound)
@@ -347,7 +347,7 @@ selection.
 str(second.order.queen[[2]])
 ```
 
-We store the second order neighbours in **sf.nb.queen2** to make things simpler
+We store the second order neighbors in **sf.nb.queen2** to make things simpler
 for our visuals.
 
 ```{r}
@@ -359,7 +359,7 @@ sf.nb.queen2 <- second.order.queen[[2]]
 
 Now if we want to include both 1st and 2nd order neighbors in our visualizations, we
 need the `nblag_cumul` function. This will give us an **nb** object with both 1st and 2nd order neighbors, instead of separating them as in the result of `nblag`. To use this
-function, we need the resulting object from the `nblag` function. `nblag_cumul` combines the two sepatae **nb** objects from the `nblag` function into one.
+function, we need the resulting object from the `nblag` function. `nblag_cumul` combines the two separate **nb** objects from the `nblag` function into one.
 
 
 ```{r}
@@ -436,9 +436,9 @@ head(coords)
 
 #### Rook Connectivity Graphs {-}
 
-Now that we have coordinates for each of our observations, we can plot the neighbours
+Now that we have coordinates for each of our observations, we can plot the neighbors
 through a connectivity graph. We just need the basic `plot` function and to enter
-our neighbour list as the first parameter, then our coordinates as the second. We
+our neighbor list as the first parameter, then our coordinates as the second. We
 add extra customizations, so we can actually see what is going on in the graph.
 We use `lwd = .2` to make the line length less thick, we set the `col ="blue"`, and 
 finally `cex = .5` to make the point symbols smaller. The default options make the
@@ -495,7 +495,7 @@ plot(second.order.queen.cumul, coords, lwd=.2, col="blue", cex = .5)
 
 A connectivity histogram shows the number of observations for each 
 cardinality of neighbors(how many observations have the same number of neighbors).
-We first have to get the cardianlity before we can make the histograms. We can
+We first have to get the cardinality before we can make the histograms. We can
 do this by using the `card` function from the **spdep** package. This will give
 us a vector of 3085 observations with each one containing the corresponding
 number of neighbors from the input neighbors list.
@@ -533,7 +533,7 @@ ggplot() +
 
 Here we will add a few customizations to make the plot nicer. The most important is with
 the `breaks =` parameter, as the bars are spaced out kind of weirdly in our opening plot.
-We can avoid manuelly typing in the breaks by using the `seq` function, which will give us
+We can avoid manually typing in the breaks by using the `seq` function, which will give us
 a list of numbers 0 to 13, incrementing by 1 each time. We specify the range in the first
 two arguments and then use `by =` to pick the number to increment by. In our case, 1 makes
 the most sense as you cannot have half of a neighbor.
@@ -541,7 +541,7 @@ the most sense as you cannot have half of a neighbor.
 ```{r}
 ggplot() +
   geom_histogram(aes(x=rook.card), breaks = seq(0,13, by = 1)) +
-  xlab("number of neighbours")
+  xlab("number of neighbors")
 ```
 
 
@@ -581,7 +581,7 @@ in a header for the file. All we have to do is set `oldstyle =` to FALSE and
 enter names for `shpfile` and `ind` parameters.
 
 ```{r}
-write.nb.gal(sf.nb.rook, "rook_contiguity_new.gal", oldstyle = FALSE,shpfile ="NAT.shp", ind ="region id")
+write.nb.gal(sf.nb.rook, "rook_contiguity_new.gal", oldstyle = FALSE, shpfile ="NAT.shp", ind ="region id")
 ```
 
 

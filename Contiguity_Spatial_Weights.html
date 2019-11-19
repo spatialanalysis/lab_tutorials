@@ -7,6 +7,7 @@
 <meta charset="utf-8" />
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
 <meta name="author" content="Luc Anselin and Grant Morrison" />
@@ -72,9 +73,7 @@ h6 {
 
 <link rel="stylesheet" href="tutor.css" type="text/css" />
 
-</head>
 
-<body>
 
 <style type = "text/css">
 .main-container {
@@ -88,7 +87,6 @@ code {
 }
 img {
   max-width:100%;
-  height: auto;
 }
 .tabbed-pane {
   padding-top: 12px;
@@ -99,22 +97,80 @@ img {
 button.code-folding-btn:focus {
   outline: none;
 }
+summary {
+  display: list-item;
+}
 </style>
 
 
 
-<div class="container-fluid main-container">
-
 <!-- tabsets -->
-<script>
-$(document).ready(function () {
-  window.buildTabsets("TOC");
-});
-</script>
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
 
 <!-- code folding -->
 
 
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
 
 
 
@@ -124,9 +180,9 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">Contiguity-Based Spatial Weights</h1>
-<h3 class="subtitle"><em>R Notes</em></h3>
-<h4 class="author"><em>Luc Anselin and Grant Morrison<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a></em></h4>
-<h4 class="date"><em>08/08/2018</em></h4>
+<h3 class="subtitle">R Notes</h3>
+<h4 class="author">Luc Anselin and Grant Morrison<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></h4>
+<h4 class="date">08/08/2018</h4>
 
 </div>
 
@@ -165,9 +221,9 @@ $(document).ready(function () {
 <p><br></p>
 <div id="introduction" class="section level2 unnumbered">
 <h2>Introduction</h2>
-<p>This notebook cover the functionality of the <a href="https://geodacenter.github.io/workbook/4a_contig_weights/lab4a.html">Contiguity-Based Spatial Weights</a> section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.</p>
+<p>This notebook covers the functionality of the <a href="https://geodacenter.github.io/workbook/4a_contig_weights/lab4a.html">Contiguity-Based Spatial Weights</a> section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.</p>
 <p>The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).</p>
-<p>For this notebook, we use U.S. Homocide data. Our goal in this lab is show how to implement contiguity based spatial weights</p>
+<p>For this notebook, we use U.S. Homicide data. Our goal in this lab is show how to implement contiguity based spatial weights</p>
 <div id="objectives" class="section level3 unnumbered">
 <h3>Objectives</h3>
 <p>After completing the notebook, you should know how to carry out the following tasks:</p>
@@ -194,7 +250,7 @@ $(document).ready(function () {
 <p>Below follows a list of the commands used in this notebook. For further details and a comprehensive list of options, please consult the <a href="https://www.rdocumentation.org">R documentation</a>.</p>
 <ul>
 <li><p><strong>Base R</strong>: <code>install.packages</code>, <code>library</code>, <code>setwd</code>, <code>class</code>, <code>str</code>, <code>lapply</code>, <code>attributes</code>, <code>summary</code>, <code>head</code>, <code>seq</code></p></li>
-<li><p><strong>sf</strong>: <code>st_read</code>, <code>plot</code>, <code>st_centroid</code>, <code>st_relate</code></p></li>
+<li><p><strong>sf</strong>: <code>plot</code>, <code>st_centroid</code>, <code>st_relate</code></p></li>
 <li><p><strong>purrr</strong>: <code>map_dbl</code></p></li>
 <li><p><strong>ggplot2</strong>: <code>ggplot</code>, <code>geom_histogram</code>, <code>aes</code>, <code>xlab</code></p></li>
 <li><p><strong>spdep</strong>: <code>write.nb.gal</code>, <code>nblag</code>, <code>nblag_cumul</code>, <code>card</code></p></li>
@@ -204,22 +260,26 @@ $(document).ready(function () {
 </div>
 <div id="preliminaries" class="section level2 unnumbered">
 <h2>Preliminaries</h2>
-<p>Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not actually be saving any files.<a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a></p>
+<p>Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not actually be saving any files.<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a></p>
 <div id="load-packages" class="section level3 unnumbered">
 <h3>Load packages</h3>
-<p>First, we load all the required packages using the <code>library</code> command. If you don’t have some of these in your system, make sure to install them first as well as their dependencies.<a href="#fn3" class="footnoteRef" id="fnref3"><sup>3</sup></a> You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.</p>
+<p>First, we load all the required packages using the <code>library</code> command. If you don’t have some of these in your system, make sure to install them first as well as their dependencies.<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a> You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.</p>
 <pre class="r"><code>library(sf)</code></pre>
-<pre><code>## Linking to GEOS 3.6.1, GDAL 2.1.3, PROJ 4.9.3</code></pre>
+<pre><code>## Linking to GEOS 3.7.2, GDAL 2.4.2, PROJ 5.2.0</code></pre>
 <pre class="r"><code>library(spdep)</code></pre>
 <pre><code>## Loading required package: sp</code></pre>
-<pre><code>## Loading required package: Matrix</code></pre>
 <pre><code>## Loading required package: spData</code></pre>
 <pre><code>## To access larger datasets in this package, install the spDataLarge
 ## package with: `install.packages(&#39;spDataLarge&#39;,
 ## repos=&#39;https://nowosad.github.io/drat/&#39;, type=&#39;source&#39;)`</code></pre>
 <pre class="r"><code>library(purrr)
-library(ggplot2)
-library(geodaData)</code></pre>
+library(ggplot2)</code></pre>
+<pre><code>## Registered S3 methods overwritten by &#39;ggplot2&#39;:
+##   method         from 
+##   [.quosures     rlang
+##   c.quosures     rlang
+##   print.quosures rlang</code></pre>
+<pre class="r"><code>library(geodaData)</code></pre>
 </div>
 <div id="geodadata" class="section level3 unnumbered">
 <h3>geodaData</h3>
@@ -232,7 +292,7 @@ library(geodaData)</code></pre>
 <p>Contiguity means that two spatial units share a common border of non-zero length. Operationally, we can further distinguish between a rook and a queen criterion of contiguity, in analogy to the moves allowed for the such-named pieces on a chess board.</p>
 <p>The rook criterion defines neighbors by the existence of a common edge between two spatial units. The queen criterion is somewhat more encompassing and defines neighbors as spatial units sharing a common edge or a common vertex.4 Therefore, the number of neighbors according to the queen criterion will always be at least as large as for the rook criterion.</p>
 <p>In practice, the construction of the spatial weights from the geometry of the data cannot be done by visual inspection or manual calculation, except in the most trivial of situations. To assess whether two polygons are contiguous requires the use of explicit spatial data structures to deal with the location and arrangement of the polygons. This is implemented through the spatial weights functionality in GeoDa. We will do this with <strong>sf</strong> and <strong>spdep</strong> libraries.</p>
-<p>We will create our neighbors using <strong>sf</strong> first, as the <strong>spdep</strong> library doesn’t allow us to create neighbors lists directy as with the older <strong>sp</strong> library. When we create neighbors in <strong>sf</strong> we will get a class of <strong>sgbp</strong>(sparse geometry binary predicate), which is similar to the standard <strong>nb</strong> class used in <strong>spdep</strong>, but is not quite compatible. We will have to convert from <strong>sgbp</strong> to <strong>nb</strong>, which is not too difficult, as the classes are very similar.</p>
+<p>We will create our neighbors using <strong>sf</strong> first, as the <strong>spdep</strong> library doesn’t allow us to create neighbors lists directly as with the older <strong>sp</strong> library. When we create neighbors in <strong>sf</strong> we will get a class of <strong>sgbp</strong>(sparse geometry binary predicate), which is similar to the standard <strong>nb</strong> class used in <strong>spdep</strong>, but is not quite compatible. We will have to convert from <strong>sgbp</strong> to <strong>nb</strong>, which is not too difficult, as the classes are very similar.</p>
 <p>It is important to keep in mind that the spatial weights are critically dependent on the quality of the spatial data source (GIS) from which they are constructed. Problems with the topology in the GIS (e.g., slivers) will result in inaccuracies for the neighbor relations included in the spatial weights. In practice, it is essential to check the characteristics of the weights for any evidence of problems. When problems are detected, the solution is to go back to the GIS and fix or clean the topology of the data set. Editing of spatial layers is not implemented in GeoDa, but this is a routine operation in most GIS software.</p>
 <div id="rook-contiguity" class="section level3 unnumbered">
 <h3>Rook Contiguity</h3>
@@ -351,8 +411,8 @@ library(geodaData)</code></pre>
 ##  - attr(*, &quot;ncol&quot;)= int 3085
 ##  - attr(*, &quot;class&quot;)= chr &quot;sgbp&quot;</code></pre>
 <p>Now we will start our conversion from class <strong>sgbp</strong> to <strong>nb</strong>. To do this, we need to change the class explicitly, and take the precaution to represent observations with no neighbors with the integer 0. Our data set doesn’t have any observations without neighbors, but in ones with these, it will mess everything up, if not dealt with.</p>
-<p>We start with the <code>function</code> operator. The input for our function will be an object of class <strong>sgbp</strong>, denoted by <strong>x</strong>. We store the attributes in <strong>attrs</strong>, as we will need to reapply them later. Now we deal we observation with no neighbors. We will use <code>lapply</code>, which applies a function to each element of a list or vector. As for the input function, we make one that checks the length of an element of our list for 0(meaning no neighbors) and returns 0 if the element is empty and the element otherwise. This can be a bit confusing, for more information on <code>lapply</code>, check out <a href="https://www.rdocumentation.org/packages/base/versions/3.5.1/topics/lapply">lapply documentaion</a></p>
-<p>From here we will have dealt with observation with no neighbors, but will need to reapply our attributes to the resulting structure from the <code>lapply</code> function. This is done by calling the <code>attributes</code> function and assigning our stored attributes. The final step is to explictly change the class to <strong>nb</strong> by using the <code>class</code> function and assigning <code>&quot;nb&quot;</code>. We then return our object <strong>x</strong>.</p>
+<p>We start with the <code>function</code> operator. The input for our function will be an object of class <strong>sgbp</strong>, denoted by <strong>x</strong>. We store the attributes in <strong>attrs</strong>, as we will need to reapply them later. Now we deal we observation with no neighbors. We will use <code>lapply</code>, which applies a function to each element of a list or vector. As for the input function, we make one that checks the length of an element of our list for 0(meaning no neighbors) and returns 0 if the element is empty and the element otherwise. This can be a bit confusing, for more information on <code>lapply</code>, check out <a href="https://www.rdocumentation.org/packages/base/versions/3.5.1/topics/lapply">lapply documentation</a></p>
+<p>From here we will have dealt with observation with no neighbors, but will need to reapply our attributes to the resulting structure from the <code>lapply</code> function. This is done by calling the <code>attributes</code> function and assigning our stored attributes. The final step is to explicitly change the class to <strong>nb</strong> by using the <code>class</code> function and assigning <code>&quot;nb&quot;</code>. We then return our object <strong>x</strong>.</p>
 <pre class="r"><code>as.nb.sgbp &lt;- function(x, ...) {
   attrs &lt;- attributes(x)
   x &lt;- lapply(x, function(i) { if(length(i) == 0L) 0L else i } )
@@ -362,7 +422,7 @@ library(geodaData)</code></pre>
 }</code></pre>
 <p>Now we use the function we created to convert our <strong>sgbp</strong> object to <strong>nb</strong>.</p>
 <pre class="r"><code>sf.nb.rook &lt;- as.nb.sgbp(sf.sgbp.rook)</code></pre>
-<p>Now we take a comprehensive look at our resulting <strong>nb</strong> object with the <code>str</code> command. It is essentially the same as before, just the class now says <strong>nb</strong> instead of <strong>sgbp</strong>. This makes our earlier steps seem a bit unnecesssary and overcomplicated, but they are important, as all datasets, will not have the same circumstances as this one, and it is important for these things to work across the board.</p>
+<p>Now we take a comprehensive look at our resulting <strong>nb</strong> object with the <code>str</code> command. It is essentially the same as before, just the class now says <strong>nb</strong> instead of <strong>sgbp</strong>. This makes our earlier steps seem a bit unnecessary and overcomplicated, but they are important, as all datasets, will not have the same circumstances as this one, and it is important for these things to work across the board.</p>
 <pre class="r"><code>str(sf.nb.rook)</code></pre>
 <pre><code>## List of 3085
 ##  $ : int [1:3] 23 31 41
@@ -469,7 +529,7 @@ library(geodaData)</code></pre>
 ##  - attr(*, &quot;region.id&quot;)= chr [1:3085] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...
 ##  - attr(*, &quot;ncol&quot;)= int 3085
 ##  - attr(*, &quot;class&quot;)= chr &quot;nb&quot;</code></pre>
-<p>Now that we are converted to <strong>nb</strong>, we can use the <code>summary</code> command to give us more useful information about the neighbours list.</p>
+<p>Now that we are converted to <strong>nb</strong>, we can use the <code>summary</code> command to give us more useful information about the neighbors list.</p>
 <pre class="r"><code>summary(sf.nb.rook)</code></pre>
 <pre><code>## Neighbour list object:
 ## Number of regions: 3085 
@@ -496,7 +556,7 @@ library(geodaData)</code></pre>
 <p>We proceed in the same fashion to construct queen contiguity weights. The difference between the rook and queen criterion to determine neighbors is that the latter also includes common vertices. This makes the greatest difference for regular grids (square polygons), where the rook criterion will result in four neighbors (except for edge cases) and the queen criterion will yield eight. For irregular polygons (like most areal units encountered in practice), the differences will be slight. In order to deal with potential inaccuracies in the polygon file (such as rounding errors), using the queen criterion is recommended in practice. Hence it is also the default for contiguity weights.</p>
 <p>To make our queen contiguity weights, we make a function using <code>st_relate</code> and specifying a DE9-IM pattern. For queen contiguity, our pattern is <code>&quot;F***T****&quot;</code>. We we don’t really need to go into why the pattern is what it is for our purposes, but <a href="https://en.wikipedia.org/wiki/DE-9IM">DE9-IM</a> and <a href="https://www.rdocumentation.org/packages/sf/versions/0.6-3/topics/st_relate">st_relate documentation</a> can help explain this to a degree.</p>
 <pre class="r"><code>st_queen &lt;- function(a, b = a) st_relate(a, b, pattern = &quot;F***T****&quot;)</code></pre>
-<p>Now we use our <code>st_queen</code> function to get another <strong>sgbp</strong> neighbour list</p>
+<p>Now we use our <code>st_queen</code> function to get another <strong>sgbp</strong> neighbor list</p>
 <pre class="r"><code>sf.sgbp.queen &lt;- st_queen(us.bound)</code></pre>
 <pre><code>## although coordinates are longitude/latitude, st_relate_pattern assumes that they are planar</code></pre>
 <p>To convert to type <strong>nb</strong> we use <code>as.nb.sgbp</code>, which we created earlier.</p>
@@ -934,9 +994,9 @@ library(geodaData)</code></pre>
 ##  - attr(*, &quot;class&quot;)= chr &quot;nb&quot;
 ##  - attr(*, &quot;region.id&quot;)= chr [1:3085] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...
 ##  - attr(*, &quot;sym&quot;)= logi TRUE</code></pre>
-<p>We store the second order neighbours in <strong>sf.nb.queen2</strong> to make things simpler for our visuals.</p>
+<p>We store the second order neighbors in <strong>sf.nb.queen2</strong> to make things simpler for our visuals.</p>
 <pre class="r"><code>sf.nb.queen2 &lt;- second.order.queen[[2]]</code></pre>
-<p>Now if we want to include both 1st and 2nd order neighbors in our visualizations, we need the <code>nblag_cumul</code> function. This will give us an <strong>nb</strong> object with both 1st and 2nd order neighbors, instead of separating them as in the result of <code>nblag</code>. To use this function, we need the resulting object from the <code>nblag</code> function. <code>nblag_cumul</code> combines the two sepatae <strong>nb</strong> objects from the <code>nblag</code> function into one.</p>
+<p>Now if we want to include both 1st and 2nd order neighbors in our visualizations, we need the <code>nblag_cumul</code> function. This will give us an <strong>nb</strong> object with both 1st and 2nd order neighbors, instead of separating them as in the result of <code>nblag</code>. To use this function, we need the resulting object from the <code>nblag</code> function. <code>nblag_cumul</code> combines the two separate <strong>nb</strong> objects from the <code>nblag</code> function into one.</p>
 <pre class="r"><code>second.order.queen.cumul &lt;- nblag_cumul(second.order.queen)</code></pre>
 <p>Here we take another in depth look at result. We can see that, we now have one <strong>nb</strong> object with both 1st and 2nd order neighbors.</p>
 <pre class="r"><code>str(second.order.queen.cumul)</code></pre>
@@ -1071,7 +1131,7 @@ library(geodaData)</code></pre>
 </div>
 <div id="rook-connectivity-graphs" class="section level4 unnumbered">
 <h4>Rook Connectivity Graphs</h4>
-<p>Now that we have coordinates for each of our observations, we can plot the neighbours through a connectivity graph. We just need the basic <code>plot</code> function and to enter our neighbour list as the first parameter, then our coordinates as the second. We add extra customizations, so we can actually see what is going on in the graph. We use <code>lwd = .2</code> to make the line length less thick, we set the <code>col =&quot;blue&quot;</code>, and finally <code>cex = .5</code> to make the point symbols smaller. The default options make the graph near indecipherable, so it is important to add these extra parameters.</p>
+<p>Now that we have coordinates for each of our observations, we can plot the neighbors through a connectivity graph. We just need the basic <code>plot</code> function and to enter our neighbor list as the first parameter, then our coordinates as the second. We add extra customizations, so we can actually see what is going on in the graph. We use <code>lwd = .2</code> to make the line length less thick, we set the <code>col =&quot;blue&quot;</code>, and finally <code>cex = .5</code> to make the point symbols smaller. The default options make the graph near indecipherable, so it is important to add these extra parameters.</p>
 <pre class="r"><code>plot(sf.nb.rook, coords, lwd=.2, col=&quot;blue&quot;, cex = .5)</code></pre>
 <p><img src="Contiguity_Spatial_Weights_files/figure-html/unnamed-chunk-28-1.png" width="672" /></p>
 </div>
@@ -1100,7 +1160,7 @@ library(geodaData)</code></pre>
 </div>
 <div id="connectivity-histogram" class="section level3 unnumbered">
 <h3>Connectivity Histogram</h3>
-<p>A connectivity histogram shows the number of observations for each cardinality of neighbors(how many observations have the same number of neighbors). We first have to get the cardianlity before we can make the histograms. We can do this by using the <code>card</code> function from the <strong>spdep</strong> package. This will give us a vector of 3085 observations with each one containing the corresponding number of neighbors from the input neighbors list.</p>
+<p>A connectivity histogram shows the number of observations for each cardinality of neighbors(how many observations have the same number of neighbors). We first have to get the cardinality before we can make the histograms. We can do this by using the <code>card</code> function from the <strong>spdep</strong> package. This will give us a vector of 3085 observations with each one containing the corresponding number of neighbors from the input neighbors list.</p>
 <pre class="r"><code>rook.card &lt;- card(sf.nb.rook)</code></pre>
 <p>We take a look at the first few observation with the <code>head</code> function and as we can see, it is a vector with number of neighbors for each observation of the <strong>nb</strong> object.</p>
 <pre class="r"><code>head(rook.card)</code></pre>
@@ -1113,10 +1173,10 @@ library(geodaData)</code></pre>
   geom_histogram(aes(x=rook.card))</code></pre>
 <pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
 <p><img src="Contiguity_Spatial_Weights_files/figure-html/unnamed-chunk-35-1.png" width="672" /></p>
-<p>Here we will add a few customizations to make the plot nicer. The most important is with the <code>breaks =</code> parameter, as the bars are spaced out kind of weirdly in our opening plot. We can avoid manuelly typing in the breaks by using the <code>seq</code> function, which will give us a list of numbers 0 to 13, incrementing by 1 each time. We specify the range in the first two arguments and then use <code>by =</code> to pick the number to increment by. In our case, 1 makes the most sense as you cannot have half of a neighbor.</p>
+<p>Here we will add a few customizations to make the plot nicer. The most important is with the <code>breaks =</code> parameter, as the bars are spaced out kind of weirdly in our opening plot. We can avoid manually typing in the breaks by using the <code>seq</code> function, which will give us a list of numbers 0 to 13, incrementing by 1 each time. We specify the range in the first two arguments and then use <code>by =</code> to pick the number to increment by. In our case, 1 makes the most sense as you cannot have half of a neighbor.</p>
 <pre class="r"><code>ggplot() +
   geom_histogram(aes(x=rook.card), breaks = seq(0,13, by = 1)) +
-  xlab(&quot;number of neighbours&quot;)</code></pre>
+  xlab(&quot;number of neighbors&quot;)</code></pre>
 <p><img src="Contiguity_Spatial_Weights_files/figure-html/unnamed-chunk-36-1.png" width="672" /></p>
 <p>With the <code>summary</code> command we can get a look at the summary statistics for the cardinality of the neighbors list.</p>
 <pre class="r"><code>summary(rook.card)</code></pre>
@@ -1135,15 +1195,15 @@ library(geodaData)</code></pre>
 <div id="geoda-header-format" class="section level3 unnumbered">
 <h3>GeoDA Header Format</h3>
 <p>The new GeoDA header style, also takes the shapefile name taken from GAL file for the dataset and the region id indicator variable name. It puts this information in a header for the file. All we have to do is set <code>oldstyle =</code> to FALSE and enter names for <code>shpfile</code> and <code>ind</code> parameters.</p>
-<pre class="r"><code>write.nb.gal(sf.nb.rook, &quot;rook_contiguity_new.gal&quot;, oldstyle = FALSE,shpfile =&quot;NAT.shp&quot;, ind =&quot;region id&quot;)</code></pre>
+<pre class="r"><code>write.nb.gal(sf.nb.rook, &quot;rook_contiguity_new.gal&quot;, oldstyle = FALSE, shpfile =&quot;NAT.shp&quot;, ind =&quot;region id&quot;)</code></pre>
 </div>
 </div>
 <div class="footnotes">
 <hr />
 <ol>
-<li id="fn1"><p>University of Chicago, Center for Spatial Data Science – <a href="mailto:anselin@uchicago.edu">anselin@uchicago.edu</a>,<a href="mailto:morrisonge@uchicago.edu">morrisonge@uchicago.edu</a><a href="#fnref1">↩</a></p></li>
-<li id="fn2"><p>Use <code>setwd(directorypath)</code> to specify the working directory.<a href="#fnref2">↩</a></p></li>
-<li id="fn3"><p>Use <code>install.packages(packagename)</code>.<a href="#fnref3">↩</a></p></li>
+<li id="fn1"><p>University of Chicago, Center for Spatial Data Science – <a href="mailto:anselin@uchicago.edu" class="email">anselin@uchicago.edu</a>,<a href="mailto:morrisonge@uchicago.edu" class="email">morrisonge@uchicago.edu</a><a href="#fnref1" class="footnote-back">↩</a></p></li>
+<li id="fn2"><p>Use <code>setwd(directorypath)</code> to specify the working directory.<a href="#fnref2" class="footnote-back">↩</a></p></li>
+<li id="fn3"><p>Use <code>install.packages(packagename)</code>.<a href="#fnref3" class="footnote-back">↩</a></p></li>
 </ol>
 </div>
 
@@ -1164,6 +1224,23 @@ $(document).ready(function () {
 
 
 </script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
 
 <!-- dynamically load mathjax for compatibility with self-contained -->
 <script>
