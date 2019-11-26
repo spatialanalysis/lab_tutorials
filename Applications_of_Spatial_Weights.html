@@ -1,0 +1,3770 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Luc Anselin and Grant Morrison" />
+
+<meta name="date" content="2019-11-17" />
+
+<title>Applications of Spatial Weights</title>
+
+<script src="Applications_of_Spatial_Weights_files/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="Applications_of_Spatial_Weights_files/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="Applications_of_Spatial_Weights_files/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="Applications_of_Spatial_Weights_files/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="Applications_of_Spatial_Weights_files/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="Applications_of_Spatial_Weights_files/navigation-1.1/tabsets.js"></script>
+<link href="Applications_of_Spatial_Weights_files/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="Applications_of_Spatial_Weights_files/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+<link rel="stylesheet" href="tutor.css" type="text/css" />
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+</style>
+
+
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Applications of Spatial Weights</h1>
+<h3 class="subtitle">R Notes</h3>
+<h4 class="author">Luc Anselin and Grant Morrison<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></h4>
+<h4 class="date">11/17/2019</h4>
+
+</div>
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction">Introduction</a><ul>
+<li><a href="#objectives">Objectives</a><ul>
+<li><a href="#r-packages-used">R Packages used</a></li>
+<li><a href="#r-commands-used">R Commands used</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#preliminaries">Preliminaries</a><ul>
+<li><a href="#load-packages">Load packages</a></li>
+<li><a href="#geodadata">geodaData</a></li>
+</ul></li>
+<li><a href="#spatially-lagged-variables">Spatially lagged variables</a><ul>
+<li><a href="#creating-a-spatially-lagged-variable">Creating a spatially lagged variable</a><ul>
+<li><a href="#creating-the-weights">Creating the weights</a></li>
+<li><a href="#spatial-lag-with-row-standardized-weights">Spatial lag with row-standardized weights</a></li>
+<li><a href="#pcp">PCP</a></li>
+<li><a href="#spatial-lag-as-a-sum-of-neighboring-values">Spatial lag as a sum of neighboring values</a></li>
+<li><a href="#spatial-window-average">Spatial window average</a></li>
+<li><a href="#spatial-window-sum">Spatial window sum</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#spatially-lagged-variables-from-inverse-distance-weights">Spatially lagged variables from inverse distance weights</a><ul>
+<li><a href="#principle">Principle</a></li>
+<li><a href="#default-approach">Default approach</a><ul>
+<li><a href="#inverse-distance-for-k-6-nearest-neighbors">inverse distance for k = 6 nearest neighbors</a></li>
+</ul></li>
+<li><a href="#spatial-lags-with-row-standardized-inverse-distance-weights">Spatial lags with row-standardized inverse distance weights</a></li>
+</ul></li>
+<li><a href="#spatially-lagged-variables-from-kernel-weights">Spatially lagged variables from kernel weights</a></li>
+<li><a href="#spatial-rate-smoothing">Spatial rate smoothing</a><ul>
+<li><a href="#principle-1">Principle</a></li>
+<li><a href="#preliminaries-1">Preliminaries</a><ul>
+<li><a href="#geodadata-1">geodaData</a></li>
+<li><a href="#creating-a-crude-rate">Creating a Crude Rate</a></li>
+<li><a href="#creating-the-weights-1">Creating the Weights</a></li>
+</ul></li>
+<li><a href="#simple-window-average-of-rates">Simple window average of rates</a></li>
+<li><a href="#spatially-smoothed-rates">Spatially Smoothed Rates</a><ul>
+<li><a href="#inverse-distance-smoothed-rate">Inverse Distance Smoothed Rate</a></li>
+<li><a href="#kernal-smoothed-rate">Kernal Smoothed Rate</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#spatial-empirical-bayes-smoothing">Spatial Empirical Bayes smoothing</a><ul>
+<li><a href="#principle-2">Principle</a></li>
+<li><a href="#spatial-eb-rate-smoother">Spatial EB rate smoother</a></li>
+</ul></li>
+</ul>
+</div>
+
+<p><br></p>
+<div id="introduction" class="section level2 unnumbered">
+<h2>Introduction</h2>
+<p>This notebook cover the functionality of the <a href="https://geodacenter.github.io/workbook/4d_weights_applications/lab4d.html">Applications of Spatial Weights</a> section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.</p>
+<p>The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).</p>
+<p>For this notebook, we use Cleveland house price data. Our goal in this lab is show how to assign spatial weights based on different distance functions.</p>
+<div id="objectives" class="section level3 unnumbered">
+<h3>Objectives</h3>
+<p>After completing the notebook, you should know how to carry out the following tasks:</p>
+<ul>
+<li><p>Create a spatially lagged variable as an average or sum of the neighbors</p></li>
+<li><p>Create a spatially lagged variable as a window sum or average</p></li>
+<li><p>Create a spatially lagged variable based on inverse distance weights</p></li>
+<li><p>Create a spatially lagged variable based on kernel weights</p></li>
+<li><p>Rescaling coordinates to obtain inverse distance weights</p></li>
+<li><p>Compute and map spatially smoothed rates</p></li>
+<li><p>Compute and map spatial Empirical Bayes smoothed rates</p></li>
+</ul>
+<div id="r-packages-used" class="section level4 unnumbered">
+<h4>R Packages used</h4>
+<ul>
+<li><p><strong>sf</strong>: To read in the shapefile.</p></li>
+<li><p><strong>spdep</strong>: To create k-nearest neighbors and distance-band neighbors, calculate distances between neighbors, convert to a weights structure, and coercion methods to sparse matrices.</p></li>
+<li><p><strong>knitr</strong>: To make nicer looking tables</p></li>
+<li><p><strong>ggplot2</strong>: To make a scatterplot comparing two different rate variables</p></li>
+<li><p><strong>tmap</strong>: To make maps of different spatial rate variables</p></li>
+<li><p><strong>broom</strong>: To get regression statistics in a tidy format</p></li>
+<li><p><strong>GGally</strong>: To make a parallel coordinates plot</p></li>
+<li><p><strong>purrr</strong>: To map a centroid function of the geometry column of an <strong>sf</strong> data structure</p></li>
+<li><p><strong>geodaData</strong>: To access the data for this notebook</p></li>
+<li><p><strong>tidyverse</strong>: Basic data frame manipulation</p></li>
+</ul>
+</div>
+<div id="r-commands-used" class="section level4 unnumbered">
+<h4>R Commands used</h4>
+<p>Below follows a list of the commands used in this notebook. For further details and a comprehensive list of options, please consult the <a href="https://www.rdocumentation.org">R documentation</a>.</p>
+<ul>
+<li><p><strong>Base R</strong>: <code>install.packages</code>, <code>library</code>, <code>setwd</code>, <code>class</code>, <code>str</code>, <code>lapply</code>, <code>attributes</code>, <code>summary</code>, <code>head</code>, <code>seq</code>, <code>as</code>, <code>cbind</code>, <code>max</code>, <code>unlist</code>, <code>length</code>, <code>sqrt</code>, <code>exp</code>, <code>diag</code>, <code>sort</code>, <code>append</code>, <code>sum</code></p></li>
+<li><p><strong>sf</strong>: <code>st_read</code>, <code>plot</code></p></li>
+<li><p><strong>spdep</strong>: <code>knn2nb</code>, <code>dnearneigh</code>, <code>knearneigh</code>, <code>nb2listw</code>, <code>mat2listw</code>, <code>EBlocal</code>, <code>lag.listw</code>, <code>include.self</code></p></li>
+<li><p><strong>knitr</strong>: <code>kable</code></p></li>
+<li><p><strong>ggplot2</strong>: <code>ggplot</code>, <code>geom_smooth</code>, <code>geom_point</code>, <code>ggtitle</code></p></li>
+<li><p><strong>tmap</strong>: <code>tm_shape</code>, <code>tm_fill</code>, <code>tm_border</code>, <code>tm_layout</code></p></li>
+<li><p><strong>broom</strong>: <code>tidy</code></p></li>
+<li><p><strong>GGally</strong>: <code>ggparcoord</code></p></li>
+<li><p><strong>purrr</strong>: <code>map_dbl</code></p></li>
+<li><p><strong>tidyverse</strong>: <code>mutate</code></p></li>
+</ul>
+</div>
+</div>
+</div>
+<div id="preliminaries" class="section level2 unnumbered">
+<h2>Preliminaries</h2>
+<p>Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not actually be saving any files.<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a></p>
+<div id="load-packages" class="section level3 unnumbered">
+<h3>Load packages</h3>
+<p>First, we load all the required packages using the <code>library</code> command. If you don’t have some of these in your system, make sure to install them first as well as their dependencies.<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a> You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.</p>
+<pre class="r"><code>library(sf)</code></pre>
+<pre><code>## Linking to GEOS 3.7.2, GDAL 2.4.2, PROJ 5.2.0</code></pre>
+<pre class="r"><code>library(spdep)</code></pre>
+<pre><code>## Loading required package: sp</code></pre>
+<pre><code>## Loading required package: spData</code></pre>
+<pre><code>## To access larger datasets in this package, install the spDataLarge
+## package with: `install.packages(&#39;spDataLarge&#39;,
+## repos=&#39;https://nowosad.github.io/drat/&#39;, type=&#39;source&#39;)`</code></pre>
+<pre class="r"><code>library(tmap)
+library(ggplot2)</code></pre>
+<pre><code>## Registered S3 methods overwritten by &#39;ggplot2&#39;:
+##   method         from 
+##   [.quosures     rlang
+##   c.quosures     rlang
+##   print.quosures rlang</code></pre>
+<pre class="r"><code>library(GGally)</code></pre>
+<pre><code>## Registered S3 method overwritten by &#39;GGally&#39;:
+##   method from   
+##   +.gg   ggplot2</code></pre>
+<pre class="r"><code>library(broom)
+library(knitr)
+library(tidyverse)</code></pre>
+<pre><code>## Registered S3 method overwritten by &#39;rvest&#39;:
+##   method            from
+##   read_xml.response xml2</code></pre>
+<pre><code>## ── Attaching packages ──────────────────────────────────────────────────────────────────── tidyverse 1.2.1 ──</code></pre>
+<pre><code>## ✔ tibble  2.1.1     ✔ purrr   0.3.2
+## ✔ tidyr   1.0.0     ✔ dplyr   0.8.3
+## ✔ readr   1.3.1     ✔ stringr 1.4.0
+## ✔ tibble  2.1.1     ✔ forcats 0.4.0</code></pre>
+<pre><code>## ── Conflicts ─────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()</code></pre>
+<pre class="r"><code>library(purrr)</code></pre>
+</div>
+<div id="geodadata" class="section level3 unnumbered">
+<h3>geodaData</h3>
+<p>All of the data for the R notebooks is available in the <strong>geodaData</strong> package. We loaded the library earlier, now to access the individual data sets, we use the double colon notation. This works similar to to accessing a variable with <code>$</code>, in that a drop down menu will appear with a list of the datasets included in the package. For this notebook, we use <code>clev_pts</code>.</p>
+<p>If you choose to download the data into your working directory, you will need to go to <a href="https://geodacenter.github.io/data-and-lab//clev_sls_154_core/">Cleveland Home Sales</a> The download format is a zipfile, so you will need to unzip it by double clicking on the file in your file finder. From there move the resulting folder titled: nyc into your working directory to continue. Once that is done, you can use the <strong>sf</strong> function: <code>st_read()</code> to read the shapefile into your R environment.</p>
+<pre class="r"><code>clev.points &lt;- geodaData::clev_pts</code></pre>
+</div>
+</div>
+<div id="spatially-lagged-variables" class="section level2 unnumbered">
+<h2>Spatially lagged variables</h2>
+<p>With a neighbor structure defined by the non-zero elements of the spatial weights matrix W, a spatially lagged variable is a weighted sum or a weighted average of the neighboring values for that variable. In most commonly used notation, the spatial lag of y is then expressed as Wy. .</p>
+<p>Formally, for observation i, the spatial lag of <span class="math inline">\(y_i\)</span>, referred to as <span class="math inline">\([Wy]_i\)</span> (the variable Wy observed for location i) is: <span class="math display">\[[Wy]_i = w_{i1}y_1 + w_{i2}y_2 + ... + w_{in}y_n\]</span> or, <span class="math display">\[[Wy]_i = \sum_{j=1}^nw_{ij}y_j\]</span> where the weights <span class="math inline">\(w_{ij}\)</span> consist of the elements of the i-th row of the matrix W, matched up with the corresponding elements of the vector y.</p>
+<p>In other words, the spatial lag is a weighted sum of the values observed at neighboring locations, since the non-neighbors are not included (those i for which <span class="math inline">\(w_{ij}=0\)</span>). Typically, the weights matrix is very sparse, so that only a small number of neighbors contribute to the weighted sum. For row-standardized weights, with<span class="math inline">\(\sum_jw_{ij} = 1\)</span>, the spatially lagged variable becomes a weighted average of the values at neighboring observations.</p>
+<p>In matrix notation, the spatial lag expression corresponds to the matrix product of the <strong>n × n</strong> spatial weights matrix W with the <strong>n × 1</strong> vector of observations y, or <strong>W × y</strong>. The matrix W can therefore be considered to be the spatial lag operator on the vector <strong>y</strong>.</p>
+<p>In a number of applied contexts, it may be useful to include the observation at location i itself in the weights computation. This implies that the diagonal elements of the weights matrix must be non-zero, i.e., <span class="math inline">\(w_{ii}≠0\)</span>. Depending on the context, the diagonal elements may take on the value of one or equal a specific value (e.g., for kernel weights where the kernel function is applied to the diagonal). We will highlight this issue in the specific illustrations that follow.</p>
+<div id="creating-a-spatially-lagged-variable" class="section level3 unnumbered">
+<h3>Creating a spatially lagged variable</h3>
+<p>In this section, we will go through the four different spatial lag options covered in the Geoda workbook. These are <strong>Spatial lag with row-standardized weights</strong>, ** Spatial lag as a sum of neighboring values<strong>, </strong>Spatial window average<strong>, and </strong>Spatial window sum**.</p>
+<div id="creating-the-weights" class="section level4 unnumbered">
+<h4>Creating the weights</h4>
+<p>To start, we will need to make our weights in order to follow along with the Geoda workbook example. This will require making a k-nearest neighbors for k = 6 with row standarized weights.</p>
+<p>The process for making these weights is the same as covered in earlier notebooks. However, to summarize, we start by getting the coordinates in a separate matrix with the base R function <code>cbind</code>, then use that with the <strong>spdep</strong> functions <code>knn2nb</code> and <code>knearneigh</code> to compute a neighbors list. From there we convert the neighbors list to class <strong>listw</strong> with <code>nb2listw</code>. This will result in row standardized weights. It is important to note that we will have to work with neighbors structure in some cases to get the desired functionality, which will require creating more than one weights object for the k-nearest neighbors weights used in this section of the notebook.</p>
+<pre class="r"><code># getting coordinates
+coords &lt;- cbind(clev.points$x,clev.points$y)
+
+# creating neighbors list
+k6 &lt;- knn2nb(knearneigh(coords, k = 6))
+
+# converting to weights structure from neighbors list
+k6.weights1 &lt;- nb2listw(k6)</code></pre>
+<pre><code>## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;</code></pre>
+<pre class="r"><code>k6.weights1$weights[[1]]</code></pre>
+<pre><code>## [1] 0.1666667 0.1666667 0.1666667 0.1666667 0.1666667 0.1666667</code></pre>
+</div>
+<div id="spatial-lag-with-row-standardized-weights" class="section level4 unnumbered">
+<h4>Spatial lag with row-standardized weights</h4>
+<p>The default case in Geoda is to use row-standardized weights and to leave out the diagonal element. Implementing this will be relatively simple, as we will only need one line of code with the weights structure: <strong>k6.weights1</strong>. To create the lag variable, the <strong>spdep</strong> function, <code>lag.listw</code> is used. The inputs require a weights structure and a variable with the same length as the weights structure. The length should not be a problem if the variable comes from the same dataset used to create your weights.</p>
+<p>We create a new data frame of the <strong>sale_price</strong> variable and the lag variable to get a side by side look. To get a brief look at the first few observations of both variables, we use <code>head</code>. Then to get a nicer looking table, we use <code>kable</code> from the <strong>knitr</strong> package.</p>
+<pre class="r"><code>lag1 &lt;- lag.listw(k6.weights1, clev.points$sale_price)
+df &lt;- data.frame(sale_price = clev.points$sale_price, lag1)
+kable(head(df))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">sale_price</th>
+<th align="right">lag1</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">235500</td>
+<td align="right">79858.33</td>
+</tr>
+<tr class="even">
+<td align="right">65000</td>
+<td align="right">90608.33</td>
+</tr>
+<tr class="odd">
+<td align="right">92000</td>
+<td align="right">71041.67</td>
+</tr>
+<tr class="even">
+<td align="right">5000</td>
+<td align="right">91375.00</td>
+</tr>
+<tr class="odd">
+<td align="right">116250</td>
+<td align="right">72833.33</td>
+</tr>
+<tr class="even">
+<td align="right">120000</td>
+<td align="right">74041.67</td>
+</tr>
+<tr class="odd">
+<td align="right">The values ma</td>
+<td align="right">tch with the example from the Geoda workbook, only difference being in that it is rounded to less</td>
+</tr>
+<tr class="even">
+<td align="right">significant f</td>
+<td align="right">igures than GeoDa.</td>
+</tr>
+</tbody>
+</table>
+<p>The lag variables are calculated in this instance, by taking an average of the neighboring values. We will illustrate this by finding the neighboring sale price values for the first observation. To get these values, we get the neighbor ids for the first observation by double bracket notation. We then select the sale price values by indexing with the resulting numeric vector.</p>
+<pre class="r"><code>nb1 &lt;- k6[[1]]
+nb1 &lt;- clev.points$sale_price[nb1]
+nb1</code></pre>
+<pre><code>## [1]  65000 120000 131650  81500  76000   5000</code></pre>
+<p>We now verify the value for the spatial lag listed in the table. It is obtained as the average of the sales price for the six neighbors, or (131650 + 65000 + 81500 + 76000 + 120000 + 5000)/6 = 79858.33.</p>
+<p>We can quickly assess the effect of spatial averaging by comparing the descriptive statistics for the lag variable with those of the original sale price variable.</p>
+<pre class="r"><code>summary(clev.points$sale_price)</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##    1049    9000   20000   41897   48500  527409</code></pre>
+<pre class="r"><code>summary(lag1)</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##    6583   16142   26500   39818   54417  229583</code></pre>
+<p>As seen above, the range for the original sale price variable is 1,049 to 527,409. The range for the lag variable is much more compressed, being 6,583 to 229,583. The typical effect of spatial lag is a compression of the range and variance of a variable. We can see this further when examing the standard deviation.</p>
+<pre class="r"><code>sd(clev.points$sale_price)</code></pre>
+<pre><code>## [1] 60654.34</code></pre>
+<pre class="r"><code>sd(lag1)</code></pre>
+<pre><code>## [1] 36463.76</code></pre>
+<p>The standard deviation for home sales gets significantly condensed from 60654.34 to 36463.76 in the creation of the lag variable.</p>
+</div>
+<div id="pcp" class="section level4 unnumbered">
+<h4>PCP</h4>
+<p>To get a more dramatic view of the influence of high-valued or low-valued neighbors on the spatial lag, we use a parallel coordinates plot. This will be done using <strong>GGally</strong>, which is an R package that builds off of the <strong>ggplot2</strong> package for some more complicated plots, ie the parallel coordinates plot and the scatter plot matrix. We won’t go in depth about the different options this package offers in this notebook, but if interested, check out <a href="https://www.rdocumentation.org/packages/GGally/versions/1.4.0">GGally documentation</a>.</p>
+<p>To make the pcp with just the two variables, we will need to put them in a separate matrix, or data frame. We use <code>cbind</code> to do this, as with the coordinates. From there we use <code>ggparcoord</code> from the <strong>GGally</strong> package. The necessary inputs are the data(<strong>pcp.vars</strong>) and the scale parameter. We use `scale = “globalminmax” to keep the same price values as our lag variable and sale price variable. The default option scales it down, which is not what we are looking for in this case.</p>
+<pre class="r"><code>sale.price &lt;- clev.points$sale_price
+pcp.vars &lt;- cbind(sale.price,lag1)
+ggparcoord(data = pcp.vars,scale =&quot;globalminmax&quot;) +
+  ggtitle(&quot;Parallel Coordinate Plot&quot;)</code></pre>
+<p><img src="Applications_of_Spatial_Weights_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+</div>
+<div id="spatial-lag-as-a-sum-of-neighboring-values" class="section level4 unnumbered">
+<h4>Spatial lag as a sum of neighboring values</h4>
+<p>We can calculate spatial lag as a sum of neighboring values by assigning binary weights. This requires us to go back to our neighbors list, then apply a function that will assign binary weights, then we use <code>glist =</code> in the <code>nb2listw</code> function to explicitly assign these weights.</p>
+<p>We start by applying a function that will assign a value of 1 per each neighbor. This is done with <code>lapply</code>, which we have been using to manipulate the neighbors structure throughout the past notebooks. Basically it applies a function across each value in the neighbors structure.</p>
+<pre class="r"><code>binary.weights &lt;- lapply(k6, function(x) 0*x + 1)
+k6.weights2 &lt;- nb2listw(k6, glist = binary.weights, style = &quot;B&quot;)</code></pre>
+<p>With the proper weights assigned, we can use <code>lag.listw</code> to compute a lag variable from our weight and sale price data.</p>
+<pre class="r"><code>lag2 &lt;- lag.listw(k6.weights2, clev.points$sale_price)
+df &lt;- df %&gt;% mutate(lag2 = lag2)
+kable(head(df))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">sale_price</th>
+<th align="right">lag1</th>
+<th align="right">lag2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">235500</td>
+<td align="right">79858.33</td>
+<td align="right">479150</td>
+</tr>
+<tr class="even">
+<td align="right">65000</td>
+<td align="right">90608.33</td>
+<td align="right">543650</td>
+</tr>
+<tr class="odd">
+<td align="right">92000</td>
+<td align="right">71041.67</td>
+<td align="right">426250</td>
+</tr>
+<tr class="even">
+<td align="right">5000</td>
+<td align="right">91375.00</td>
+<td align="right">548250</td>
+</tr>
+<tr class="odd">
+<td align="right">116250</td>
+<td align="right">72833.33</td>
+<td align="right">437000</td>
+</tr>
+<tr class="even">
+<td align="right">120000</td>
+<td align="right">74041.67</td>
+<td align="right">444250</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="spatial-window-average" class="section level4 unnumbered">
+<h4>Spatial window average</h4>
+<p>The spatial window average uses row-standardized weights and includes the diagonal element. To do this in R, we need to go back to the neighbors structure and add the diagonal element before assigning weights. To begin we assign <strong>k6</strong> to a new variable because we will directly alter its structure to add the diagonal elements.</p>
+<pre class="r"><code>k6a &lt;- k6</code></pre>
+<p>To add the diagonal element to the neighbors list, we just need <code>include.self</code> from <strong>spdep</strong>.</p>
+<pre class="r"><code>include.self(k6a)</code></pre>
+<pre><code>## Neighbour list object:
+## Number of regions: 205 
+## Number of nonzero links: 1435 
+## Percentage nonzero weights: 3.414634 
+## Average number of links: 7 
+## Non-symmetric neighbours list</code></pre>
+<p>Now we obtain weights with <code>nb2listw</code></p>
+<pre class="r"><code>k6.weights3 &lt;- nb2listw(k6a)</code></pre>
+<pre><code>## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;</code></pre>
+<p>Lastly, we just need to create the lag variable from our weight structure and <strong>sale_price</strong> variable.</p>
+<pre class="r"><code>lag3 &lt;- lag.listw(k6.weights3, clev.points$sale_price)
+df &lt;- df %&gt;% mutate(lag3 = lag3)
+kable(head(df))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">sale_price</th>
+<th align="right">lag1</th>
+<th align="right">lag2</th>
+<th align="right">lag3</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">235500</td>
+<td align="right">79858.33</td>
+<td align="right">479150</td>
+<td align="right">79858.33</td>
+</tr>
+<tr class="even">
+<td align="right">65000</td>
+<td align="right">90608.33</td>
+<td align="right">543650</td>
+<td align="right">90608.33</td>
+</tr>
+<tr class="odd">
+<td align="right">92000</td>
+<td align="right">71041.67</td>
+<td align="right">426250</td>
+<td align="right">71041.67</td>
+</tr>
+<tr class="even">
+<td align="right">5000</td>
+<td align="right">91375.00</td>
+<td align="right">548250</td>
+<td align="right">91375.00</td>
+</tr>
+<tr class="odd">
+<td align="right">116250</td>
+<td align="right">72833.33</td>
+<td align="right">437000</td>
+<td align="right">72833.33</td>
+</tr>
+<tr class="even">
+<td align="right">120000</td>
+<td align="right">74041.67</td>
+<td align="right">444250</td>
+<td align="right">74041.67</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="spatial-window-sum" class="section level4 unnumbered">
+<h4>Spatial window sum</h4>
+<p>The spatial window sum is the counter part of the window average, but without using row-standardized weights. To do this we assign binary weights to the neighbor structure that includes the diagonal element.</p>
+<pre class="r"><code>binary.weights2 &lt;- lapply(k6a, function(x) 0*x + 1)
+binary.weights2[1]</code></pre>
+<pre><code>## [[1]]
+## [1] 1 1 1 1 1 1</code></pre>
+<p>Again we use <code>nb2listw</code> and <code>glist =</code> to explicitly assign weight values.</p>
+<pre class="r"><code>k6.weights4 &lt;- nb2listw(k6a, glist = binary.weights2, style = &quot;B&quot;)</code></pre>
+<p>With our new weight structure, we can compute the lag variable with <code>lag.listw</code>.</p>
+<pre class="r"><code>lag4 &lt;- lag.listw(k6.weights4, clev.points$sale_price)
+df &lt;- df %&gt;% mutate(lag4 = lag4)
+kable(head(df))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">sale_price</th>
+<th align="right">lag1</th>
+<th align="right">lag2</th>
+<th align="right">lag3</th>
+<th align="right">lag4</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">235500</td>
+<td align="right">79858.33</td>
+<td align="right">479150</td>
+<td align="right">79858.33</td>
+<td align="right">479150</td>
+</tr>
+<tr class="even">
+<td align="right">65000</td>
+<td align="right">90608.33</td>
+<td align="right">543650</td>
+<td align="right">90608.33</td>
+<td align="right">543650</td>
+</tr>
+<tr class="odd">
+<td align="right">92000</td>
+<td align="right">71041.67</td>
+<td align="right">426250</td>
+<td align="right">71041.67</td>
+<td align="right">426250</td>
+</tr>
+<tr class="even">
+<td align="right">5000</td>
+<td align="right">91375.00</td>
+<td align="right">548250</td>
+<td align="right">91375.00</td>
+<td align="right">548250</td>
+</tr>
+<tr class="odd">
+<td align="right">116250</td>
+<td align="right">72833.33</td>
+<td align="right">437000</td>
+<td align="right">72833.33</td>
+<td align="right">437000</td>
+</tr>
+<tr class="even">
+<td align="right">120000</td>
+<td align="right">74041.67</td>
+<td align="right">444250</td>
+<td align="right">74041.67</td>
+<td align="right">444250</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div id="spatially-lagged-variables-from-inverse-distance-weights" class="section level2 unnumbered">
+<h2>Spatially lagged variables from inverse distance weights</h2>
+<div id="principle" class="section level3 unnumbered">
+<h3>Principle</h3>
+<p>The spatial lag operation can also be applied using spatial weights calculated from the inverse distance between observations. As mentioned in our earlier discussion, the magnitude of these weights is highly scale dependent (depends on the scale of the coordinates). An uncritical application of a spatial lag operation with these weights can easily result in non-sensical values. More specifically, since the resulting weights can take on very small values, the spatial lag could end up being essentially zero.</p>
+<p>Formally, the spatial lag operation amounts to a weighted average of the neighboring values, with the inverse distance function as the weights: <span class="math display">\[[Wy]_i = \sum_jy_j/d_{ij}^\alpha\]</span> where in our implementation, <span class="math inline">\(\alpha\)</span> is either 1 or 2. In the latter case (a so-called gravity model weight), the spatial lag is sometimes referred to as a potential in geo-marketing analyses. It is a measure of how accessible location i is to opportunities located in the neighboring locations (as defined by the weights).</p>
+</div>
+<div id="default-approach" class="section level3 unnumbered">
+<h3>Default approach</h3>
+<div id="inverse-distance-for-k-6-nearest-neighbors" class="section level4 unnumbered">
+<h4>inverse distance for k = 6 nearest neighbors</h4>
+<p>To calculate the inverse distances, we must first compute the distances between each neighbor. This is done with <code>nbdists</code>.</p>
+<pre class="r"><code>k6.distances &lt;- nbdists(k6,coords)</code></pre>
+<p>Now we apply the function 1/x to each element of the distance structure, which gives us the inverse distances.</p>
+<pre class="r"><code>invd1a &lt;- lapply(k6.distances, function(x) (1/x))
+invd1a[1]</code></pre>
+<pre><code>## [[1]]
+## [1] 0.0025963168 0.0003318873 0.0008618371 0.0005379514 0.0003959608
+## [6] 0.0003074062</code></pre>
+<p>Now we explicitly assign the inverse distance weight with <code>glist =</code> in the <code>nb2listw</code> function.</p>
+<pre class="r"><code>invd.weights &lt;- nb2listw(k6,glist = invd1a,style = &quot;B&quot;)</code></pre>
+<p>The default case with row-standardized weights off and no diagonal elements is put into the variable <strong>IDRSND</strong>. The lag values here are very different from the sale price because the weight values are relatively small, the largest being .0026</p>
+<pre class="r"><code>idrsnd &lt;- lag.listw(invd.weights, clev.points$sale_price)
+kable(head(idrsnd))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">x</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">397.5210</td>
+</tr>
+<tr class="even">
+<td align="right">805.2941</td>
+</tr>
+<tr class="odd">
+<td align="right">359.3411</td>
+</tr>
+<tr class="even">
+<td align="right">966.1106</td>
+</tr>
+<tr class="odd">
+<td align="right">444.5489</td>
+</tr>
+<tr class="even">
+<td align="right">361.3308</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>idnrwd &lt;- clev.points$sale_price + idrsnd
+kable(head(idnrwd))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">x</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">235897.521</td>
+</tr>
+<tr class="even">
+<td align="right">65805.294</td>
+</tr>
+<tr class="odd">
+<td align="right">92359.341</td>
+</tr>
+<tr class="even">
+<td align="right">5966.111</td>
+</tr>
+<tr class="odd">
+<td align="right">116694.549</td>
+</tr>
+<tr class="even">
+<td align="right">120361.331</td>
+</tr>
+</tbody>
+</table>
+<p>The above would be the result for when the diagonal is included. This amounts to the original sale price being added to the the lag value, which is the equivalent of: <span class="math display">\[[W_y]_i = y_i + \Sigma_j\frac{y_i}{d_{ij}^\alpha}\]</span></p>
+</div>
+</div>
+<div id="spatial-lags-with-row-standardized-inverse-distance-weights" class="section level3 unnumbered">
+<h3>Spatial lags with row-standardized inverse distance weights</h3>
+<pre class="r"><code>row_stand &lt;- function(x){
+  row_sum &lt;- sum(x)
+  scalar &lt;- 1/row_sum
+  x * scalar
+}</code></pre>
+<pre class="r"><code>row.standw &lt;- lapply(invd1a, row_stand)
+df &lt;- data.frame(inverse_distance = invd1a[[1]], row_stand_invd = row.standw[[1]])
+kable(df)</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">inverse_distance</th>
+<th align="right">row_stand_invd</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">0.0025963</td>
+<td align="right">0.5160269</td>
+</tr>
+<tr class="even">
+<td align="right">0.0003319</td>
+<td align="right">0.0659637</td>
+</tr>
+<tr class="odd">
+<td align="right">0.0008618</td>
+<td align="right">0.1712931</td>
+</tr>
+<tr class="even">
+<td align="right">0.0005380</td>
+<td align="right">0.1069197</td>
+</tr>
+<tr class="odd">
+<td align="right">0.0003960</td>
+<td align="right">0.0786986</td>
+</tr>
+<tr class="even">
+<td align="right">0.0003074</td>
+<td align="right">0.0610980</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>sum(row.standw[[1]])</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>invd.weights2 &lt;- nb2listw(k6,glist = row.standw,style = &quot;B&quot;)
+invd.weights2$weights[[1]]</code></pre>
+<pre><code>## [1] 0.51602688 0.06596374 0.17129309 0.10691969 0.07869856 0.06109804</code></pre>
+<pre class="r"><code>lag6 &lt;- lag.listw(invd.weights2, clev.points$sale_price)
+head(lag6)</code></pre>
+<pre><code>## [1]  79008.67 159632.92  70716.60 101979.20  45949.65  65842.27</code></pre>
+</div>
+</div>
+<div id="spatially-lagged-variables-from-kernel-weights" class="section level2 unnumbered">
+<h2>Spatially lagged variables from kernel weights</h2>
+<p>Spatially lagged variables can also be computed from kernel weights. However, in this instance, only one of the options with respect to row-standardization and diagonal weights makes sense. Since the kernel weights are the result of a specific kernel function, they should not be altered. Also, each kernel function results in a specific value for the diagonal element, which should not be changed either. As a result, the only viable option to create spatially lagged variables based on kernel weights is to have no row-standardization and have the diagonal elements included.</p>
+<pre class="r"><code>k6a.distances &lt;- nbdists(k6a,coords)</code></pre>
+<p>Here we apply the Epanechnikov kernal weight function to the distance structure, but calculate z as a variable bandwidth rather than the critical threshold. For the variable bandwidth, we take the maximum distance between a location and it’s set of 6 neighbors. Then this is the distance used to calculate the weights for the neighbors of that location.</p>
+<pre class="r"><code>for (i in 1:length(k6a.distances)){
+  maxk6 &lt;- max(k6a.distances[[i]])
+  bandwidth &lt;- maxk6
+  new_row &lt;- .75*(1-(k6a.distances[[i]] / bandwidth)^2)
+  k6a.distances[[i]] &lt;- new_row
+}
+k6a.distances[[1]]</code></pre>
+<pre><code>## [1] 0.7394859 0.1065641 0.6545807 0.5050934 0.2979544 0.0000000</code></pre>
+<p>Now we create the weights structure with <code>nb2listw</code>, and directly assign the weights values to the neighbors structure with <code>glist =</code>.</p>
+<pre class="r"><code>epan.weights &lt;- nb2listw(k6a,glist = k6a.distances,style = &quot;B&quot;)
+epan.weights$weights[[1]]</code></pre>
+<pre><code>## [1] 0.7394859 0.1065641 0.6545807 0.5050934 0.2979544 0.0000000</code></pre>
+<p>Lastly, we use <code>lag.listw</code> to create the lag variable from our Epanechnikov kernal weights, then take a brief look at the resulting lag variable, <strong>epalag</strong>.</p>
+<pre class="r"><code>epalag &lt;- lag.listw(epan.weights, clev.points$sale_price)
+df &lt;- data.frame(clev.points$sale_price,epalag)
+kable(head(df))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">clev.points.sale_price</th>
+<th align="right">epalag</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">235500</td>
+<td align="right">210839.48</td>
+</tr>
+<tr class="even">
+<td align="right">65000</td>
+<td align="right">320223.68</td>
+</tr>
+<tr class="odd">
+<td align="right">92000</td>
+<td align="right">62295.77</td>
+</tr>
+<tr class="even">
+<td align="right">5000</td>
+<td align="right">272183.78</td>
+</tr>
+<tr class="odd">
+<td align="right">116250</td>
+<td align="right">189258.60</td>
+</tr>
+<tr class="even">
+<td align="right">120000</td>
+<td align="right">99958.83</td>
+</tr>
+</tbody>
+</table>
+<p><span class="math display">\[[W_y]_i = \Sigma_jK_{ij}y_j\]</span></p>
+</div>
+<div id="spatial-rate-smoothing" class="section level2 unnumbered">
+<h2>Spatial rate smoothing</h2>
+<div id="principle-1" class="section level3 unnumbered">
+<h3>Principle</h3>
+<p>A spatial rate smoother is a special case of a nonparameteric rate estimator, based on the principle of locally weighted estimation. Rather than applying a local average to the rate itself, as in an application of a spatial window average, the weighted average is applied separately to the numerator and denominator.</p>
+<p>The spatially smoothed rate for a given location i is then given as:</p>
+<p><span class="math display">\[\pi_i = \frac{\Sigma_{j=1}^nw_{ij}O_j} {\Sigma_{j=1}^nw_{ij}P_j}\]</span></p>
+<p>where <span class="math inline">\(O_j\)</span> is the event count in location j, <span class="math inline">\(P_j\)</span> is the population at risk, and <span class="math inline">\(w_{ij}\)</span> are spatial weights (typically with <span class="math inline">\(w_{ii} = 0\)</span>, i.e. including the diagonal)</p>
+<p>Different smoothers are obtained for different spatial definitions of neighbors and/or different weights applied to those neighbors (e.g., contiguity weights, inverse distance weights, or kernel weights).</p>
+<p>The window average is not applied to the rate itself, but it is computed separately for the numerator and denominator. The simplest case boils down to applying the idea of a spatial window sum to the numerator and denominator (i.e., with binary spatial weights in both, and including the diagonal term): <span class="math display">\[\pi_i = \frac{O_i + \Sigma_{j=1}^nO_j} {O_i +\Sigma_{j=1}^nP_j}\]</span> <span class="math inline">\(\pi_i = \frac{O_i+\Sigma_{j=1}^J_iO_j}{O_i + \Sigma_{j=1}^J_iP_j}\)</span></p>
+<p>where <span class="math inline">\(J_i\)</span> is a reference set (neighbors) for observation i. In practice, this is achieved by using binary spatial weights for both numerator and denominator, and including the diagonal in both terms, as in the expression above.</p>
+<p>A map of spatially smoothed rates tends to emphasize broad spatial trends and is useful for identifying general features of the data. However, it is not useful for the analysis of spatial autocorrelation, since the smoothed rates are autocorrelated by construction. It is also not very useful for identifying outlying observations, since the values portrayed are really regional averages and not specific to an individual location. By construction, the values shown for individual locations are determined by both the events and the population sizes of adjoining spatial units, which can lead to misleading impressions. Often, inverse distance weights are applied to both the numerator and denominator</p>
+</div>
+<div id="preliminaries-1" class="section level3 unnumbered">
+<h3>Preliminaries</h3>
+<p>We return to the rate smoothing examples using the Ohio county lung cancer data. Therefore, we need to close the current project and load the ohlung data set.</p>
+<p>Next, we need to create the spatial weights files we will use if we don’t have them already stored in a project file. In order to make sure that some smoothing will occur, we take a fairly wide definition of neighbors. Specifically, we will create a second order queen contiguity, inclusive of first order neighbors, inverse distance weights based on knn = 10 nearest neighbor weights, and Epanechnikov kernel weights, using the same 10 nearest neighbors and with the kernel applied to the diagonal (its value will be 0.75).</p>
+<p>To proceed, we will be using procedures outlined in earlier notebooks to create the weights. The process will be less in depth than the ones in the distance and contiguity weight notebooks, but will be enough to make and review the process of making the weights.</p>
+<div id="geodadata-1" class="section level4 unnumbered">
+<h4>geodaData</h4>
+<p>All of the data for the R notebooks is available in the <strong>geodaData</strong> package. We loaded the library earlier, now to access the individual data sets, we use the double colon notation. This works similar to to accessing a variable with <code>$</code>, in that a drop down menu will appear with a list of the datasets included in the package. For this notebook, we use <code>ohio_lung</code>.</p>
+<p>Otherwise, to get the data for this notebook, you will need to go to <a href="https://geodacenter.github.io/data-and-lab/ohiolung/">Ohio Lung Cancer</a> The download format is a zipfile, so you will need to unzip it by double clicking on the file in your file finder. From there move the resulting folder titled: nyc into your working directory to continue. Once that is done, you can use the <strong>sf</strong> function: <code>st_read()</code> to read the shapefile into your R environment.</p>
+<pre class="r"><code>ohio_lung &lt;- geodaData::ohio_lung</code></pre>
+</div>
+<div id="creating-a-crude-rate" class="section level4 unnumbered">
+<h4>Creating a Crude Rate</h4>
+<p>In addition to the spatial weights, we also need an example for crude rates. If not already saved in the data set, we compute the crude rate for lung cancer among white females in 68.</p>
+<p>To get the rate we make a new variable, <strong>LRATE</strong> and calculated the rate through bivariate operation. We multiply the ratio by 10,000 to the crude rate of lung cancer per 10,000 white women in 1968.</p>
+<pre class="r"><code>ohio_lung$LRATE &lt;- ohio_lung$LFW68 / ohio_lung$POPFW68 * 10000</code></pre>
+<pre class="r"><code>tm_shape(ohio_lung) +
+  tm_fill(&quot;LRATE&quot;,palette = &quot;-RdBu&quot;,style =&quot;sd&quot;,title = &quot;Standard Deviation: LRATE&quot;) +
+  tm_borders() + 
+  tm_layout(legend.outside = TRUE, legend.outside.position = &quot;right&quot;)</code></pre>
+<p><img src="Applications_of_Spatial_Weights_files/figure-html/unnamed-chunk-37-1.png" width="672" /></p>
+</div>
+<div id="creating-the-weights-1" class="section level4 unnumbered">
+<h4>Creating the Weights</h4>
+<div id="queen-contiguity" class="section level5 unnumbered">
+<h5>Queen Contiguity</h5>
+<p>To create the queen contiguity weights, we will use the <strong>spdep</strong> package and <strong>sf</strong> package to make a neighbors list with both first and second order neighbors included.</p>
+<p>To begin we create a queen contiguity function with the corresponding pattern. We use the <code>st_relate</code> function to accomplish this. For a more in depth explanation of the specified pattern, check the contiguity based weights notebook.</p>
+<pre class="r"><code>st_queen &lt;- function(a, b = a) st_relate(a, b, pattern = &quot;F***T****&quot;)</code></pre>
+<p>Here we define a function needed to convert the resulting data structure from the <code>st_relate</code> function. Specifically from <strong>sgbp</strong> to <strong>nb</strong>. It’s fairly straightforward, we just change the class name, transfer the attributes, and check for observations without a neighbor.</p>
+<pre class="r"><code>as.nb.sgbp &lt;- function(x, ...) {
+  attrs &lt;- attributes(x)
+  x &lt;- lapply(x, function(i) { if(length(i) == 0L) 0L else i } )
+  attributes(x) &lt;- attrs
+  class(x) &lt;- &quot;nb&quot;
+  x
+}</code></pre>
+<p>Now we create a comprehnsive neighbors list with both first and second order neighbors. To start, we use the two functions we created to get a 1st order neighbors list, then we use <code>nblag</code> to get the first and second order neighbors. The next step is reoragnize the data structre so that first and second order neighbors are not separated, this is done with <code>nblag_cumul</code>. With these steps, we have a neighbors list of first and second order neighbors.</p>
+<pre class="r"><code>queen.sgbp &lt;- st_queen(ohio_lung)
+queen.nb &lt;- as.nb.sgbp(queen.sgbp)
+second.order.queen &lt;- nblag(queen.nb, 2)
+second.order.queen.cumul &lt;- nblag_cumul(second.order.queen)</code></pre>
+<p>Here we add the diagonal elements to the neighbors list because we will need them later on in computations.</p>
+<pre class="r"><code>include.self(second.order.queen.cumul)</code></pre>
+<pre><code>## Neighbour list object:
+## Number of regions: 88 
+## Number of nonzero links: 1376 
+## Percentage nonzero weights: 17.7686 
+## Average number of links: 15.63636</code></pre>
+<p>Now, we just use the <code>nb2listw</code> function to convert the neighbors list to a weights structure, which is row-standardized by default.</p>
+<pre class="r"><code>queen.weights &lt;- nb2listw(second.order.queen.cumul)</code></pre>
+<pre><code>## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;</code></pre>
+<pre class="r"><code>queen.weights$weights[[1]]</code></pre>
+<pre><code>##  [1] 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1</code></pre>
+</div>
+<div id="k-nearest-neighbors" class="section level5 unnumbered">
+<h5>K-nearest neighbors</h5>
+<p>Here we will make the inverse distance weights for the 10th-nearest neighbors. To start, we need the coordinates in a separate data structure before we can proceed with the neighbor and distance calculations. We use the same method to extract these values as the distance-band weights notebook.</p>
+<pre class="r"><code>longitude &lt;- map_dbl(ohio_lung$geometry, ~st_centroid(.x)[[1]])
+latitude &lt;- map_dbl(ohio_lung$geometry, ~st_centroid(.x)[[2]])
+coords &lt;- cbind(longitude, latitude)</code></pre>
+<p>From here we just use <code>knearneigh</code> and <code>knn2nb</code> to get our neighbors structure.</p>
+<pre class="r"><code>k10 &lt;- knn2nb(knearneigh(coords, k = 10))</code></pre>
+<p>Now we need the distances between each observation and its neighbors. Having this will allow us to calculate the inverse later and assign these values as weights when converting the neighbors structure to a weights structure.</p>
+<pre class="r"><code>k10.dists &lt;- nbdists(k10,coords)</code></pre>
+<p>Here we apply a function to the distances of the 10th nearest neighbors and change the scale by an order of 10,000. The purpose of changing the scale is to get weight values that are not approximently zero.</p>
+<pre class="r"><code>invdk10 &lt;- lapply(k10.dists, function(x) (1/(x/10000)))
+invdk10[1]</code></pre>
+<pre><code>## [[1]]
+##  [1] 0.2537074 0.1289088 0.2415022 0.3469379 0.1935753 0.2138694 0.1299890
+##  [8] 0.1415348 0.1449763 0.1291574</code></pre>
+<p>With the <code>nb2listw</code> function, we can assign non-default weights to the new weights structure by means of the <code>glist</code> argument. Here we just assign the scaled inverse weights we created above.</p>
+<pre class="r"><code>k10.weights &lt;- nb2listw(k10,glist = invdk10, style = &quot;B&quot;)
+k10.weights$weights[[1]]</code></pre>
+<pre><code>##  [1] 0.2537074 0.1289088 0.2415022 0.3469379 0.1935753 0.2138694 0.1299890
+##  [8] 0.1415348 0.1449763 0.1291574</code></pre>
+</div>
+<div id="epanechnikov-kernel" class="section level5 unnumbered">
+<h5>Epanechnikov kernel</h5>
+<p>For the Epanechnikov kernal weights, things are a bit more complicated, as we need to add in diagonal elements. This is best done with neighbors list.</p>
+<p>We start with the 10-nearest neighbors and assign to a new object because we will be altering the structure to get the resulting weights.</p>
+<p>This gives us the distances between neighbors in the same structure as the neighbors list.</p>
+<pre class="r"><code>k10.distances &lt;- nbdists(k10,coords)</code></pre>
+<p>This four loop gives us the epanechnikov weights in the the distance data structure that we computed above.</p>
+<pre class="r"><code>for (i in 1:length(k10.distances)){
+  maxk10 &lt;- max(k10.distances[[i]])
+  bandwidth &lt;- maxk10
+  new_row &lt;- .75*(1-(k10.distances[[i]] / bandwidth)^2)
+  k10.distances[[i]] &lt;- new_row
+}
+k10.distances[[1]]</code></pre>
+<pre><code>##  [1] 0.556375699 0.000000000 0.536310124 0.646456537 0.417397027
+##  [6] 0.477523632 0.012413252 0.127843776 0.157031189 0.002884936</code></pre>
+<p>Now we can assign our epanechnikov weight values as weights with the <code>nb2listw</code> function throught the <code>glist =</code> parameter.</p>
+<pre class="r"><code>epan.weights &lt;- nb2listw(k10,glist = k10.distances,style = &quot;B&quot;)
+epan.weights$weights[[1]]</code></pre>
+<pre><code>##  [1] 0.556375699 0.000000000 0.536310124 0.646456537 0.417397027
+##  [6] 0.477523632 0.012413252 0.127843776 0.157031189 0.002884936</code></pre>
+</div>
+</div>
+</div>
+<div id="simple-window-average-of-rates" class="section level3 unnumbered">
+<h3>Simple window average of rates</h3>
+<p>This is an illustration of how not to proceed with the spatial rate calculation. Here we use our crude rate and create a spatial lag variable directly from the second order queen contiguity weights.</p>
+<pre class="r"><code>ohio_lung$W_LRATE &lt;- lag.listw(queen.weights,ohio_lung$LRATE)</code></pre>
+<p>We then plot <strong>W_LRATE</strong> with a standard deviation map.</p>
+<pre class="r"><code>tm_shape(ohio_lung) +
+  tm_fill(&quot;W_LRATE&quot;,palette = &quot;-RdBu&quot;,style =&quot;sd&quot;,title = &quot;Standard Deviation: W_LRATE&quot;) +
+  tm_borders() + 
+  tm_layout(legend.outside = TRUE, legend.outside.position = &quot;right&quot;)</code></pre>
+<p><img src="Applications_of_Spatial_Weights_files/figure-html/unnamed-chunk-52-1.png" width="672" /></p>
+<p>Characteristic of the spatial averaging, several larger groupings of similarly classified observations appear. The pattern is quite different from that displayed for the crude rate. For example, the upper outliers have disappeared, and there is now one new lower outlier.</p>
+</div>
+<div id="spatially-smoothed-rates" class="section level3 unnumbered">
+<h3>Spatially Smoothed Rates</h3>
+<p>As mentioned, applying the spatial averaging directly to the crude rates is not the proper way to operate. This approach ignores the differences between the populations of the different counties and the associated variance instability of the rates.</p>
+<p>To create the spatially smoothed rate, we need to make lag variables of the event variable and base variable, then divide them to get our rate. In GeoDa we just select our variables and the software does it for us, in R we need some extra steps.</p>
+<p>To get this rate we create lag variables for both population and event count with <code>lag.listw</code>. To get the rate, we then divide the event count lag variable by the the population lag variable.</p>
+<pre class="r"><code>lag_lfw68 &lt;- lag.listw(queen.weights,ohio_lung$LFW68)
+lag_popfw68 &lt;- lag.listw(queen.weights,ohio_lung$POPFW68)
+ohio_lung$R_SPAT_R &lt;- lag_lfw68 / lag_popfw68</code></pre>
+<p>We map the results with <strong>tmap</strong> functions.</p>
+<pre class="r"><code>tm_shape(ohio_lung) +
+  tm_fill(&quot;R_SPAT_R&quot;,palette = &quot;-RdBu&quot;,style =&quot;sd&quot;,title = &quot;SRS-Smoothed LFW68 over POPFW68&quot;) +
+  tm_borders() + 
+  tm_layout(legend.outside = TRUE, legend.outside.position = &quot;right&quot;)</code></pre>
+<p><img src="Applications_of_Spatial_Weights_files/figure-html/unnamed-chunk-54-1.png" width="672" /></p>
+<p>We rescale the spatial rate variable by 10,000 to make it comparable to <strong>W_LRATE</strong>. Then we add all of the rate to a data frame with <code>data.frame</code> and take a brief side by side look with <code>head</code> and <code>kable</code>.</p>
+<pre class="r"><code>ohio_lung$R_SPAT_RT &lt;- ohio_lung$R_SPAT_R * 10000
+df &lt;- data.frame(LRATE = ohio_lung$LRATE,W_LRATE = ohio_lung$W_LRATE,R_SPAT_RT= ohio_lung$R_SPAT_RT)
+kable(head(df))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">LRATE</th>
+<th align="right">W_LRATE</th>
+<th align="right">R_SPAT_RT</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1.2266817</td>
+<td align="right">0.6859424</td>
+<td align="right">0.6787945</td>
+</tr>
+<tr class="even">
+<td align="right">0.6113217</td>
+<td align="right">0.7315576</td>
+<td align="right">0.9793153</td>
+</tr>
+<tr class="odd">
+<td align="right">0.9636697</td>
+<td align="right">0.9364070</td>
+<td align="right">1.0274976</td>
+</tr>
+<tr class="even">
+<td align="right">0.0000000</td>
+<td align="right">0.9414058</td>
+<td align="right">1.0600851</td>
+</tr>
+<tr class="odd">
+<td align="right">1.1988872</td>
+<td align="right">1.1059237</td>
+<td align="right">0.9678452</td>
+</tr>
+<tr class="even">
+<td align="right">0.0000000</td>
+<td align="right">1.0709655</td>
+<td align="right">1.1050227</td>
+</tr>
+</tbody>
+</table>
+<p>To get a more quantifiable comparason the table above, we can make a scatterplot with <strong>gplot2</strong> functions. We will not go into depth on the different options here, but will create a basic scatterplot of <strong>W_LRATE</strong> and <strong>R_SPAT_RT</strong>. <code>geom_point</code> add the points to the plot, and <code>geom_smooth(method=lm)</code> add a linear regression line.</p>
+<pre class="r"><code>ggplot(data=ohio_lung,aes(x=W_LRATE,y=R_SPAT_RT)) +
+  geom_point() +
+  geom_smooth(method=lm) </code></pre>
+<p><img src="Applications_of_Spatial_Weights_files/figure-html/unnamed-chunk-56-1.png" width="672" /></p>
+<p><code>lm</code> calculates the associated regression statistics with the scatterplot above. We then use <code>tidy</code> and <code>kable</code> to display these statistics in a neat table.</p>
+<pre class="r"><code>lmfit &lt;- lm(R_SPAT_RT ~ W_LRATE,data = ohio_lung)
+kable(tidy(lmfit))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">term</th>
+<th align="right">estimate</th>
+<th align="right">std.error</th>
+<th align="right">statistic</th>
+<th align="right">p.value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">(Intercept)</td>
+<td align="right">0.4213586</td>
+<td align="right">0.0613816</td>
+<td align="right">6.864573</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">W_LRATE</td>
+<td align="right">0.6421174</td>
+<td align="right">0.0586340</td>
+<td align="right">10.951276</td>
+<td align="right">0</td>
+</tr>
+</tbody>
+</table>
+<div id="inverse-distance-smoothed-rate" class="section level4 unnumbered">
+<h4>Inverse Distance Smoothed Rate</h4>
+<p>For the inverse distance weights, we proceed with a different approach. The <strong>k10.weights</strong> do not include diagonal elements, so we will need to address this in our computation of the rate. We begin with the lag variables for population and event count with our inverse distance weights. To add the diagonal element in our rate calculation, we add the event count variable to lag event count variable and do the same with population before dividing to compute the rate. This works because the diagonal element would be assigned 1 in the weight structure and as a result would just add the original sale proce from the location to the lag sale price, if originally included in the weight’s structure.</p>
+<pre class="r"><code>lag_lfw68 &lt;- lag.listw(k10.weights,ohio_lung$LFW68)
+lag_popfw68 &lt;- lag.listw(k10.weights,ohio_lung$POPFW68)
+ohio_lung$ID_RATE &lt;- (lag_lfw68 + ohio_lung$LFW68)/ (lag_popfw68 + ohio_lung$POPFW68) * 10000</code></pre>
+<pre class="r"><code>tm_shape(ohio_lung) +
+  tm_fill(&quot;ID_RATE&quot;,palette = &quot;-RdBu&quot;,style =&quot;sd&quot;,title = &quot;Standard Deviation IDRATE&quot;) +
+  tm_borders() + 
+  tm_layout(legend.outside = TRUE, legend.outside.position = &quot;right&quot;)</code></pre>
+<p><img src="Applications_of_Spatial_Weights_files/figure-html/unnamed-chunk-59-1.png" width="672" /></p>
+</div>
+<div id="kernal-smoothed-rate" class="section level4 unnumbered">
+<h4>Kernal Smoothed Rate</h4>
+<p>We follow the same process for the kernal weights calculation as the inverse distance, except rescale the diagonal element by .75 as done in epanechnikov kernal function.</p>
+<pre class="r"><code>lag_lfw68 &lt;- lag.listw(epan.weights,ohio_lung$LFW68)
+lag_popfw68 &lt;- lag.listw(epan.weights,ohio_lung$POPFW68)
+ohio_lung$KERN_RATE &lt;- (lag_lfw68 + .75 * ohio_lung$LFW68)/ (lag_popfw68 + .75 * ohio_lung$POPFW68) * 10000
+ohio_lung$KERN_RATE &lt;- lag_lfw68 / lag_popfw68 * 10000</code></pre>
+<pre class="r"><code>tm_shape(ohio_lung) +
+  tm_fill(&quot;KERN_RATE&quot;,palette = &quot;-RdBu&quot;,style =&quot;sd&quot;,title = &quot;Standard Deviation: KERN_RATE&quot;) +
+  tm_borders() + 
+  tm_layout(legend.outside = TRUE, legend.outside.position = &quot;right&quot;)</code></pre>
+<p><img src="Applications_of_Spatial_Weights_files/figure-html/unnamed-chunk-61-1.png" width="672" /></p>
+<pre class="r"><code>df &lt;- df %&gt;% mutate(ID_RATE = ohio_lung$ID_RATE, KERN_RATE = ohio_lung$KERN_RATE)
+kable(head(df))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">LRATE</th>
+<th align="right">W_LRATE</th>
+<th align="right">R_SPAT_RT</th>
+<th align="right">ID_RATE</th>
+<th align="right">KERN_RATE</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1.2266817</td>
+<td align="right">0.6859424</td>
+<td align="right">0.6787945</td>
+<td align="right">1.1004473</td>
+<td align="right">0.4102768</td>
+</tr>
+<tr class="even">
+<td align="right">0.6113217</td>
+<td align="right">0.7315576</td>
+<td align="right">0.9793153</td>
+<td align="right">0.9106611</td>
+<td align="right">0.9880350</td>
+</tr>
+<tr class="odd">
+<td align="right">0.9636697</td>
+<td align="right">0.9364070</td>
+<td align="right">1.0274976</td>
+<td align="right">1.0250171</td>
+<td align="right">1.0632788</td>
+</tr>
+<tr class="even">
+<td align="right">0.0000000</td>
+<td align="right">0.9414058</td>
+<td align="right">1.0600851</td>
+<td align="right">0.7552625</td>
+<td align="right">0.9394942</td>
+</tr>
+<tr class="odd">
+<td align="right">1.1988872</td>
+<td align="right">1.1059237</td>
+<td align="right">0.9678452</td>
+<td align="right">1.1197279</td>
+<td align="right">0.8257277</td>
+</tr>
+<tr class="even">
+<td align="right">0.0000000</td>
+<td align="right">1.0709655</td>
+<td align="right">1.1050227</td>
+<td align="right">0.8583623</td>
+<td align="right">1.0165777</td>
+</tr>
+</tbody>
+</table>
+<p>It is important to keep in mind that both the inverse distance and kernel weights spatially smoothed rates are based on a particular trade-off between the value at the location and its neighbors. This trade-off depends critically on the distance metric used in the calculations (or, on the scale in which the coordinates are expressed). There is no right answer, and a thorough sensitivity analysis is advised.</p>
+<p>For example, we can observe that the three spatially smoothed maps point to some elevated rates in the south of the state, but the extent of the respective regions and the counties on which they are centered differ slightly. Also, the general regional patterns are roughly the same, but there are important differences in terms of the specific counties affected.</p>
+</div>
+</div>
+</div>
+<div id="spatial-empirical-bayes-smoothing" class="section level2 unnumbered">
+<h2>Spatial Empirical Bayes smoothing</h2>
+<div id="principle-2" class="section level3 unnumbered">
+<h3>Principle</h3>
+<p>The second option for spatial rate smoothing is Spatial Empirical Bayes. This operates in the same way as the standard Empirical Bayes smoother (covered in the rate mapping Chapter), except that the reference rate is computed for a spatial window for each individual observation, rather than taking the same overall reference rate for all. This only works well for larger data sets, when the window (as defined by the spatial weights) is large enough to allow for effective smoothing.</p>
+<p>Similar to the standard EB principle, a reference rate (or prior) is computed. However, here, this rate is estimated from the spatial window surrounding a given observation, consisting of the observation and its neighbors. The neighbors are defined by the non-zero elements in the row of the spatial weight matrix (i.e., the spatial weights are treated as binary).</p>
+<p>Formally, the reference mean for location i is then:</p>
+<p><span class="math display">\[\mu_i = \frac{\Sigma_jw_{ij}O_j}{\Sigma_jw_{ij}P_j}\]</span></p>
+<p>with <span class="math inline">\(w_{ij}\)</span> as binary spatial weights, and <span class="math inline">\(w_{ii}=1\)</span></p>
+<p>The local estimate of the prior variance follows the same logic as for EB, but replacing the population and rates by their local counterparts:</p>
+<p><span class="math display">\[\sigma_i^2 = \frac{\Sigma_jw_{ij}[P_j(r_i - \mu_i)^2]}{\Sigma_jw_{ij}P_j} - \frac{\mu_i}{\Sigma_jw_{ij}P_i/(k_i +1)}\]</span></p>
+<p>Note that the average population in the second term pertains to all locations within the window, therefore, this is divided by <span class="math inline">\(k_i +1\)</span>(with <span class="math inline">\(k_i\)</span> as the number of neighbors of i). As in the case of the standard EB rate, it is quite possible (and quite common) to obtain a negative estimate for the local variance, in which case it is set to zero.</p>
+<p>The spatial EB smoothed rate is computed as a weighted average of the crude rate and the prior, in the same manner as for the standard EB rate</p>
+<p>For reference the EB rate in this case is as denoted below:</p>
+<p><span class="math display">\[w_i = \frac{\sigma_i^2}{\sigma_i^2 + \mu_i / P_i}\]</span></p>
+<p><span class="math display">\[\pi_i^{EB}= w_ir_i + (1-w_i)\theta\]</span></p>
+</div>
+<div id="spatial-eb-rate-smoother" class="section level3 unnumbered">
+<h3>Spatial EB rate smoother</h3>
+<p>The spatial Empirical Bayes is included in the <strong>spdep</strong> package. It even has a <code>geoda =</code> that calculates the rate in the same manner as GeoDa. To do this, we use the <code>EBlocal</code> function from <strong>spdep</strong> and input the two variables with a neighbors list. We then set <code>geoda =</code> to be TRUE.</p>
+<pre class="r"><code>eb_risk &lt;- EBlocal(ohio_lung$LFW68, ohio_lung$POPFW68, second.order.queen.cumul, geoda = TRUE)</code></pre>
+<pre><code>## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;</code></pre>
+<p>With our Empirical Bayes calculation, we can now examine it with a choropleth map. Before we proceed, we add <strong>eb_risk</strong> to the data frame. We need to select the <strong>est</strong> not the <strong>raw</strong> to get the correct figures.</p>
+<pre class="r"><code>ohio_lung &lt;- ohio_lung %&gt;% mutate(eb_risk = eb_risk$est)
+tm_shape(ohio_lung) +
+  tm_fill(&quot;eb_risk&quot;,palette = &quot;-RdBu&quot;,style =&quot;sd&quot;,title = &quot;SEBS-Smoothed LFW68 over POPFW68&quot;) +
+  tm_borders() + 
+  tm_layout(legend.outside = TRUE, legend.outside.position = &quot;right&quot;)</code></pre>
+<p><img src="Applications_of_Spatial_Weights_files/figure-html/unnamed-chunk-64-1.png" width="672" /></p>
+<p>We do the same for the 10-nearest neighbors:</p>
+<pre class="r"><code>eb_risk_k10 &lt;- EBlocal(ohio_lung$LFW68, ohio_lung$POPFW68, k10, geoda = TRUE)</code></pre>
+<pre><code>## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;
+
+## Warning in rep(1, length = cardnb[i]): partial argument match of &#39;length&#39;
+## to &#39;length.out&#39;</code></pre>
+<pre class="r"><code>ohio_lung &lt;- ohio_lung %&gt;% mutate(eb_risk_k10 = eb_risk_k10$est)
+tm_shape(ohio_lung) +
+  tm_fill(&quot;eb_risk_k10&quot;,palette = &quot;-RdBu&quot;,style =&quot;sd&quot;,title = &quot;SEBS-Smoothed LFW68 over POPFW68&quot;) +
+  tm_borders() + 
+  tm_layout(legend.outside = TRUE, legend.outside.position = &quot;right&quot;)</code></pre>
+<p><img src="Applications_of_Spatial_Weights_files/figure-html/unnamed-chunk-65-1.png" width="672" /></p>
+<p>As for the spatial rate smoothing approaches, a careful sensitivity analysis is in order. The results depend considerably on the range used for the reference rate. The larger the range, the more the smoothed rates will be similar to the global EB rate. For a narrow range, the estimate of the local variance will often result in a zero imputed value, which makes the EB approach less meaningful.</p>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>University of Chicago, Center for Spatial Data Science – <a href="mailto:anselin@uchicago.edu" class="email">anselin@uchicago.edu</a>,<a href="mailto:morrisonge@uchicago.edu" class="email">morrisonge@uchicago.edu</a><a href="#fnref1" class="footnote-back">↩</a></p></li>
+<li id="fn2"><p>Use <code>setwd(directorypath)</code> to specify the working directory.<a href="#fnref2" class="footnote-back">↩</a></p></li>
+<li id="fn3"><p>Use <code>install.packages(packagename)</code>.<a href="#fnref3" class="footnote-back">↩</a></p></li>
+</ol>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

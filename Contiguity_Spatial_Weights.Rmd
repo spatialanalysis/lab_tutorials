@@ -1,0 +1,601 @@
+---
+title: "Contiguity-Based Spatial Weights"
+subtitle: "R Notes"
+author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
+date: "11/17/2019"
+output:
+  html_document:
+    fig_caption: yes
+    self_contained: no
+    toc: yes
+    toc_depth: 4
+    css: tutor.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br>
+
+## Introduction {-}
+
+This notebook covers the functionality of the [Contiguity-Based Spatial Weights](https://geodacenter.github.io/workbook/4a_contig_weights/lab4a.html) section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.
+
+The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments
+on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).
+
+For this notebook, we use U.S. Homicide data. Our goal in this lab is show how to implement contiguity based spatial weights 
+
+
+```{r}
+
+```
+### Objectives {-}
+
+After completing the notebook, you should know how to carry out the following tasks:
+
+- Construct rook and queen contiguity-based spatial weights
+
+- Compute higher order contiguity weights
+
+- Save weights information
+
+- Assess the characteristics of spatial weights
+
+- Visualize the graph structure of spatial weights
+
+- Identify the neighbors of selected observations
+
+#### R Packages used {-}
+
+- **sf**: To read in the shapefile, add centroids, and create the neighbors lists
+
+- **purrr**: Used to map a function over each element of a vector
+
+- **ggplot2**: To make a connectivity histogram
+
+- **spdep**: Save weights files and create neighbors lists of higher order
+
+- **geodaData: Load the data for the notebook.
+
+#### R Commands used {-}
+
+Below follows a list of the commands used in this notebook. For further details
+and a comprehensive list of options, please consult the 
+[R documentation](https://www.rdocumentation.org).
+
+- **Base R**: `install.packages`, `library`, `setwd`, `class`, `str`, `lapply`, `attributes`, `summary`, `head`, `seq`
+
+- **sf**: `plot`, `st_centroid`, `st_relate`
+
+- **purrr**: `map_dbl`
+
+- **ggplot2**: `ggplot`, `geom_histogram`, `aes`, `xlab`
+
+- **spdep**: `write.nb.gal`, `nblag`, `nblag_cumul`, `card`
+
+## Preliminaries {-}
+
+Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not
+actually be saving any files.^[Use `setwd(directorypath)` to specify the working directory.]
+
+### Load packages {-}
+
+First, we load all the required packages using the `library` command. If you don't have some of these in your system, make sure to install them first as well as
+their dependencies.^[Use 
+`install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
+
+
+```{r}
+library(sf)
+library(spdep)
+library(purrr)
+library(ggplot2)
+library(geodaData)
+```
+
+
+### geodaData {-}
+
+All of the data for the R notebooks is available in the **geodaData**
+package. We loaded the library earlier, now to access the individual
+data sets, we use the double colon notation. This works similar to
+to accessing a variable with `$`, in that a drop down menu will 
+appear with a list of the datasets included in the package. For this
+notebook, we use `ncovr`.
+
+
+```{r}
+us.bound  <- geodaData::ncovr
+```
+
+## Contiguity Weights {-}
+
+Contiguity means that two spatial units share a common border of non-zero length.
+Operationally, we can further distinguish between a rook and a queen criterion of
+contiguity, in analogy to the moves allowed for the such-named pieces on a chess
+board.
+
+The rook criterion defines neighbors by the existence of a common edge between two
+spatial units. The queen criterion is somewhat more encompassing and defines
+neighbors as spatial units sharing a common edge or a common vertex.4 Therefore, the
+number of neighbors according to the queen criterion will always be at least as
+large as for the rook criterion.
+
+In practice, the construction of the spatial weights from the geometry of the data
+cannot be done by visual inspection or manual calculation, except in the most
+trivial of situations. To assess whether two polygons are contiguous requires the
+use of explicit spatial data structures to deal with the location and arrangement of
+the polygons. This is implemented through the spatial weights functionality in
+GeoDa. We will do this with **sf** and **spdep** libraries.
+
+We will create our neighbors using **sf** first, as the **spdep** library doesn't 
+allow us to create neighbors lists directly as with the older **sp** library. 
+When we create neighbors in **sf** we will get a class of **sgbp**(sparse geometry binary predicate), which is similar
+to the standard **nb** class used in **spdep**, but is not quite compatible. We will
+have to convert from **sgbp** to **nb**, which is not too difficult, as the classes are
+very similar.
+
+It is important to keep in mind that the spatial weights are critically dependent on
+the quality of the spatial data source (GIS) from which they are constructed.
+Problems with the topology in the GIS (e.g., slivers) will result in inaccuracies
+for the neighbor relations included in the spatial weights. In practice, it is
+essential to check the characteristics of the weights for any evidence of problems.
+When problems are detected, the solution is to go back to the GIS and fix or clean
+the topology of the data set. Editing of spatial layers is not implemented in GeoDa,
+but this is a routine operation in most GIS software.
+
+
+
+### Rook Contiguity {-}
+
+We first start with rook contiguity, which are neighbors that are connected by a
+common side. To create our neighbors list we start by making a 
+function that will do the rook contiguity. To do this we start with the `function`
+command and use `a, a = b` for our inputs. We do this reduce unnecessary typing,
+as the two parameters are both going to be our **sf** object. From here we just
+need `st_relate`. `st_relate` computes relationships between pairs of geometries,
+or matches it to a given pattern. This function also has a parameter for a specified 
+pattern. This pattern will refer to a DE9-IM relationship between x[i] and y[j]. We
+don't need to go into detail on this to utilize rook contiguity, but you can check
+out the basics of DE9-IM at [DE9-IM](https://en.wikipedia.org/wiki/DE-9IM). All we
+need for rook contiguity is the pattern input `"F***1****"`. This gives us the
+correct DE9-IM relationship for rook contiguity. For more documentation on
+`st_relate` check out [st_relate documentation](https://www.rdocumentation.org/packages/sf/versions/0.6-3/topics/st_relate)
+
+```{r}
+st_rook = function(a, b = a) st_relate(a, b, pattern = "F***1****")
+```
+
+
+```{r}
+sf.sgbp.rook <- st_rook(us.bound)
+```
+
+
+
+
+We now check the class of our resulting object from the the `st_rook` function
+with the base R function `class`. It is **sgbp**, which we will have to convert in order to
+work with **spdep** and the `plot` function later on.
+
+```{r}
+class(sf.sgbp.rook)
+```
+
+
+We can get a comprehensive view of what the **sgbp** data structure looks like with
+the `str` command. We will see a list of 3085 vectors that contain the id numbers of
+each observation's neighbors. Along with this we will see some attributes. These
+are the same attributes as an **nb** and the data structure follows the same form
+as **nb**. This is important for later operations where we will need to convert
+to type **nb**.
+
+
+```{r}
+str(sf.sgbp.rook)
+```
+
+Now we will start our conversion from class **sgbp** to **nb**. To do this,
+we need to change the class explicitly, and take the precaution to represent 
+observations with no neighbors with the integer 0. Our data set doesn't have
+any observations without neighbors, but in ones with these, it will mess everything
+up, if not dealt with. 
+
+We start with the `function` operator. The input for our function will be an object
+of class **sgbp**, denoted by **x**. We store the attributes in **attrs**, as we will
+need to reapply them later. Now we deal we observation with no neighbors. We will
+use `lapply`, which applies a function to each element of a list or vector. As for the
+input function, we make one that checks the length of an element of our list for
+0(meaning no neighbors) and returns 0 if the element is empty and the element
+otherwise. This can be a bit confusing, for more information on `lapply`, check out 
+[lapply documentation](https://www.rdocumentation.org/packages/base/versions/3.5.1/topics/lapply)
+
+From here we will have dealt with observation with no neighbors, but will need to 
+reapply our attributes to the resulting structure from the `lapply` function. This 
+is done by calling the `attributes` function and assigning our stored attributes.
+The final step is to explicitly change the class to **nb** by using the `class` function
+and assigning `"nb"`. We then return our object **x**.
+
+
+
+```{r}
+as.nb.sgbp <- function(x, ...) {
+  attrs <- attributes(x)
+  x <- lapply(x, function(i) { if(length(i) == 0L) 0L else i } )
+  attributes(x) <- attrs
+  class(x) <- "nb"
+  x
+}
+```
+
+
+Now we use the function we created to convert our **sgbp** object to **nb**.
+
+```{r}
+sf.nb.rook <- as.nb.sgbp(sf.sgbp.rook)
+```
+
+
+
+Now we take a comprehensive look at our resulting **nb** object with the `str` command.
+It is essentially the same as before, just the class now says **nb** instead of **sgbp**. This makes our earlier steps seem a bit unnecessary and overcomplicated, 
+but they are important, as all datasets, will not have the same circumstances as 
+this one, and it is important for these things to work across the board.
+
+```{r}
+str(sf.nb.rook)
+```
+
+Now that we are converted to **nb**, we can use the `summary` command to give us more
+useful information about the neighbors list.
+
+```{r}
+summary(sf.nb.rook)
+```
+
+We use the `class` command to check and make sure we have **nb**.
+
+```{r}
+class(sf.nb.rook)
+```
+
+We check the length to make sure it corresponds with the GeoDa tutorial example.
+
+```{r}
+length(sf.nb.rook)
+```
+
+
+
+
+### Queen Contiguity {-}
+
+
+We proceed in the same fashion to construct queen contiguity weights. The difference
+between the rook and queen criterion to determine neighbors is that the latter also
+includes common vertices. This makes the greatest difference for regular grids (square
+polygons), where the rook criterion will result in four neighbors (except for edge
+cases) and the queen criterion will yield eight. For irregular polygons (like most
+areal units encountered in practice), the differences will be slight. In order to deal
+with potential inaccuracies in the polygon file (such as rounding errors), using the
+queen criterion is recommended in practice. Hence it is also the default for
+contiguity weights.
+
+To make our queen contiguity weights, we make a function using `st_relate` and 
+specifying a DE9-IM pattern. For queen contiguity, our pattern is `"F***T****"`. We
+we don't really need to go into why the pattern is what it is for our purposes, but
+[DE9-IM](https://en.wikipedia.org/wiki/DE-9IM) and [st_relate documentation](https://www.rdocumentation.org/packages/sf/versions/0.6-3/topics/st_relate) can help explain this to a degree.
+
+
+```{r}
+st_queen <- function(a, b = a) st_relate(a, b, pattern = "F***T****")
+```
+
+
+Now we use our `st_queen` function to get another **sgbp** neighbor list
+
+```{r}
+sf.sgbp.queen <- st_queen(us.bound)
+```
+
+To convert to type **nb** we use `as.nb.sgbp`, which we created earlier.
+
+
+```{r}
+sf.nb.queen <- as.nb.sgbp(sf.sgbp.queen)
+```
+
+
+```{r}
+str(sf.nb.queen)
+```
+
+
+## Higher Order Contiguity {-}
+
+Now we move on to higher order contiguity weights. To make these we will need the
+**spdep** package. We will use the `nblag` and `nblag_cumul` functions to compute
+the higher order weights.
+
+The `nblag` function takes a neighbor list of class **nb** and an order as parameters.
+It will give us a list of neighbors lists. One for 1st order neighbors and one for
+second order neighbors. We can select from this data structure by double bracket
+notation, for instance `[[1]]` will give the **nb** object for first order neighbors.
+Using a `2` instead of a `1` will give us the second order neighbors.
+
+
+```{r}
+second.order.queen <- nblag(sf.nb.queen, 2)
+```
+
+We first take a comprehensive look at **second.order.queen** to see the resulting
+data structure from `nblag`. As said earlier, it is a list of 2 **nb** objects. One
+for 1st order neighbors and one for 2nd order. It is important to examine this, so
+we can make use of specific elements of the data structure in our visualizations
+of the neighbors.
+
+```{r}
+str(second.order.queen)
+```
+
+Now we can look at, specifically, the 2nd order neighbors by using the double bracket
+selection.
+
+```{r}
+str(second.order.queen[[2]])
+```
+
+We store the second order neighbors in **sf.nb.queen2** to make things simpler
+for our visuals.
+
+```{r}
+sf.nb.queen2 <- second.order.queen[[2]]
+```
+
+
+
+
+Now if we want to include both 1st and 2nd order neighbors in our visualizations, we
+need the `nblag_cumul` function. This will give us an **nb** object with both 1st and 2nd order neighbors, instead of separating them as in the result of `nblag`. To use this
+function, we need the resulting object from the `nblag` function. `nblag_cumul` combines the two separate **nb** objects from the `nblag` function into one.
+
+
+```{r}
+second.order.queen.cumul <- nblag_cumul(second.order.queen)
+```
+
+
+Here we take another in depth look at result. We can see that, we now have one **nb**
+object with both 1st and 2nd order neighbors.
+
+```{r}
+str(second.order.queen.cumul)
+```
+
+
+
+## Visualizing Contiguity Neighbors {-}
+
+
+
+### Connectivity Graph {-}
+
+A connectivity graph takes a point and displays a line to each neighboring point. We are
+working with polygons at the moment, so we will need to get points in order to make
+our connectivity graphs. The most typically method for this will be polygon centroids.
+We will calculate these in the **sf** package before moving onto the graphs.
+
+
+
+#### Getting Latitude and Longitude of Polygon Centroids {-}
+
+We will need points to associate with each polygon before we can make our connectivity
+graph. It will be a little more complicated than just running `st_centroid` on
+the **sf** object: **us.bound**. We need the coordinates in a separate data frame
+for this to work. To do this we will use a mapping function. The mapping function
+applies a given function to each element of a vector and returns a vector of the 
+same length. Our input vector will be the geometry column of **us.bound**. Our
+function will be `st_centroid`. We will be using `map_dbl` variation of `map` from
+the **purrr** package. For more documentation, check out [map documentation](https://www.rdocumentation.org/packages/purrr/versions/0.2.5/topics/map)
+
+
+To get our longitude values we map the `st_centroid` function over the geometry 
+column of **us.bound** and access the longitude value through double bracket notation
+[[]] and 1. This allows us to get only the longitude, which is the first value in each
+centroid.
+
+
+```{r}
+longitude <- map_dbl(us.bound$geometry, ~st_centroid(.x)[[1]])
+```
+
+We do the same for latitude with one key difference. We access the second value per
+each centroid with `[[2]]`.
+
+```{r}
+latitude <- map_dbl(us.bound$geometry, ~st_centroid(.x)[[2]])
+```
+
+Now that we have latitude and longitude, we use `cbind` to put longitude and latitude
+into the same object.
+
+```{r}
+coords <- cbind(longitude, latitude)
+```
+
+
+We check the first few observations to see if things are formatted correctly.
+```{r}
+head(coords)
+```
+
+
+
+
+#### Rook Connectivity Graphs {-}
+
+Now that we have coordinates for each of our observations, we can plot the neighbors
+through a connectivity graph. We just need the basic `plot` function and to enter
+our neighbor list as the first parameter, then our coordinates as the second. We
+add extra customizations, so we can actually see what is going on in the graph.
+We use `lwd = .2` to make the line length less thick, we set the `col ="blue"`, and 
+finally `cex = .5` to make the point symbols smaller. The default options make the
+graph near indecipherable, so it is important to add these extra parameters.
+
+```{r}
+plot(sf.nb.rook, coords, lwd=.2, col="blue", cex = .5)
+```
+
+
+
+#### Queen Connectivity Graphs {-}
+
+Now we will do the same for queen contiguity. The queen variation will have more lines,
+as there are more neighbors due to shared vertices counting in the neighbors
+relationship. It is hard to spot the differences between the two plots, as they are
+both visually busy 
+
+##### First Order {-}
+
+The same form is followed for queen contiguity as we are working with the same class:
+a **nb** object and a corresponding list of coordinates.
+
+```{r}
+plot(sf.nb.queen, coords, lwd=.2, col="blue", cex = .5)
+```
+
+##### Second Order {-}
+
+Here we take a look at a connectivity graph for second order neighbors. All we need
+is the second order **nb** object that we created earlier and our coordinates. This
+graph will look significantly different from the ones we've made so far, as second 
+order tends to have more neighbors than first order.
+
+```{r}
+plot(sf.nb.queen2, coords, lwd=.2, col="blue", cex = .5)
+```
+
+
+##### Cumulative {-}
+
+We will take a look a plot with both second and first order neighbors here. It will
+be a very busy graph. 
+
+
+```{r}
+plot(second.order.queen.cumul, coords, lwd=.2, col="blue", cex = .5)
+```
+
+
+
+
+### Connectivity Histogram {-}
+
+A connectivity histogram shows the number of observations for each 
+cardinality of neighbors(how many observations have the same number of neighbors).
+We first have to get the cardinality before we can make the histograms. We can
+do this by using the `card` function from the **spdep** package. This will give
+us a vector of 3085 observations with each one containing the corresponding
+number of neighbors from the input neighbors list.
+
+
+
+```{r}
+rook.card <- card(sf.nb.rook)
+```
+
+
+We take a look at the first few observation with the `head` function and as we can see,
+it is a vector with number of neighbors for each observation of the **nb** object.
+```{r}
+
+head(rook.card)
+```
+
+Now we check the length and it is what we expected.
+```{r}
+length(rook.card)
+```
+
+We can visualize the cardinality through a **ggplot2** histogram. For this we just
+need to call the `ggplot` function and add `geom_histogram` as a layer. We specify the
+`aes()` in `geom_histogram` to be our rook cardinality. This will give us a basic plot, which
+we will customize further a little later.
+
+```{r}
+ggplot() +
+  geom_histogram(aes(x=rook.card))
+```
+
+
+
+Here we will add a few customizations to make the plot nicer. The most important is with
+the `breaks =` parameter, as the bars are spaced out kind of weirdly in our opening plot.
+We can avoid manually typing in the breaks by using the `seq` function, which will give us
+a list of numbers 0 to 13, incrementing by 1 each time. We specify the range in the first
+two arguments and then use `by =` to pick the number to increment by. In our case, 1 makes
+the most sense as you cannot have half of a neighbor.
+
+```{r}
+ggplot() +
+  geom_histogram(aes(x=rook.card), breaks = seq(0,13, by = 1)) +
+  xlab("number of neighbors")
+```
+
+
+With the `summary` command we can get a look at the summary
+statistics for the cardinality of the neighbors list.
+```{r}
+summary(rook.card)
+```
+
+
+
+
+## Saving Neighbors {-}
+To save our neighbors list, we use the `write.nb.gal` function from
+the **spdep** package. The file format is a GAL Lattice file. We
+input our neighbors list, and the the filename second. We have two 
+options from this point. We can save the file with the old style
+or the new GeoDa header style.
+
+### Oldstyle {-}
+
+The oldstyle just saves the neighbor list with then number of observations
+at the top of the file. We can save in this format by setting `oldstyle =`
+to `TRUE`.
+
+```{r}
+write.nb.gal(sf.nb.rook, "rook_contiguity_old.gal", oldstyle = TRUE)
+```
+
+
+
+### GeoDA Header Format {-}
+
+The new GeoDA header style, also takes the shapefile name taken from GAL file for
+the dataset and the region id indicator variable name. It puts this information
+in a header for the file. All we have to do is set `oldstyle =` to FALSE and
+enter names for `shpfile` and `ind` parameters.
+
+```{r}
+write.nb.gal(sf.nb.rook, "rook_contiguity_new.gal", oldstyle = FALSE, shpfile ="NAT.shp", ind ="region id")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
