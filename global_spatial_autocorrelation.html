@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
 <meta name="author" content="Luc Anselin and Grant Morrison" />
 
-<meta name="date" content="2018-09-17" />
+<meta name="date" content="2019-12-28" />
 
 <title>Global Spatial Autocorrelation 1</title>
 
@@ -72,9 +72,7 @@ h6 {
 
 <link rel="stylesheet" href="tutor.css" type="text/css" />
 
-</head>
 
-<body>
 
 <style type = "text/css">
 .main-container {
@@ -88,7 +86,6 @@ code {
 }
 img {
   max-width:100%;
-  height: auto;
 }
 .tabbed-pane {
   padding-top: 12px;
@@ -99,22 +96,81 @@ img {
 button.code-folding-btn:focus {
   outline: none;
 }
+summary {
+  display: list-item;
+}
 </style>
 
 
 
-<div class="container-fluid main-container">
-
 <!-- tabsets -->
-<script>
-$(document).ready(function () {
-  window.buildTabsets("TOC");
-});
-</script>
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
 
 <!-- code folding -->
 
 
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
 
 
 
@@ -124,9 +180,9 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">Global Spatial Autocorrelation 1</h1>
-<h3 class="subtitle"><em>R Notes</em></h3>
-<h4 class="author"><em>Luc Anselin and Grant Morrison<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a></em></h4>
-<h4 class="date"><em>09/17/2018</em></h4>
+<h3 class="subtitle">R Notes</h3>
+<h4 class="author">Luc Anselin and Grant Morrison<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a></h4>
+<h4 class="date">12/28/2019</h4>
 
 </div>
 
@@ -153,8 +209,6 @@ $(document).ready(function () {
 <li><a href="#interpretation">Interpretation</a></li>
 <li><a href="#assessing-significance">Assessing significance</a></li>
 <li><a href="#reference-distribution">Reference distribution</a></li>
-<li><a href="#replicability---the-random-seed">Replicability - the random seed</a></li>
-<li><a href="#lowess-smoother">LOWESS smoother</a></li>
 <li><a href="#chow-test-morans-i-scatterplot">Chow test Moran’s I scatterplot</a></li>
 </ul></li>
 </ul></li>
@@ -222,58 +276,16 @@ $(document).ready(function () {
 <div id="load-packages" class="section level3">
 <h3>Load packages</h3>
 <p>First, we load all the required packages using the <code>library</code> command. If you don’t have some of these in your system, make sure to install them first as well as their dependencies.<a href="#fn3" class="footnoteRef" id="fnref3"><sup>3</sup></a> You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.</p>
-<pre class="r"><code>library(sf)</code></pre>
-<pre><code>## Linking to GEOS 3.6.1, GDAL 2.1.3, PROJ 4.9.3</code></pre>
-<pre class="r"><code>library(spdep)</code></pre>
-<pre><code>## Loading required package: sp</code></pre>
-<pre><code>## Loading required package: Matrix</code></pre>
-<pre><code>## Loading required package: spData</code></pre>
-<pre><code>## To access larger datasets in this package, install the spDataLarge
-## package with: `install.packages(&#39;spDataLarge&#39;,
-## repos=&#39;https://nowosad.github.io/drat/&#39;, type=&#39;source&#39;)`</code></pre>
-<pre class="r"><code>library(ggplot2)
-library(deldir)</code></pre>
-<pre><code>## deldir 0.1-15</code></pre>
-<pre class="r"><code>library(robustHD)</code></pre>
-<pre><code>## Loading required package: perry</code></pre>
-<pre><code>## Loading required package: parallel</code></pre>
-<pre><code>## Loading required package: robustbase</code></pre>
-<pre class="r"><code>library(Hmisc)</code></pre>
-<pre><code>## Warning: package &#39;Hmisc&#39; was built under R version 3.5.2</code></pre>
-<pre><code>## Loading required package: lattice</code></pre>
-<pre><code>## Loading required package: survival</code></pre>
-<pre><code>## 
-## Attaching package: &#39;survival&#39;</code></pre>
-<pre><code>## The following object is masked from &#39;package:robustbase&#39;:
-## 
-##     heart</code></pre>
-<pre><code>## Loading required package: Formula</code></pre>
-<pre><code>## 
-## Attaching package: &#39;Hmisc&#39;</code></pre>
-<pre><code>## The following objects are masked from &#39;package:base&#39;:
-## 
-##     format.pval, units</code></pre>
-<pre class="r"><code>library(tidyverse)</code></pre>
-<pre><code>## ── Attaching packages ─────────────────────────────────────────────────────── tidyverse 1.2.1 ──</code></pre>
-<pre><code>## ✔ tibble  1.4.2     ✔ purrr   0.2.5
-## ✔ tidyr   0.8.2     ✔ dplyr   0.7.8
-## ✔ readr   1.2.1     ✔ stringr 1.3.1
-## ✔ tibble  1.4.2     ✔ forcats 0.3.0</code></pre>
-<pre><code>## ── Conflicts ────────────────────────────────────────────────────────── tidyverse_conflicts() ──
-## ✖ tidyr::expand()    masks Matrix::expand()
-## ✖ dplyr::filter()    masks stats::filter()
-## ✖ dplyr::lag()       masks stats::lag()
-## ✖ dplyr::src()       masks Hmisc::src()
-## ✖ dplyr::summarize() masks Hmisc::summarize()</code></pre>
-<pre class="r"><code>library(gap)</code></pre>
-<pre><code>## gap version 1.1-22</code></pre>
-<pre class="r"><code>library(gridExtra)</code></pre>
-<pre><code>## 
-## Attaching package: &#39;gridExtra&#39;</code></pre>
-<pre><code>## The following object is masked from &#39;package:dplyr&#39;:
-## 
-##     combine</code></pre>
-<pre class="r"><code>library(geodaData)</code></pre>
+<pre class="r"><code>library(sf)
+library(spdep)
+library(ggplot2)
+library(deldir)
+library(robustHD)
+library(Hmisc)
+library(tidyverse)
+library(gap)
+library(gridExtra)
+library(geodaData)</code></pre>
 </div>
 <div id="geodadata-website" class="section level3 unnumbered">
 <h3>geodaData website</h3>
@@ -285,17 +297,8 @@ library(deldir)</code></pre>
 <h3>Making the weights</h3>
 <p>The weights used for this notebook are queen contiguity, based off voronoi polygons contructed from the point data for this notebook. In order to make the weights, we must first construct voronoi polygons from the cleveland point data. There are a number of ways to do this. We will be using the <strong>deldir</strong> package as a starting point. We will need to convert the result from the <strong>deldir</strong> package to class <strong>sf</strong>, which we have been working with throughout the notebooks.</p>
 <p>The only function we need from <strong>deldir</strong> is <code>deldir</code>, which outputs a data structure with voronoi polygons. The only inputs needed are a vector of the x coordinates and a vector of the y coordinates. The base R <code>plot</code> function can give us a preliminary look at the voronoi polygons. We will need a few additional parameters other than <strong>vtess</strong>, so the plot is legitable. Set <code>wlines = &quot;tess&quot;</code>, <code>wpoints = &quot;none&quot;</code> and <code>lty = 1</code>.</p>
-<pre class="r"><code>vtess &lt;- deldir(clev.points$x, clev.points$y)</code></pre>
-<pre><code>## 
-##      PLEASE NOTE:  The components &quot;delsgs&quot; and &quot;summary&quot; of the
-##  object returned by deldir() are now DATA FRAMES rather than
-##  matrices (as they were prior to release 0.0-18).
-##  See help(&quot;deldir&quot;).
-##  
-##      PLEASE NOTE: The process that deldir() uses for determining
-##  duplicated points has changed from that used in version
-##  0.0-9 of this package (and previously). See help(&quot;deldir&quot;).</code></pre>
-<pre class="r"><code>plot(vtess, wlines=&quot;tess&quot;, wpoints=&quot;none&quot;,
+<pre class="r"><code>vtess &lt;- deldir(clev.points$x, clev.points$y)
+plot(vtess, wlines=&quot;tess&quot;, wpoints=&quot;none&quot;,
       lty=1)</code></pre>
 <p><img src="global_spatial_autocorrelation_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
 <p>This function will be used to convert the <strong>deldir</strong> voronoi polygons to <strong>sp</strong>, where we can easily convert them to <strong>sf</strong>. We are not going to cover the individual steps of this function because it is outside the scope of these notebooks. The important thing to note here is that this function converts <strong>deldir</strong> voronoi polygons to <strong>sp</strong>.</p>
@@ -356,9 +359,7 @@ class(queen.nb)</code></pre>
 <h4>Permutation inference</h4>
 <p>Inference for Moran’s I is based on a null hypothesis of spatial randomness. The distribution of the statistic under the null can be derived using either an assumption of normality (independent normal random variates), or so-called randomization (i.e., each value is equally likely to occur at any location).</p>
 <p>An alternative to an analytical derivation is a computational approach based on permutation. This calculates a reference distribution for the statistic under the null hypothesis of spatial randomness by randomly permuting the observed values over the locations. The statistic is computed for each of these randomly reshuffled data sets, which yields a reference distribution.</p>
-<p>This distribution is then used to calculate a so-called pseudo p-value. This is found as</p>
-<p><span class="math display">\[p = \frac{R +1}{M+1}\]</span></p>
-<p>where R is the number of times the computed Moran’s I from the spatial random data sets (the permuted data sets) is equal to or more extreme than the observed statistic. M equals the number of permutations. The latter is typically taken as 99, 999, etc., to yield nicely rounded pseudo p-values.</p>
+<p>This distribution is then used to calculate a so-called pseudo p-value. This is found as <span class="math display">\[p = \frac{R +1}{M+1}\]</span> where R is the number of times the computed Moran’s I from the spatial random data sets (the permuted data sets) is equal to or more extreme than the observed statistic. M equals the number of permutations. The latter is typically taken as 99, 999, etc., to yield nicely rounded pseudo p-values.</p>
 <p>The pseudo p-value is only a summary of the results from the reference distribution and should not be interpreted as an analytical p-value. Most importantly, it should be kept in mind that the extent of significance is determined in part by the number of random pemutations. More precisely, a result that has a p-value of 0.01 with 99 permutations is not necessarily more significant than a result with a p-value of 0.001 with 999 permutations.</p>
 </div>
 <div id="moran-scatter-plot" class="section level4">
@@ -438,6 +439,11 @@ clev.points$standardized_lag_sale_price &lt;- standardize(clev.points$lagged_sal
 <div id="assessing-significance" class="section level4">
 <h4>Assessing significance</h4>
 <p>We have an estimate of the Moran’s I statistic, but no information on the significance of that statistic. This can be obtained by constructing a distribution by means of random assignment. In order to do this, we first choose the number of permutations desired, which will directly affect the minimum pseudo p-value we can obtain for the test statistic. In the case of 999 permutation the minimum p-value would be .001, which would mean none of the sample distribution statistics are as extreme or more extreme than the test statistic.</p>
+<div id="replicability---the-random-seed" class="section level5">
+<h5>Replicability - the random seed</h5>
+<p>To faciliate replication, it is best to set a seed for the random number generator. The one used in GeoDa is 123456789, so we will demonstrate how to set the seed here. It is just <code>set.seed</code> and the desired seed number as an input.</p>
+<pre class="r"><code>set.seed(123456789)</code></pre>
+</div>
 </div>
 <div id="reference-distribution" class="section level4">
 <h4>Reference distribution</h4>
@@ -445,27 +451,27 @@ clev.points$standardized_lag_sale_price &lt;- standardize(clev.points$lagged_sal
 <p>We start by taking one random sample of our points with the base R <code>sample</code> function. We choose the same size as the number of sale price data observations to make a spatially randomized vector of our sale price data. The point of this is to randomly assign the housing prices to the voronoi polygons, then to compute the Moran’s I statistic for the spatially random assignment based off the original weights structure.</p>
 <pre class="r"><code>draw &lt;- sample(clev.points$sale_price, size = length(clev.points$sale_price))
 draw</code></pre>
-<pre><code>##   [1]  48900  26400   9500   2500 165000  62000  16000  32500   5000   6370
-##  [11]  65000  76000  25000 228000   8600  14500  49000  81500   5000   3000
-##  [21]  15000   8500  20000   7000  48500 235500 100000  15834  25750  29000
-##  [31]   7500  47000   4250 122500  11500  15000  13000   1300  20000  10000
-##  [41]  12000  13000  24900  20000   4775   8400 131650  65000  75000  69000
-##  [51]  20000  15500   4149   2910  27000   5000  38500  11750   5000   7000
-##  [61]  16900  21119  92000  16000  26000  19000  64000   7000  22000  23500
-##  [71]  15000   3500  13000   8000   7000   8000   7000  28000 116250  11500
-##  [81]  15000  27750   8000  84900 135000  14000  11000  10500  65000  15000
-##  [91]  17500  41500   4924 125000  42500  51000  14500  15000  25000  21199
-## [101]  12000  10000  16500  42000  15000   8000  76000  48500 109900  16500
-## [111]  25250  29150  32500  30000  49000  26000  15000   6483  26000  68900
-## [121]   7900  27600 120000  89500   5200  17000  70000  40000  38200   5968
-## [131]   6800   1049 138500   7000 230000  78000  73400   1448  41069  72900
-## [141]  33500  85000  34750  45000   9000   5000  47000  34000 169500   5000
-## [151]  13100  40000 172500  28500  11750  11582   5800 155000 275000  48000
-## [161]  32500  19971  11750  65000  25000  10000   5500  73000   5500   5000
-## [171]  23000  29900  10000   2100  10000  15000  12000 527409 305000  25000
-## [181]  72000  82500  63000   6500  45900   8000  25750  20000  10000   5000
-## [191]   9000   6375  19000   4000  18000  24800  56900  41000 167000   6300
-## [201]   3000  75000 103000   4500  20000</code></pre>
+<pre><code>##   [1]   5000  10000   8500   4775   4500   5200  28500  62000  12000  20000
+##  [11]  30000  17000  19000 167000  24900  41500  65000 131650  26400  12000
+##  [21] 172500  65000   2500 120000 305000  15500   5000  69000   6800  49000
+##  [31]  85000  15000 228000   1300  14500  14000  42500   4250 116250  29000
+##  [41]  11750  14500  42000  15000  73400  24800  10000   5000  84900 235500
+##  [51]  40000  28000  47000   7000  11000 275000  16500  29150 100000 155000
+##  [61]   8000  15000  63000  34750   7900  13000  18000   8000  48500  15000
+##  [71]  26000  38500  17500   8000  16900  23500  65000  21119  15000  75000
+##  [81]  76000   7000  48000  27750  15000  51000   9000   6300   4924  72000
+##  [91]  25750  33500  45900  13000   5500 125000   7500  10000  22000  10000
+## [101]  73000  26000  20000   9000  11582 169500  20000  25000   8600  72900
+## [111]   5000 230000   6375   2910  23000   3000  41000  16500   3000  32500
+## [121]   5000  25250   4149  40000  25750   7000  25000   8000  68900  16000
+## [131]  48500  15000 109900  11500   6483  49000  27600 122500   6370   9500
+## [141]  32500  27000  47000   3500  45000 135000  11500   5968  13100   8000
+## [151]   6500  25000 138500   5000  11750  10500   5000  38200  10000  25000
+## [161]   7000   7000  29900  75000  34000   7000 527409   4000  15000  19000
+## [171]   5500  76000  20000  21199  41069  78000  15000  26000   1049  65000
+## [181] 103000  92000   8400  10000  82500  56900  20000  13000   2100  81500
+## [191]  15834  20000  19971  12000   1448  70000   5800  64000  48900  32500
+## [201] 165000   5000  16000  11750  89500</code></pre>
 <p>Now we can begin to calculate the Moran’s I statistic by first calculating the spatial lag variable based on our queen weights and the spatially random sample.</p>
 <pre class="r"><code>lag1 &lt;- lag.listw(queen.weights,draw)</code></pre>
 <p>We can get the Moran’s I statistic by regressing the standardized values of the spatial lag variable on the standardized values of the random draw. We can get the standardized value with the <code>standardize</code> function. The <code>summary</code> function allows us to see a summary of the regression statistics.</p>
@@ -477,18 +483,16 @@ summary(lmfit)</code></pre>
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -1.5073 -0.7103 -0.2479  0.3810  4.7668 
+## -1.1296 -0.6232 -0.2418  0.2690  5.5560 
 ## 
 ## Coefficients:
-##                    Estimate Std. Error t value Pr(&gt;|t|)  
-## (Intercept)       6.026e-17  6.898e-02   0.000    1.000  
-## standardize(draw) 1.714e-01  6.915e-02   2.478    0.014 *
-## ---
-## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+##                     Estimate Std. Error t value Pr(&gt;|t|)
+## (Intercept)        6.833e-17  6.997e-02   0.000    1.000
+## standardize(draw) -3.771e-02  7.014e-02  -0.538    0.591
 ## 
-## Residual standard error: 0.9876 on 203 degrees of freedom
-## Multiple R-squared:  0.02936,    Adjusted R-squared:  0.02458 
-## F-statistic: 6.141 on 1 and 203 DF,  p-value: 0.01402</code></pre>
+## Residual standard error: 1.002 on 203 degrees of freedom
+## Multiple R-squared:  0.001422,   Adjusted R-squared:  -0.003497 
+## F-statistic: 0.2891 on 1 and 203 DF,  p-value: 0.5914</code></pre>
 <p>The slope here is the estimate for <strong>standardize(draw)</strong>. This value is fairly close to zero as the randomization process makes makes the draw spatially random.</p>
 <p>To build our distribution, we will need to repeat this process many times over. We can accomplish this by way of a <code>for</code> loop. We will need somewhere to store our Moran’s I result for each iteration. To do this we will make an empty vector of a length corresponding to our desired number of permutations.</p>
 <pre class="r"><code>randomized_moran &lt;- rep(NA, 999)</code></pre>
@@ -499,15 +503,16 @@ summary(lmfit)</code></pre>
   lmfit &lt;- lm(standardize(lag) ~ standardize(draw))
   randomized_moran[i] &lt;- lmfit$coefficients[2] 
 }</code></pre>
+<p>We can obtain summary statistics of our distribution with <code>summary</code></p>
 <pre class="r"><code>summary(randomized_moran)</code></pre>
 <pre><code>##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
-## -0.25708 -0.07536 -0.02305 -0.01365  0.04089  0.38895</code></pre>
+## -0.26215 -0.07946 -0.02163 -0.01469  0.04247  0.37970</code></pre>
 <pre class="r"><code>sd(randomized_moran)</code></pre>
-<pre><code>## [1] 0.08840575</code></pre>
+<pre><code>## [1] 0.09099489</code></pre>
 <p>Now to get the p value, we will check the number of samples that had higher Moran’s I statistic than the observed value. To do this, we use the base R <code>which</code> function to get a vector of the indices at which the conditional is TRUE. We then get the length of the vector with <code>length</code>.</p>
 <pre class="r"><code>length(which(randomized_moran &gt; .281))</code></pre>
-<pre><code>## [1] 5</code></pre>
-<p>Since the result is 1, there is only 1 value in all of the permutations that is higher than the test statistic. This means that the p value is .002 <span class="math inline">\(\frac{1 + R}{1 + M}\)</span>, where R = 1 and M = 999.</p>
+<pre><code>## [1] 7</code></pre>
+<p>Since the result is 1, there is only 1 value in all of the permutations that is higher than the test statistic. This means that the p value is .002, <span class="math inline">\(\frac{1 + R}{1 + M}\)</span>, where R = 1 and M = 999.</p>
 <p>There are a number of ways we can visualize the distribution that we just constructed in R. We will use <strong>ggplot2</strong> to do these visualizations because it looks much better than base R visualizations.</p>
 <p>To start, we convert our vector with the randomized moran’s I values into a data frame, so we can use <strong>ggplot2</strong> functions. For this, we just use the <code>data.frame</code> function with the vector of randomized moran’s I values as an argument and then assign a name for the column, which is just <code>moran</code> in this case.</p>
 <p>The first option is a density plot. This requires the standard <code>ggplot</code> function with <code>aes</code> containing the x axis. Additionally we need <code>geom_density</code>. We use <code>geom_vline</code> to plot the mean of the distribution and our observed statistic.</p>
@@ -516,22 +521,14 @@ ggplot(data = df,aes(x=moran)) +
   geom_density() +
   geom_vline(xintercept = moran[[1]], col = &quot;green&quot;) +
   geom_vline(xintercept = mean(randomized_moran), col = &quot;blue&quot;)</code></pre>
-<p><img src="global_spatial_autocorrelation_files/figure-html/unnamed-chunk-25-1.png" width="672" /></p>
+<p><img src="global_spatial_autocorrelation_files/figure-html/unnamed-chunk-26-1.png" width="672" /></p>
 <p>The next option is a histogram. The only difference here is that we use <code>geom_histogram</code> instead of `geom_density.</p>
 <pre class="r"><code>ggplot(data = df, aes(x=moran)) +
   geom_histogram() +
   geom_vline(xintercept = moran[[1]], col = &quot;green&quot;) +
   geom_vline(xintercept = mean(randomized_moran), col = &quot;blue&quot;)</code></pre>
 <pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
-<p><img src="global_spatial_autocorrelation_files/figure-html/unnamed-chunk-26-1.png" width="672" /></p>
-</div>
-<div id="replicability---the-random-seed" class="section level4">
-<h4>Replicability - the random seed</h4>
-<p>To faciliate replication, it is best to set a seed for the random number generator. The one used in GeoDa is 123456789, so we will demonstrate how to set the seed here. It is just <code>set.seed</code> and the desired seed number as an input.</p>
-<pre class="r"><code>set.seed(123456789)</code></pre>
-</div>
-<div id="lowess-smoother" class="section level4">
-<h4>LOWESS smoother</h4>
+<p><img src="global_spatial_autocorrelation_files/figure-html/unnamed-chunk-27-1.png" width="672" /> #### LOWESS smoother</p>
 <p>The LOWESS smoother is not implemented directly in <strong>ggplot2</strong>, but can be found in an add-on package. We use the <strong>Hmisc</strong> package to add this functionality to the <strong>ggplot2</strong> plots. To add the smoother to our Moran’s I scatter plot, we use the <code>stat_plsmo</code> from the <strong>Hmisc</strong> package. The default span for GeoDa is .2 so we will set the <code>span =</code> parameter to .2.</p>
 <p>With the LOWESS smoother, we can see potential structural breaks in the pattern of spatial autocorrelation. For example some parts of the data, the curve may be very steep, and positive, indicating strong spatial autocorrelation, whereas in other parts, it could be flat, indicating no spatial autocorrelation.</p>
 <pre class="r"><code>ggplot(data = clev.points, aes(x=standardized_sale_price, y = standardized_lag_sale_price)) +
@@ -636,19 +633,8 @@ chow</code></pre>
 <p>Now we create distance based neighbors coordinate matrix and lower distance bound and an upper distance bound, which is used to define neighbors. We use <code>dnearneigh</code> to create the distance band neighbors. For more in depth information on distance based neighbors, please see the Disatnce Based Weights notebook. We use a distance of 4823.27 to emulate the first example in the GeoDa workbook.</p>
 <pre class="r"><code>dist.band.nb &lt;- dnearneigh(coords,0,4823.27)</code></pre>
 <p>Using the <strong>spdep</strong> function `sp.correlogram, we can get measures of spatial autocorrelation for an input number of lag orders. We can then use the base R plotting function to get a look at the autocorrelation values for each lag order.</p>
-<pre class="r"><code>sp &lt;- sp.correlogram(dist.band.nb, clev.points$sale_price, order = 10, method = &quot;I&quot;,style = &quot;W&quot;, randomisation = TRUE, spChk = NULL, zero.policy = TRUE)</code></pre>
-<pre><code>## Warning in moran.test(var, listw, randomisation = randomisation, zero.policy = zero.policy): Kurtosis overflow,
-## distribution of variable does not meet test assumptions</code></pre>
-<pre><code>## Warning in moran.test(var, listw, randomisation = randomisation, zero.policy = zero.policy): Negative variance,
-## distribution of variable does not meet test assumptions</code></pre>
-<pre><code>## Warning in sqrt(VI): NaNs produced</code></pre>
-<pre><code>## Warning in moran.test(var, listw, randomisation = randomisation,
-## zero.policy = zero.policy): Out-of-range p-value: reconsider test arguments</code></pre>
-<pre class="r"><code>plot(sp)</code></pre>
-<pre><code>## Warning in arrows(lags, x$res[, 1] + sd2, lags, x$res[, 1] - sd2, length =
-## 0.1, : zero-length arrow is of indeterminate angle and so skipped</code></pre>
-<pre><code>## Warning in arrows(lags, x$res[, 1] - sd2, lags, x$res[, 1] + sd2, length =
-## 0.1, : zero-length arrow is of indeterminate angle and so skipped</code></pre>
+<pre class="r"><code>sp &lt;- sp.correlogram(dist.band.nb, clev.points$sale_price, order = 10, method = &quot;I&quot;,style = &quot;W&quot;, randomisation = TRUE, spChk = NULL, zero.policy = TRUE)
+plot(sp)</code></pre>
 <p><img src="global_spatial_autocorrelation_files/figure-html/unnamed-chunk-38-1.png" width="672" /></p>
 <p>To get a better looking plot, we can extract the moran’s I values and put them into a data frame, so we can use <strong>ggplot2</strong> plotting functionality.</p>
 <pre class="r"><code>morans &lt;- sp$res[,1]
@@ -679,7 +665,7 @@ ggplot(data = df, aes(x=euclidean_distance,y=Morans_I)) +
   pairs[i] &lt;- sum(card(nb)) / 2
 }</code></pre>
 <p>Now we create a data frame from the two vectors we create with the lag order values and associated euclidean distance values.</p>
-<pre class="r"><code>df &lt;- data_frame(lag_order = 1:10, auto_corr = morans, num_pairs = pairs)
+<pre class="r"><code>df &lt;- data.frame(lag_order = 1:10, auto_corr = morans, num_pairs = pairs)
 df$euclidean_distance &lt;- df$lag_order * 4823</code></pre>
 <p>Here we create two different plots, one is a histogram with the number of pairs in each bin, the other is the spatial correlogram</p>
 <pre class="r"><code>p1 &lt;- ggplot(data = df, aes(x = euclidean_distance,y = auto_corr)) +
@@ -714,8 +700,7 @@ p1</code></pre>
   #        coords: A matrix of coordinates of the same length as var
   # creating vectors to store autocorrelation values and number of pairs
   pairs &lt;- rep(NA, lag.order)
-  spat_auto_cor &lt;- rep(NA, lag.order)
-  
+
   #loop to calculate number of pairs for each lag order
   for(i in 1:lag.order) {
     nb &lt;- dnearneigh(coords, (i-1) * distance, i * distance)
@@ -781,6 +766,23 @@ $(document).ready(function () {
 
 
 </script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
 
 <!-- dynamically load mathjax for compatibility with self-contained -->
 <script>

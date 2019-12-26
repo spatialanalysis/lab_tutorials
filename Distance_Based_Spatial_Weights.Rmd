@@ -104,7 +104,7 @@ their dependencies.^[Use
 `install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
 
 
-```{r}
+```{r, message=FALSE,warning=FALSE}
 library(tmap)
 library(sf)
 library(spdep)
@@ -130,7 +130,7 @@ clev.points <- geodaData::clev_pts
 ```
 
 
-```{r}
+```{r,warning=FALSE}
 plot(clev.points)
 ```
 
@@ -538,7 +538,7 @@ basic polygons. `wpoints = "none"` keeps points off the map. `lty = 1` specifies
 a solid line type.
 
 
-```{r}
+```{r, message=FALSE}
 vtess <- deldir(clev.points$x, clev.points$y)
 plot(vtess, wlines="tess", wpoints="none",
       lty=1)

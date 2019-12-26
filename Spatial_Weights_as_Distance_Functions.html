@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
 <meta name="author" content="Luc Anselin and Grant Morrison" />
 
-<meta name="date" content="2018-09-17" />
+<meta name="date" content="2019-12-19" />
 
 <title>Spatial Weights as Distance Functions</title>
 
@@ -72,9 +72,7 @@ h6 {
 
 <link rel="stylesheet" href="tutor.css" type="text/css" />
 
-</head>
 
-<body>
 
 <style type = "text/css">
 .main-container {
@@ -88,7 +86,6 @@ code {
 }
 img {
   max-width:100%;
-  height: auto;
 }
 .tabbed-pane {
   padding-top: 12px;
@@ -99,22 +96,81 @@ img {
 button.code-folding-btn:focus {
   outline: none;
 }
+summary {
+  display: list-item;
+}
 </style>
 
 
 
-<div class="container-fluid main-container">
-
 <!-- tabsets -->
-<script>
-$(document).ready(function () {
-  window.buildTabsets("TOC");
-});
-</script>
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
 
 <!-- code folding -->
 
 
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
 
 
 
@@ -124,9 +180,9 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">Spatial Weights as Distance Functions</h1>
-<h3 class="subtitle"><em>R Notes</em></h3>
-<h4 class="author"><em>Luc Anselin and Grant Morrison<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a></em></h4>
-<h4 class="date"><em>09/17/2018</em></h4>
+<h3 class="subtitle">R Notes</h3>
+<h4 class="author">Luc Anselin and Grant Morrison<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a></h4>
+<h4 class="date">12/19/2019</h4>
 
 </div>
 
@@ -205,16 +261,9 @@ $(document).ready(function () {
 <div id="load-packages" class="section level3 unnumbered">
 <h3>Load packages</h3>
 <p>First, we load all the required packages using the <code>library</code> command. If you don’t have some of these in your system, make sure to install them first as well as their dependencies.<a href="#fn3" class="footnoteRef" id="fnref3"><sup>3</sup></a> You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.</p>
-<pre class="r"><code>library(sf)</code></pre>
-<pre><code>## Linking to GEOS 3.6.1, GDAL 2.1.3, PROJ 4.9.3</code></pre>
-<pre class="r"><code>library(spdep)</code></pre>
-<pre><code>## Loading required package: sp</code></pre>
-<pre><code>## Loading required package: Matrix</code></pre>
-<pre><code>## Loading required package: spData</code></pre>
-<pre><code>## To access larger datasets in this package, install the spDataLarge
-## package with: `install.packages(&#39;spDataLarge&#39;,
-## repos=&#39;https://nowosad.github.io/drat/&#39;, type=&#39;source&#39;)`</code></pre>
-<pre class="r"><code>library(geodaData)</code></pre>
+<pre class="r"><code>library(sf)
+library(spdep)
+library(geodaData)</code></pre>
 </div>
 <div id="obtaining-the-data-from-the-geoda-website" class="section level3 unnumbered">
 <h3>Obtaining the Data from the GeoDa website</h3>
@@ -270,8 +319,8 @@ distances[1]</code></pre>
 <pre class="r"><code>invd1a &lt;- lapply(distances, function(x) (1/(x/100)))
 invd1a[1]</code></pre>
 <pre><code>## [[1]]
-## [1] 0.25963168 0.03318873 0.08618371 0.05379514 0.02969871 0.03959608
-## [7] 0.03074062 0.02949213 0.02967673</code></pre>
+## [1] 0.25963168 0.03318873 0.08618371 0.05379514 0.02969871 0.03959608 0.03074062
+## [8] 0.02949213 0.02967673</code></pre>
 <p>Now that we have properly scaled inverse distances, we can assign them as weight values. This is done in the conversion function <code>nb2listw</code>. To assign the weights, we use the <code>glist =</code> argument. For this to work we also have to specify <code>style = &quot;B&quot;</code>, otherwise the <code>listw</code> function will use the default row standardization.</p>
 <pre class="r"><code>invd.weights &lt;- nb2listw(nb.dist.band,glist = invd1a,style = &quot;B&quot;)</code></pre>
 <p>Here we take a cursory look at our weights with <code>summary</code> to get basic imformation and statistics.</p>
@@ -284,10 +333,10 @@ invd1a[1]</code></pre>
 ## Average number of links: 12.6439 
 ## Link number distribution:
 ## 
-##  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 
-##  6  6  9  5  5 10  8 10 13 12 11  6 17  8  9 11 13  6 10  7  2  4  6  2  1 
-## 26 27 28 29 30 32 
-##  1  1  2  1  1  2 
+##  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 
+##  6  6  9  5  5 10  8 10 13 12 11  6 17  8  9 11 13  6 10  7  2  4  6  2  1  1 
+## 27 28 29 30 32 
+##  1  2  1  1  2 
 ## 6 least connected regions:
 ## 59 114 115 116 117 198 with 1 link
 ## 2 most connected regions:
@@ -300,8 +349,8 @@ invd1a[1]</code></pre>
 <p>We can check the values of the weights by using <code>$weights</code> to access the values.</p>
 <pre class="r"><code>invd.weights$weights[1]</code></pre>
 <pre><code>## [[1]]
-## [1] 0.25963168 0.03318873 0.08618371 0.05379514 0.02969871 0.03959608
-## [7] 0.03074062 0.02949213 0.02967673</code></pre>
+## [1] 0.25963168 0.03318873 0.08618371 0.05379514 0.02969871 0.03959608 0.03074062
+## [8] 0.02949213 0.02967673</code></pre>
 <div id="properties-of-inverse-distance-weights" class="section level4 unnumbered">
 <h4>Properties of inverse distance weights</h4>
 <p>Since the properties only pertain to the connectivity structure implied by the weights, they are identical to the ones obtained for the standard distance-band weights. It is important to keep in mind that the actual values for the weights are ignored in this operation.</p>
@@ -318,115 +367,7 @@ invd1a[1]</code></pre>
 <h3>Creating inverse distance functions for k-nearest neighbors</h3>
 <p>We can compute inverse distance weights for k-nearest neighbors using the same approach as for distance-band neighbors. The only difference being that we don’t have to calculate a critical threshold for k-nearest neighbors.</p>
 <p>We start by getting the k-nearest neighbors for k = 6. We do this with <code>knearneigh</code> and <code>knn2nb</code>.</p>
-<pre class="r"><code>k6 &lt;- knn2nb(knearneigh(coords, k = 6))
-str(k6)</code></pre>
-<pre><code>## List of 205
-##  $ : int [1:6] 2 6 7 8 10 31
-##  $ : int [1:6] 1 7 8 10 31 32
-##  $ : int [1:6] 4 5 11 13 15 17
-##  $ : int [1:6] 3 5 6 11 13 15
-##  $ : int [1:6] 3 4 6 11 13 15
-##  $ : int [1:6] 3 4 5 10 11 15
-##  $ : int [1:6] 1 2 8 9 10 31
-##  $ : int [1:6] 2 7 10 31 32 34
-##  $ : int [1:6] 8 10 11 31 34 35
-##  $ : int [1:6] 4 6 7 8 9 34
-##  $ : int [1:6] 3 4 5 12 13 14
-##  $ : int [1:6] 3 11 13 14 17 18
-##  $ : int [1:6] 3 11 12 14 17 18
-##  $ : int [1:6] 3 4 11 12 13 18
-##  $ : int [1:6] 3 4 5 6 11 13
-##  $ : int [1:6] 3 12 13 17 18 19
-##  $ : int [1:6] 3 12 13 16 18 19
-##  $ : int [1:6] 12 13 14 17 44 45
-##  $ : int [1:6] 17 18 44 45 46 47
-##  $ : int [1:6] 19 21 22 27 46 47
-##  $ : int [1:6] 22 26 27 28 29 56
-##  $ : int [1:6] 21 23 24 25 28 29
-##  $ : int [1:6] 22 24 25 27 28 29
-##  $ : int [1:6] 22 23 25 27 28 29
-##  $ : int [1:6] 22 23 24 27 28 29
-##  $ : int [1:6] 21 27 28 29 56 57
-##  $ : int [1:6] 21 26 28 29 56 57
-##  $ : int [1:6] 21 22 26 27 29 56
-##  $ : int [1:6] 22 23 24 25 28 56
-##  $ : int [1:6] 31 32 33 38 39 40
-##  $ : int [1:6] 8 30 32 33 34 35
-##  $ : int [1:6] 8 30 31 33 34 35
-##  $ : int [1:6] 30 38 39 40 41 42
-##  $ : int [1:6] 8 9 31 32 33 35
-##  $ : int [1:6] 8 9 31 32 33 34
-##  $ : int [1:6] 18 43 44 45 101 103
-##  $ : int [1:6] 33 38 39 40 41 42
-##  $ : int [1:6] 33 37 39 40 41 42
-##  $ : int [1:6] 33 37 38 40 41 42
-##  $ : int [1:6] 33 37 38 39 41 42
-##  $ : int [1:6] 33 37 38 39 40 42
-##  $ : int [1:6] 33 37 38 39 40 41
-##  $ : int [1:6] 18 19 44 45 46 47
-##  $ : int [1:6] 18 19 43 45 46 47
-##  $ : int [1:6] 18 19 43 44 46 47
-##  $ : int [1:6] 18 19 43 44 45 47
-##  $ : int [1:6] 18 19 43 44 45 46
-##  $ : int [1:6] 49 50 51 52 54 55
-##  $ : int [1:6] 48 50 51 52 54 55
-##  $ : int [1:6] 48 49 51 52 54 55
-##  $ : int [1:6] 48 49 50 52 54 55
-##  $ : int [1:6] 48 53 54 80 81 103
-##  $ : int [1:6] 52 54 80 81 82 103
-##  $ : int [1:6] 52 53 80 81 84 85
-##  $ : int [1:6] 48 49 50 51 54 80
-##  $ : int [1:6] 21 26 27 28 29 57
-##  $ : int [1:6] 26 27 28 29 55 56
-##  $ : int [1:6] 59 72 73 94 95 97
-##  $ : int [1:6] 58 73 77 78 79 200
-##  $ : int [1:6] 98 104 105 106 107 109
-##  $ : int [1:6] 62 63 64 65 66 199
-##  $ : int [1:6] 61 63 65 66 68 69
-##  $ : int [1:6] 61 62 64 65 66 199
-##  $ : int [1:6] 61 62 63 65 67 199
-##  $ : int [1:6] 62 63 66 67 68 69
-##  $ : int [1:6] 65 67 68 69 70 71
-##  $ : int [1:6] 64 65 66 68 69 71
-##  $ : int [1:6] 65 66 67 69 70 71
-##  $ : int [1:6] 62 65 66 68 70 71
-##  $ : int [1:6] 66 68 69 71 74 75
-##  $ : int [1:6] 66 68 69 70 74 75
-##  $ : int [1:6] 73 76 77 79 93 97
-##  $ : int [1:6] 72 79 93 94 95 97
-##  $ : int [1:6] 70 71 75 76 77 78
-##  $ : int [1:6] 70 71 74 76 77 78
-##  $ : int [1:6] 72 74 75 77 78 79
-##  $ : int [1:6] 72 74 75 76 78 79
-##  $ : int [1:6] 72 74 75 76 77 79
-##  $ : int [1:6] 72 74 75 76 77 78
-##  $ : int [1:6] 52 54 81 84 85 87
-##  $ : int [1:6] 54 80 84 85 86 87
-##  $ : int [1:6] 53 83 84 88 112 113
-##  $ : int [1:6] 82 84 85 86 88 89
-##  $ : int [1:6] 80 81 83 85 86 89
-##  $ : int [1:6] 80 81 84 86 87 89
-##  $ : int [1:6] 81 84 85 89 90 91
-##  $ : int [1:6] 80 81 84 85 86 90
-##  $ : int [1:6] 82 83 84 110 112 113
-##  $ : int [1:6] 84 85 86 90 91 92
-##  $ : int [1:6] 84 85 86 89 91 92
-##  $ : int [1:6] 85 86 89 90 92 94
-##  $ : int [1:6] 86 89 90 91 93 94
-##  $ : int [1:6] 73 91 92 94 95 97
-##  $ : int [1:6] 90 91 92 93 95 97
-##  $ : int [1:6] 90 91 92 93 94 97
-##  $ : int [1:6] 88 92 93 97 111 113
-##  $ : int [1:6] 72 73 92 93 94 95
-##  $ : int [1:6] 99 104 106 107 108 109
-##  $ : int [1:6] 98 100 104 107 108 109
-##   [list output truncated]
-##  - attr(*, &quot;region.id&quot;)= chr [1:205] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...
-##  - attr(*, &quot;call&quot;)= language knearneigh(x = coords, k = 6)
-##  - attr(*, &quot;sym&quot;)= logi FALSE
-##  - attr(*, &quot;type&quot;)= chr &quot;knn&quot;
-##  - attr(*, &quot;knn-k&quot;)= num 6
-##  - attr(*, &quot;class&quot;)= chr &quot;nb&quot;</code></pre>
+<pre class="r"><code>k6 &lt;- knn2nb(knearneigh(coords, k = 6))</code></pre>
 <p>Now that we have the neighbors list we need all of the distances between neighbors in a similar data structure, which we use <code>nbdist</code> for again.</p>
 <pre class="r"><code>k.distances &lt;- nbdists(k6, coords)</code></pre>
 <p>Here we calculate the inverse distances, keeping in mind the scale from the distance-band weights from earlier.</p>
@@ -435,8 +376,8 @@ invd2a[1]</code></pre>
 <pre><code>## [[1]]
 ## [1] 0.25963168 0.03318873 0.08618371 0.05379514 0.03959608 0.03074062</code></pre>
 <p>Lastly, we assign the weight values with the <code>glist =</code> parameter and speficy the <code>style</code> as “B” to avoid default computations.</p>
-<pre class="r"><code>invd.weights.knn &lt;- nb2listw(k6,glist = invd2a,style = &quot;B&quot;)</code></pre>
-<pre class="r"><code>invd.weights.knn$weights[1]</code></pre>
+<pre class="r"><code>invd.weights.knn &lt;- nb2listw(k6,glist = invd2a,style = &quot;B&quot;)
+invd.weights.knn$weights[1]</code></pre>
 <pre><code>## [[1]]
 ## [1] 0.25963168 0.03318873 0.08618371 0.05379514 0.03959608 0.03074062</code></pre>
 </div>
@@ -475,117 +416,6 @@ invd2a[1]</code></pre>
 ## Average number of links: 13.6439</code></pre>
 <pre class="r"><code>kernal.nb[[2]]</code></pre>
 <pre><code>## [1]  1  6  7  8  9 10 31 32 34</code></pre>
-<p>We can check our result with <code>str</code>. We should now see a 1 in the 1st row, a 2 in the 2nd row, a 3 in the 3rd, and so on.</p>
-<pre class="r"><code>str(kernal.nb)</code></pre>
-<pre><code>## List of 205
-##  $ : int [1:9] 2 6 7 8 9 10 31 32 34
-##  $ : int [1:9] 1 6 7 8 9 10 31 32 34
-##  $ : int [1:15] 4 5 6 9 10 11 12 13 14 15 ...
-##  $ : int [1:15] 3 5 6 7 8 9 10 11 12 13 ...
-##  $ : int [1:15] 3 4 6 7 8 9 10 11 12 13 ...
-##  $ : int [1:17] 1 2 3 4 5 7 8 9 10 11 ...
-##  $ : int [1:15] 1 2 4 5 6 8 9 10 11 15 ...
-##  $ : int [1:15] 1 2 4 5 6 7 9 10 11 30 ...
-##  $ : int [1:19] 1 2 3 4 5 6 7 8 10 11 ...
-##  $ : int [1:18] 1 2 3 4 5 6 7 8 9 11 ...
-##  $ : int [1:20] 3 4 5 6 7 8 9 10 12 13 ...
-##  $ : int [1:20] 3 4 5 6 9 10 11 13 14 15 ...
-##  $ : int [1:20] 3 4 5 6 9 10 11 12 14 15 ...
-##  $ : int [1:19] 3 4 5 6 9 10 11 12 13 15 ...
-##  $ : int [1:14] 3 4 5 6 7 9 10 11 12 13 ...
-##  $ : int [1:17] 3 4 5 6 11 12 13 14 15 17 ...
-##  $ : int [1:17] 3 4 5 6 11 12 13 14 15 16 ...
-##  $ : int [1:19] 3 4 5 6 9 11 12 13 14 15 ...
-##  $ : int [1:13] 3 11 12 13 14 16 17 18 43 44 ...
-##  $ : int [1:3] 21 22 47
-##  $ : int [1:9] 20 22 26 27 28 29 47 56 57
-##  $ : int [1:10] 20 21 23 24 25 26 27 28 29 56
-##  $ : int [1:7] 22 24 25 27 28 29 56
-##  $ : int [1:6] 22 23 25 27 28 29
-##  $ : int [1:6] 22 23 24 27 28 29
-##  $ : int [1:12] 21 22 27 28 29 48 49 50 51 55 ...
-##  $ : int [1:10] 21 22 23 24 25 26 28 29 56 57
-##  $ : int [1:10] 21 22 23 24 25 26 27 29 56 57
-##  $ : int [1:10] 21 22 23 24 25 26 27 28 56 57
-##  $ : int [1:13] 7 8 31 32 33 34 35 37 38 39 ...
-##  $ : int [1:16] 1 2 7 8 9 10 30 32 33 34 ...
-##  $ : int [1:17] 1 2 7 8 9 10 30 31 33 34 ...
-##  $ : int [1:12] 8 30 31 32 34 35 37 38 39 40 ...
-##  $ : int [1:16] 1 2 7 8 9 10 30 31 32 33 ...
-##  $ : int [1:14] 7 8 9 10 30 31 32 33 34 38 ...
-##  $ : int [1:17] 11 12 13 14 18 43 44 45 46 48 ...
-##  $ : int [1:9] 30 32 33 38 39 40 41 42 104
-##  $ : int [1:11] 30 31 32 33 34 35 37 39 40 41 ...
-##  $ : int [1:13] 30 31 32 33 34 35 37 38 40 41 ...
-##  $ : int [1:11] 30 31 32 33 34 35 37 38 39 41 ...
-##  $ : int [1:16] 30 31 32 33 34 35 37 38 39 40 ...
-##  $ : int [1:14] 30 31 32 33 34 35 37 38 39 40 ...
-##  $ : int [1:17] 11 12 13 14 16 17 18 19 36 44 ...
-##  $ : int [1:17] 11 12 13 14 16 17 18 19 36 43 ...
-##  $ : int [1:18] 3 11 12 13 14 16 17 18 19 36 ...
-##  $ : int [1:13] 12 13 14 16 17 18 19 36 43 44 ...
-##  $ : int [1:13] 12 13 16 17 18 19 20 21 43 44 ...
-##  $ : int [1:17] 26 36 43 44 45 49 50 51 52 53 ...
-##  $ : int [1:18] 26 36 43 44 45 46 47 48 50 51 ...
-##  $ : int [1:16] 26 43 44 45 48 49 51 52 53 54 ...
-##  $ : int [1:16] 26 43 44 45 48 49 50 52 53 54 ...
-##  $ : int [1:24] 36 48 49 50 51 53 54 55 80 81 ...
-##  $ : int [1:27] 36 48 49 50 51 52 54 55 80 81 ...
-##  $ : int [1:22] 48 49 50 51 52 53 55 80 81 82 ...
-##  $ : int [1:17] 26 48 49 50 51 52 53 54 57 80 ...
-##  $ : int [1:8] 21 22 23 26 27 28 29 57
-##  $ : int [1:7] 21 26 27 28 29 55 56
-##  $ : int [1:6] 59 72 73 94 95 97
-##  $ : int 58
-##  $ : int [1:11] 98 99 100 104 105 106 107 108 109 110 ...
-##  $ : int [1:11] 62 63 64 65 66 67 68 69 70 71 ...
-##  $ : int [1:11] 61 63 64 65 66 67 68 69 70 71 ...
-##  $ : int [1:11] 61 62 64 65 66 67 68 69 70 71 ...
-##  $ : int [1:11] 61 62 63 65 66 67 68 69 70 71 ...
-##  $ : int [1:13] 61 62 63 64 66 67 68 69 70 71 ...
-##  $ : int [1:13] 61 62 63 64 65 67 68 69 70 71 ...
-##  $ : int [1:13] 61 62 63 64 65 66 68 69 70 71 ...
-##  $ : int [1:13] 61 62 63 64 65 66 67 69 70 71 ...
-##  $ : int [1:13] 61 62 63 64 65 66 67 68 70 71 ...
-##  $ : int [1:16] 61 62 63 64 65 66 67 68 69 71 ...
-##  $ : int [1:16] 61 62 63 64 65 66 67 68 69 70 ...
-##  $ : int [1:14] 58 73 74 75 76 77 78 79 92 93 ...
-##  $ : int [1:14] 58 72 76 77 78 79 90 91 92 93 ...
-##  $ : int [1:13] 65 66 67 68 69 70 71 72 75 76 ...
-##  $ : int [1:13] 65 66 67 68 69 70 71 72 74 76 ...
-##  $ : int [1:10] 70 71 72 73 74 75 77 78 79 97
-##  $ : int [1:10] 70 71 72 73 74 75 76 78 79 97
-##  $ : int [1:9] 70 71 72 73 74 75 76 77 79
-##  $ : int [1:10] 70 71 72 73 74 75 76 77 78 97
-##  $ : int [1:23] 48 49 50 51 52 53 54 55 81 82 ...
-##  $ : int [1:25] 48 49 50 51 52 53 54 55 80 82 ...
-##  $ : int [1:32] 52 53 54 80 81 83 84 85 86 87 ...
-##  $ : int [1:28] 52 53 54 80 81 82 84 85 86 87 ...
-##  $ : int [1:28] 48 50 51 52 53 54 55 80 81 82 ...
-##  $ : int [1:26] 48 49 50 51 52 53 54 55 80 81 ...
-##  $ : int [1:23] 52 53 54 55 80 81 82 83 84 85 ...
-##  $ : int [1:23] 48 49 50 51 52 53 54 55 80 81 ...
-##  $ : int [1:32] 52 53 54 80 81 82 83 84 85 86 ...
-##  $ : int [1:23] 52 53 54 55 80 81 82 83 84 85 ...
-##  $ : int [1:23] 52 53 54 55 73 80 81 82 83 84 ...
-##  $ : int [1:21] 53 54 73 80 81 82 83 84 85 86 ...
-##  $ : int [1:24] 54 72 73 80 81 82 83 84 85 86 ...
-##  $ : int [1:18] 72 73 82 83 84 85 86 87 88 89 ...
-##  $ : int [1:18] 58 72 73 81 83 84 85 86 87 88 ...
-##  $ : int [1:17] 58 72 73 81 83 84 85 86 87 89 ...
-##  $ : int [1:21] 72 73 82 83 84 86 88 89 90 91 ...
-##  $ : int [1:15] 58 72 73 76 77 79 86 89 90 91 ...
-##  $ : int [1:20] 39 41 42 60 82 99 100 101 102 103 ...
-##  $ : int [1:20] 41 42 60 82 88 98 100 101 102 103 ...
-##   [list output truncated]
-##  - attr(*, &quot;class&quot;)= chr &quot;nb&quot;
-##  - attr(*, &quot;nbtype&quot;)= chr &quot;distance&quot;
-##  - attr(*, &quot;distances&quot;)= num [1:2] 0 3598
-##  - attr(*, &quot;region.id&quot;)= chr [1:205] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...
-##  - attr(*, &quot;call&quot;)= language dnearneigh(x = coords, d1 = 0, d2 = critical.threshold)
-##  - attr(*, &quot;dnn&quot;)= num [1:2] 0 3598
-##  - attr(*, &quot;bounds&quot;)= chr [1:2] &quot;GT&quot; &quot;LE&quot;
-##  - attr(*, &quot;sym&quot;)= logi TRUE</code></pre>
 <p>With the diagonal elements, we can proceed further. To compute the kernal weight values, we need the corresponding distances for each neighbor. We do this with <code>nbdists</code>, same as earlier.</p>
 <pre class="r"><code>kernalw.distances &lt;- nbdists(kernal.nb, coords)
 kernalw.distances[1]</code></pre>
@@ -611,15 +441,15 @@ uniform[1]</code></pre>
 <pre class="r"><code>triangular &lt;- lapply(kernalw.distances, function(x) 1- abs((x/critical.threshold)))
 triangular[1]</code></pre>
 <pre><code>## [[1]]
-## [1] 0.89295300 0.16258344 0.67751688 0.48335866 0.06417492 0.29809225
-## [7] 0.09589360 0.05762014 0.06348183</code></pre>
+## [1] 0.89295300 0.16258344 0.67751688 0.48335866 0.06417492 0.29809225 0.09589360
+## [8] 0.05762014 0.06348183</code></pre>
 <pre class="r"><code>triang.weights &lt;- nb2listw(kernal.nb,glist = triangular,style = &quot;B&quot;)</code></pre>
 <pre><code>## Warning in nb2listw(kernal.nb, glist = triangular, style = &quot;B&quot;): zero sum
 ## general weights</code></pre>
 <pre class="r"><code>triang.weights$weights[1]</code></pre>
 <pre><code>## [[1]]
-## [1] 0.89295300 0.16258344 0.67751688 0.48335866 0.06417492 0.29809225
-## [7] 0.09589360 0.05762014 0.06348183</code></pre>
+## [1] 0.89295300 0.16258344 0.67751688 0.48335866 0.06417492 0.29809225 0.09589360
+## [8] 0.05762014 0.06348183</code></pre>
 </div>
 <div id="epanechnikov" class="section level4 unnumbered">
 <h4>Epanechnikov</h4>
@@ -627,15 +457,15 @@ triangular[1]</code></pre>
 <pre class="r"><code>epanechnikov &lt;- lapply(kernalw.distances, function(x) .75*(1-(x/critical.threshold)^2))
 epanechnikov[1]</code></pre>
 <pre><code>## [[1]]
-## [1] 0.74140570 0.22405013 0.67200348 0.54981129 0.09317357 0.38049413
-## [7] 0.13694371 0.08394016 0.09220029</code></pre>
+## [1] 0.74140570 0.22405013 0.67200348 0.54981129 0.09317357 0.38049413 0.13694371
+## [8] 0.08394016 0.09220029</code></pre>
 <pre class="r"><code>epan.weights &lt;- nb2listw(kernal.nb,glist = epanechnikov,style = &quot;B&quot;)</code></pre>
 <pre><code>## Warning in nb2listw(kernal.nb, glist = epanechnikov, style = &quot;B&quot;): zero sum
 ## general weights</code></pre>
 <pre class="r"><code>epan.weights$weights[1]</code></pre>
 <pre><code>## [[1]]
-## [1] 0.74140570 0.22405013 0.67200348 0.54981129 0.09317357 0.38049413
-## [7] 0.13694371 0.08394016 0.09220029</code></pre>
+## [1] 0.74140570 0.22405013 0.67200348 0.54981129 0.09317357 0.38049413 0.13694371
+## [8] 0.08394016 0.09220029</code></pre>
 </div>
 <div id="quartic" class="section level4 unnumbered">
 <h4>Quartic</h4>
@@ -643,15 +473,15 @@ epanechnikov[1]</code></pre>
 <pre class="r"><code>quartic &lt;- lapply(kernalw.distances, function(x) (15/16)*(1-(x/critical.threshold)^2)^2)
 quartic[1]</code></pre>
 <pre><code>## [[1]]
-## [1] 0.91613736 0.08366410 0.75264779 0.50382076 0.01446886 0.24129297
-## [7] 0.03125597 0.01174325 0.01416816</code></pre>
+## [1] 0.91613736 0.08366410 0.75264779 0.50382076 0.01446886 0.24129297 0.03125597
+## [8] 0.01174325 0.01416816</code></pre>
 <pre class="r"><code>quartic.weights &lt;- nb2listw(kernal.nb,glist = quartic,style = &quot;B&quot;)</code></pre>
-<pre><code>## Warning in nb2listw(kernal.nb, glist = quartic, style = &quot;B&quot;): zero sum
-## general weights</code></pre>
+<pre><code>## Warning in nb2listw(kernal.nb, glist = quartic, style = &quot;B&quot;): zero sum general
+## weights</code></pre>
 <pre class="r"><code>quartic.weights$weights[1]</code></pre>
 <pre><code>## [[1]]
-## [1] 0.91613736 0.08366410 0.75264779 0.50382076 0.01446886 0.24129297
-## [7] 0.03125597 0.01174325 0.01416816</code></pre>
+## [1] 0.91613736 0.08366410 0.75264779 0.50382076 0.01446886 0.24129297 0.03125597
+## [8] 0.01174325 0.01416816</code></pre>
 </div>
 <div id="gaussian" class="section level4 unnumbered">
 <h4>Gaussian</h4>
@@ -710,124 +540,13 @@ var.band.weights$weights[[1]]</code></pre>
 <h4>Treatment of diagonal elements</h4>
 <p>As of now, we have just been applying the kernal function to the diagonal elements. The default in GeoDa is to assign a value of 1 to these elements. For us to do this, we need a little extra work. We will take advantage of the coercion methods that <strong>spdep</strong> provides from class <strong>listw</strong> to <strong>RsparseMatrix</strong> of the <strong>Matrix</strong> package. Once converted to class **RsparseMatrix, we can assign values of 1 to the diagonal elements, then convert back.</p>
 <p>To start we use the <code>as</code> function with <strong>var.band.weights</strong> as the first parameter. We specify the class to convert to with the string: “RsparseMatrix”. We use <strong>var.band.weights</strong> to remake the GeoDa workbook example.</p>
-<pre class="r"><code>B &lt;- as(var.band.weights, &quot;RsparseMatrix&quot;)
-str(B)</code></pre>
-<pre><code>## Formal class &#39;dgRMatrix&#39; [package &quot;Matrix&quot;] with 6 slots
-##   ..@ p       : int [1:206] 0 6 12 18 24 30 36 42 48 54 ...
-##   ..@ j       : int [1:1230] 1 5 6 7 9 30 0 6 7 9 ...
-##   ..@ Dim     : int [1:2] 205 205
-##   ..@ Dimnames:List of 2
-##   .. ..$ : chr [1:205] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...
-##   .. ..$ : chr [1:205] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...
-##   ..@ x       : num [1:1230] 0.8836 0.0897 0.6495 0.4384 0.237 ...
-##   ..@ factors : list()</code></pre>
+<pre class="r"><code>B &lt;- as(var.band.weights, &quot;RsparseMatrix&quot;)</code></pre>
+<pre><code>## Warning: Function as_dgRMatrix_listw moved to the spatialreg package</code></pre>
+<pre><code>## Warning in as_dgRMatrix_listw(from): install the spatialreg package</code></pre>
 <p>Now that we have converted, we can assign values of 1 to the diagonal elements with the <code>diag</code> function.</p>
 <pre class="r"><code>diag(B) &lt;- 1</code></pre>
 <p>With this, we can now convert back to class <strong>listw</strong> with the <strong>spdep</strong> function <code>mat2listw</code>. The function is pretty self explanatory, as it converts from a matrix the <strong>listw</strong>. We need one extra step to accomplish the conversion. We first need to convert <strong>B</strong> to class <strong>dgTMatrix</strong> before we can use the <code>mat2listw</code> function.</p>
-<pre class="r"><code>var.band.w2 &lt;- mat2listw(as(B, &quot;dgTMatrix&quot;))
-str(var.band.w2$weights)</code></pre>
-<pre><code>## List of 205
-##  $ : num [1:7] 1 0.8836 0.0897 0.6495 0.4384 ...
-##  $ : num [1:7] 0.879 1 0.633 0.448 0.178 ...
-##  $ : num [1:7] 1 0.269 0.297 0.107 0.206 ...
-##  $ : num [1:7] 0.382 1 0.872 0.559 0.376 ...
-##  $ : num [1:7] 0.452 0.882 1 0.598 0.321 ...
-##  $ : num [1:7] 0.124 0.625 0.629 1 0.175 ...
-##  $ : num [1:7] 0.4979 0.4933 1 0.6653 0.0333 ...
-##  $ : num [1:7] 0.0141 0.5664 1 0.2575 0.1386 ...
-##  $ : num [1:7] 0.16852 1 0.57431 0.05983 0.00502 ...
-##  $ : num [1:7] 0.05 0.228 0.318 0.383 0.569 ...
-##  $ : num [1:7] 0.129 0.279 0.15 1 0.413 ...
-##  $ : num [1:7] 0.0855 0.4831 1 0.7014 0.722 ...
-##  $ : num [1:7] 0.194 0.298 0.647 1 0.366 ...
-##  $ : num [1:7] 0.0456 0.0453 0.6368 0.74 0.498 ...
-##  $ : num [1:7] 0.463 0.626 0.712 0.613 0.209 ...
-##  $ : num [1:7] 0.294 0.034 0.216 1 0.564 ...
-##  $ : num [1:7] 0.231 0.181 0.438 0.34 1 ...
-##  $ : num [1:7] 0.354 0.321 0.116 0.198 1 ...
-##  $ : num [1:7] 0.0676 0.025 1 0.1429 0.1496 ...
-##  $ : num [1:7] 0.09529 1 0.22444 0.13723 0.00999 ...
-##  $ : num [1:7] 1 0.087 0.679 0.69 0.541 ...
-##  $ : num [1:7] 0.00128 1 0.37968 0.4368 0.39522 ...
-##  $ : num [1:7] 0.4481 1 0.805 0.8263 0.0128 ...
-##  $ : num [1:7] 0.5646 0.8306 1 0.963 0.0279 ...
-##  $ : num [1:7] 0.5327 0.8491 0.963 1 0.0224 ...
-##  $ : num [1:7] 0.67479 1 0.75481 0.54614 0.00151 ...
-##  $ : num [1:7] 0.635 0.716 1 0.755 0.115 ...
-##  $ : num [1:7] 0.4158 0.0112 0.4312 0.7347 1 ...
-##  $ : num [1:7] 0.0309 0.5194 0.2526 0.2755 0.2534 ...
-##  $ : num [1:7] 1 0.184 0.226 0.476 0.183 ...
-##  $ : num [1:7] 0.214 0.171 1 0.925 0.108 ...
-##  $ : num [1:7] 0.146 0.221 0.925 1 0.186 ...
-##  $ : num [1:7] 0.332 1 0.484 0.356 0.376 ...
-##  $ : num [1:7] 0.21292 0.07879 0.79226 0.76942 0.00811 ...
-##  $ : num [1:7] 0.0638 0.1751 0.5799 0.5928 0.0727 ...
-##  $ : num [1:7] 0.05366 1 0.11858 0.00632 0.07675 ...
-##  $ : num [1:7] 0.153 1 0.497 0.491 0.567 ...
-##  $ : num [1:7] 0.455 0.202 1 0.668 0.875 ...
-##  $ : num [1:7] 0.368 0.249 0.691 1 0.741 ...
-##  $ : num [1:7] 0.367 0.341 0.88 0.732 1 ...
-##  $ : num [1:7] 0.275 0.134 0.362 0.589 0.392 ...
-##  $ : num [1:7] 0.417 0.145 0.521 0.754 0.539 ...
-##  $ : num [1:7] 0.214 0.147 1 0.845 0.82 ...
-##  $ : num [1:7] 0.213 0.281 0.844 1 0.84 ...
-##  $ : num [1:7] 0.301 0.215 0.8 0.824 1 ...
-##  $ : num [1:7] 0.12 0.558 0.493 0.65 0.572 ...
-##  $ : num [1:7] 0.0844 0.5272 0.472 0.5926 0.4921 ...
-##  $ : num [1:7] 1 0.772 0.9209 0.9307 0.0524 ...
-##  $ : num [1:7] 0.8001 1 0.817 0.8047 0.0926 ...
-##  $ : num [1:7] 0.9263 0.8056 1 0.984 0.0442 ...
-##  $ : num [1:7] 0.9347 0.7901 0.9839 1 0.0416 ...
-##  $ : num [1:7] 0.0154 1 0.6934 0.4581 0.3034 ...
-##  $ : num [1:7] 0.665 1 0.236 0.169 0.115 ...
-##  $ : num [1:7] 0.2798 0.0708 1 0.6738 0.4625 ...
-##  $ : num [1:7] 0.481 0.255 0.478 0.493 0.156 ...
-##  $ : num [1:7] 0.248 0.498 0.594 0.588 0.191 ...
-##  $ : num [1:7] 0.262817 0.264447 0.254621 0.074695 0.000414 ...
-##  $ : num [1:7] 1 0.0491 0.1172 0.2872 0.0788 ...
-##  $ : num [1:7] 0.37024 1 0.01888 0.04619 0.00222 ...
-##  $ : num [1:7] 1 0.109 0.554 0.378 0.168 ...
-##  $ : num [1:7] 1 0.7754 0.5172 0.0521 0.0758 ...
-##  $ : num [1:7] 0.751 1 0.407 0.114 0.148 ...
-##  $ : num [1:7] 0.462 0.404 1 0.462 0.288 ...
-##  $ : num [1:7] 0.1309 0.0672 0.5576 1 0.2561 ...
-##  $ : num [1:7] 0.00728 0.20702 1 0.51687 0.47323 ...
-##  $ : num [1:7] 0.4803 1 0.0275 0.8297 0.8103 ...
-##  $ : num [1:7] 0.0103 0.5177 0.1723 1 0.0595 ...
-##  $ : num [1:7] 0.38006 0.84609 0.00155 1 0.97888 ...
-##  $ : num [1:7] 0.00956 0.36723 0.83031 0.97909 1 ...
-##  $ : num [1:7] 0.122 0.187 0.18 1 0.935 ...
-##  $ : num [1:7] 0.102 0.157 0.148 0.934 1 ...
-##  $ : num [1:7] 1 0.6083 0.0383 0.1731 0.2812 ...
-##  $ : num [1:7] 0.63546 1 0.00636 0.36705 0.33093 ...
-##  $ : num [1:7] 0.292 0.277 1 0.986 0.457 ...
-##  $ : num [1:7] 0.315 0.3 0.986 1 0.451 ...
-##  $ : num [1:7] 0.0268 0.5296 0.5182 1 0.6343 ...
-##  $ : num [1:7] 0.177 0.19 0.178 0.64 1 ...
-##  $ : num [1:7] 0.0927 0.4176 0.4073 0.7237 0.7905 ...
-##  $ : num [1:7] 0.2728 0.0919 0.0803 0.5608 0.8816 ...
-##  $ : num [1:7] 0.0439 0.6631 1 0.7792 0.3374 ...
-##  $ : num [1:7] 0.396 0.76 1 0.516 0.476 ...
-##  $ : num [1:7] 0.00657 1 0.47015 0.09153 0.6517 ...
-##  $ : num [1:7] 0.333 1 0.3984 0.0102 0.0959 ...
-##  $ : num [1:7] 0.154 0.431 0.239 1 0.452 ...
-##  $ : num [1:7] 0.0137 0.2816 0.3595 1 0.3524 ...
-##  $ : num [1:7] 0.00507 0.32775 0.50436 1 0.80053 ...
-##  $ : num [1:7] 0.1529 0.1891 0.0186 0.4169 0.1498 ...
-##  $ : num [1:7] 0.6779 0.4729 0.0388 1 0.2073 ...
-##  $ : num [1:7] 0.189 0.244 0.77 1 0.515 ...
-##  $ : num [1:7] 0.0197 0.2629 0.6578 0.6002 1 ...
-##  $ : num [1:7] 0.00387 0.43989 0.46202 0.73764 1 ...
-##  $ : num [1:7] 0.0673 0.2316 0.1314 0.2917 1 ...
-##  $ : num [1:7] 0.04715 0.00795 0.37535 1 0.52468 ...
-##  $ : num [1:7] 0.0436 0.2552 0.2969 0.5075 1 ...
-##  $ : num [1:7] 0.00483 0.20419 0.12675 0.33179 0.79346 ...
-##  $ : num [1:7] 0.091 0.1903 0.2715 1 0.0728 ...
-##  $ : num [1:7] 0.5157 0.6751 0.0105 0.5021 0.3192 ...
-##  $ : num [1:7] 1 0.81212 0.37642 0.00331 0.13184 ...
-##  $ : num [1:7] 0.7974 1 0.117 0.1322 0.0983 ...
-##   [list output truncated]
-##  - attr(*, &quot;mode&quot;)= chr &quot;unknown&quot;</code></pre>
+<pre class="r"><code>var.band.w2 &lt;- mat2listw(as(B, &quot;dgTMatrix&quot;))</code></pre>
 </div>
 <div id="properties-of-kernal-weights" class="section level4 unnumbered">
 <h4>Properties of kernal weights</h4>
@@ -854,7 +573,7 @@ str(var.band.w2$weights)</code></pre>
 ##     n    nn       S0       S1       S2
 ## M 205 42025 622.5036 844.1885 7916.201</code></pre>
 <pre class="r"><code>plot(var.band.w2, coords, lwd=.2, col=&quot;blue&quot;, cex = .5)</code></pre>
-<p><img src="Spatial_Weights_as_Distance_Functions_files/figure-html/unnamed-chunk-47-1.png" width="672" /></p>
+<p><img src="Spatial_Weights_as_Distance_Functions_files/figure-html/unnamed-chunk-44-1.png" width="672" /></p>
 </div>
 </div>
 </div>
@@ -884,6 +603,23 @@ $(document).ready(function () {
 
 
 </script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
 
 <!-- dynamically load mathjax for compatibility with self-contained -->
 <script>

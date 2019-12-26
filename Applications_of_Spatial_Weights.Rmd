@@ -111,7 +111,7 @@ their dependencies.^[Use
 `install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
 
 
-```{r}
+```{r, message=FALSE,warning=FALSE}
 library(sf)
 library(spdep)
 library(tmap)
@@ -198,7 +198,7 @@ important to note that we will have to work with neighbors structure in some cas
 functionality, which will require creating more than one weights object for the k-nearest neighbors weights
 used in this section of the notebook.
   
-```{r}
+```{r, message=FALSE,warning=FALSE}
 # getting coordinates
 coords <- cbind(clev.points$x,clev.points$y)
 
@@ -334,7 +334,7 @@ include.self(k6a)
 ```
 
 Now we obtain weights with `nb2listw`
-```{r}
+```{r, message=FALSE,warning=FALSE}
 k6.weights3 <- nb2listw(k6a)
 ```
 
@@ -688,7 +688,7 @@ include.self(second.order.queen.cumul)
 
 Now, we just use the `nb2listw` function to convert the neighbors list to a 
 weights structure, which is row-standardized by default.
-```{r}
+```{r, message=FALSE,warning=FALSE}
 queen.weights <- nb2listw(second.order.queen.cumul)
 queen.weights$weights[[1]]
 ```
@@ -974,7 +974,7 @@ $$\pi_i^{EB}= w_ir_i + (1-w_i)\theta$$
 The spatial Empirical Bayes is included in the **spdep** package. It even has a `geoda =` that calculates the rate in the same manner as GeoDa. To do this, we use the `EBlocal` function from **spdep** and input the two variables with a neighbors 
 list. We then set `geoda =` to be TRUE. 
 
-```{r}
+```{r, message=FALSE,warning=FALSE}
 eb_risk <- EBlocal(ohio_lung$LFW68, ohio_lung$POPFW68, second.order.queen.cumul, geoda = TRUE)
 ```
 
@@ -994,7 +994,7 @@ tm_shape(ohio_lung) +
 
 We do the same for the 10-nearest neighbors:
 
-```{r}
+```{r, message=FALSE,warning=FALSE}
 eb_risk_k10 <- EBlocal(ohio_lung$LFW68, ohio_lung$POPFW68, k10, geoda = TRUE)
 ohio_lung <- ohio_lung %>% mutate(eb_risk_k10 = eb_risk_k10$est)
 tm_shape(ohio_lung) +

@@ -2,7 +2,7 @@
 title: "Spatial Weights as Distance Functions"
 author: Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial
   Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]
-date: "09/17/2018"
+date: "12/19/2019"
 output:
   html_document:
     css: tutor.css
@@ -77,7 +77,7 @@ their dependencies.^[Use
 `install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
 
 
-```{r}
+```{r, warning=FALSE, message = FALSE}
 library(sf)
 library(spdep)
 library(geodaData)
@@ -104,10 +104,7 @@ the shapefile into your R environment.
 clev.points <- geodaData::clev_pts
 ```
 
-
-
 ## Inverse Distance Weights {-}
-
 
 ### Concepts {-}
 
@@ -195,7 +192,6 @@ critical.threshold
 We have all the necessary components to calculate the distance-band neighbors. To get
 these we use `dnearneigh`. The parameters needed are the coordinates, a lower distance
 bound and an upper distance bound.
-
 ```{r}
 nb.dist.band <- dnearneigh(coords, 0, critical.threshold)
 ```
@@ -204,7 +200,6 @@ To get inverse distance, we need to calculate the distances between all of the n
 for this we will use `nbdists`, which gives us the distances in a similar structure to
 our input neighbors list. To use this function we need to input the neighbors list and
 the coordinates.
-
 ```{r}
 distances <- nbdists(nb.dist.band,coords)
 distances[1]
@@ -214,7 +209,6 @@ Calculating the inverse distances will require a function that applies 1/x over 
 entire **distances** data structure. We will use `lapply` to accomplish this. The parameters
 needed are the distances, and a function which we specify in `lapply`. We use the `function`
 operator with **(1/x)** to get the appropriate function.
-
 ```{r}
 invd1 <- lapply(distances, function(x) (1/x))
 ```
@@ -232,18 +226,17 @@ a neighbors list or class **nb** to a weight structure: class **listw**.
 ```{r}
 invd1[1]
 ```
+
 A key insight from the first element of the inverse distance structure is that the values are
 very small, or too close to zero. The unit of distance for our dataset is in feet. This
 means distance values between points can be quite large and result in small inverses. To 
 correct for this scale dependence, we can rescale the distances by repeating the inverse
 calculations, while adjusting the scale. We can make this adjustment by dividing **x** in
 our function by 100, before calculating the inverses. 
-
 ```{r}
 invd1a <- lapply(distances, function(x) (1/(x/100)))
 invd1a[1]
 ```
-
 
 Now that we have properly scaled inverse distances, we can assign them as weight values. 
 This is done in the conversion function `nb2listw`. To assign the weights, we use the
@@ -253,9 +246,7 @@ This is done in the conversion function `nb2listw`. To assign the weights, we us
 invd.weights <- nb2listw(nb.dist.band,glist = invd1a,style = "B")
 ```
 
-
 Here we take a cursory look at our weights with `summary` to get basic imformation and statistics.
-
 ```{r}
 summary(invd.weights)
 ```
@@ -265,24 +256,18 @@ We can check the values of the weights by using `$weights` to access the values.
 invd.weights$weights[1]
 ```
 
-
-
 #### Properties of inverse distance weights {-}
-
 
 Since the properties only pertain to the connectivity structure implied by the weights,
 they are identical to the ones obtained for the standard distance-band weights. It is
 important to keep in mind that the actual values for the weights are ignored in this
 operation. 
-
 ```{r}
 plot(invd.weights, coords, lwd=.2, col="blue", cex = .5)
 ```
 
 The connectivity map and the connectivity graph associated with the weights are the 
 same as before as well. 
-
-
 
 #### Using non-geographical coordinates {-}
 
@@ -293,20 +278,16 @@ socio-economic weights, where the difference between two locations on any two va
 used as the distance metric. We don't do this in this notebook, as the only meaningful 
 variable in our dataset is housing prices.
 
-
 ### Creating inverse distance functions for k-nearest neighbors {-}
 
 We can compute inverse distance weights for k-nearest neighbors using the same approach
 as for distance-band neighbors. The only difference being that we don't have to calculate
 a critical threshold for k-nearest neighbors.
 
-
 We start by getting the k-nearest neighbors for k = 6. We do this with `knearneigh` and
 `knn2nb`.
-
 ```{r}
 k6 <- knn2nb(knearneigh(coords, k = 6))
-str(k6)
 ```
 
 Now that we have the neighbors list we need all of the distances between neighbors in a
@@ -317,31 +298,19 @@ k.distances <- nbdists(k6, coords)
 
 Here we calculate the inverse distances, keeping in mind the scale from the distance-band 
 weights from earlier. 
-
 ```{r}
 invd2a <- lapply(k.distances, function(x) (1/(x/100)))
 invd2a[1]
 ```
 
-
 Lastly, we assign the weight values with the `glist =` parameter and speficy the `style` as
 "B" to avoid default computations.
-
 ```{r}
 invd.weights.knn <- nb2listw(k6,glist = invd2a,style = "B")
-```
-
-
-
-```{r}
 invd.weights.knn$weights[1]
 ```
 
-
-
-
 ## Kernal Weights {-}
-
 
 ### Concepts {-}
 
@@ -349,11 +318,9 @@ Kernel weights are used in non-parametric approaches to model spatial covariance
 as in the HAC method for heteroskedastic and spatial autocorrelation consistent
 variance estimates.
 
-
 The kernel weights are defined as a function K(z) of the ratio between the distance dij
 from i to j, and the bandwidth $h_i$, with $z=d_{ij}/h_i$. This ensures that z is 
 always less than 1. For distances greater than the bandwidth, K(z)=0.
-
 
 We will go over five different kernal weights functions that are supported by GeoDa:
 
@@ -366,7 +333,6 @@ We will go over five different kernal weights functions that are supported by Ge
 - Quartic, $K(z) = (15/16)(1 - z^2)^2$ for $\mid z \mid < 1$
 
 - Gaussian, $K(z) = (2\pi)^{1/2}\exp(-z^2/2)$
-
 
 Typically, the value for the diagonal elements of the weights is set to 1, although GeoDa 
 allows for the actual kernel value to be used as well. We will go through both of these
@@ -386,8 +352,6 @@ distance for a given specification of k-nearest neighbors. For example, with knn
 value, this is the distance between the selected k-nearest neighbors pairs that are the
 farthest apart. 
 
-
-
 ### Creating Kernal weights {-}
 
 In creating kernal weights, we will cover two important options: the fixed bandwidth
@@ -396,7 +360,6 @@ neighbors. For the variable bandwidth we will need kth-nearest neighbors.
 
 To start, we will compute a new distance-band neighbors list with the critcial threshold,
 calculated earlier in the notebook.
-
 ```{r}
 kernal.nb <- dnearneigh(coords, 0, critical.threshold)
 ```
@@ -409,31 +372,21 @@ own self when include in the neighbors list.
 
 **spdep** has a built in function for this. `include.self` can be used to add the diagonal
 elements to a neighbors list of class **nb**.
-
 ```{r}
 include.self(kernal.nb)
 kernal.nb[[2]]
 ```
 
-
-We can check our result with `str`. We should now see a 1 in the 1st row, a 2 in the 2nd
-row, a 3 in the 3rd, and so on.
-
-```{r}
-str(kernal.nb)
-```
-
 With the diagonal elements, we can proceed further. To compute the kernal weight values,
 we need the corresponding distances for each neighbor. We do this with `nbdists`, same
 as earlier.
-
 ```{r}
 kernalw.distances <- nbdists(kernal.nb, coords)
 kernalw.distances[1]
 ```
+
 When checking the first row of the distances, we see a 0. This is the distance value
 for the diagonal element.
-
 
 #### Uniform {-}
 
@@ -443,7 +396,6 @@ To get uniform weights, we use a similar method to the inverse disatnce weights.
 use `lapply` to apply a function to all elements of our distance structure. The function,
 in this case, is `0 * x + .5`. We do this to assign uniform weights of .5, the `0*x` is a necessary
 addition to get `lapply` to work properly.
-
 
 ```{r}
 uniform <- lapply(kernalw.distances, function(x) x*0 + .5)
@@ -576,20 +528,17 @@ adjustments to our `for` loop.
 
 The first thing we need to implement this is the k-nearest neighbors for k = 7. This is the 
 same process as our previous calculations for k-nearest neighbors.
-
 ```{r}
 k7 <- knn2nb(knearneigh(coords, k = 7))
 ```
 
 Next we get the associated distances using `nbdists`.
-
 ```{r}
 k7.distances <- nbdists(k7, coords)
 ```
 
 To avoid altering the original **k.distances**, we will assign a new variable to hold the
 necessary information.
-
 ```{r}
 k.distances2 <- k.distances
 ```
@@ -597,8 +546,6 @@ k.distances2 <- k.distances
 Here we remake the previous `for` loop with a few changes. Now we loop through and find
 the max distance for both the 7th nearest neighbors and 6th nearest neighbors, then get
 the average between the two before computing the kernal weight function.
-
-
 ```{r}
 for (i in 1:length(k.distances)){
   maxk6 <- max(k.distances2[[i]])
@@ -618,9 +565,6 @@ var.band.weights$weights[[1]]
 ```
 With our new weights structure all the neighbors included have a nonzero weight.
 
-
-
-
 #### Treatment of diagonal elements {-}
 
 As of now, we have just been applying the kernal function to the diagonal elements. The
@@ -634,9 +578,8 @@ To start we use the `as` function with **var.band.weights** as the first paramet
 the class to convert to with the string: "RsparseMatrix". We use **var.band.weights** to remake 
 the GeoDa workbook example.
 
-```{r}
+```{r, quiet = TRUE}
 B <- as(var.band.weights, "RsparseMatrix")
-str(B)
 ```
 
 Now that we have converted, we can assign values of 1 to the diagonal elements with the
@@ -652,12 +595,9 @@ The function is pretty self explanatory, as it converts from a matrix the **list
 need one extra step to accomplish the conversion. We first need to convert **B** to class
 **dgTMatrix** before we can use the `mat2listw` function.
 
-```{r}
+```{r quiet = TRUE}
 var.band.w2 <- mat2listw(as(B, "dgTMatrix"))
-str(var.band.w2$weights)
 ```
-
-
 
 #### Properties of kernal weights {-}
 
@@ -668,35 +608,7 @@ from the ones in GeoDa. This is because we have to add the diagonal elements to 
 structure before moving forward. This is seen below when our 6th-nearest neighbors has an average 
 of 7 links. To get a more accurate view of the connectivity properties, the structure will have to 
 be examined before the diagonal elements are added.
-
-
 ```{r}
 summary(var.band.w2)
-```
-
-```{r}
 plot(var.band.w2, coords, lwd=.2, col="blue", cex = .5)
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

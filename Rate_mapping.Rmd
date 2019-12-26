@@ -2,7 +2,7 @@
 title: "Rate Mapping"
 author: Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial
   Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]
-date: "04/22/2019"
+date: "11/22/2019"
 output:
   html_document:
     css: tutor.css
@@ -76,7 +76,7 @@ their dependencies.^[Use
 `install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
 
 
-```{r}
+```{r,message=FALSE,warning=FALSE}
 library(sf)
 library(tmap)
 library(geodaData)

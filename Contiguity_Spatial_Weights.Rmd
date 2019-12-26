@@ -85,9 +85,7 @@ actually be saving any files.^[Use `setwd(directorypath)` to specify the working
 First, we load all the required packages using the `library` command. If you don't have some of these in your system, make sure to install them first as well as
 their dependencies.^[Use 
 `install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
-
-
-```{r}
+```{r, message=FALSE,warning=FALSE}
 library(sf)
 library(spdep)
 library(purrr)
@@ -104,8 +102,6 @@ data sets, we use the double colon notation. This works similar to
 to accessing a variable with `$`, in that a drop down menu will 
 appear with a list of the datasets included in the package. For this
 notebook, we use `ncovr`.
-
-
 ```{r}
 us.bound  <- geodaData::ncovr
 ```
@@ -146,8 +142,6 @@ When problems are detected, the solution is to go back to the GIS and fix or cle
 the topology of the data set. Editing of spatial layers is not implemented in GeoDa,
 but this is a routine operation in most GIS software.
 
-
-
 ### Rook Contiguity {-}
 
 We first start with rook contiguity, which are neighbors that are connected by a
@@ -163,38 +157,16 @@ out the basics of DE9-IM at [DE9-IM](https://en.wikipedia.org/wiki/DE-9IM). All 
 need for rook contiguity is the pattern input `"F***1****"`. This gives us the
 correct DE9-IM relationship for rook contiguity. For more documentation on
 `st_relate` check out [st_relate documentation](https://www.rdocumentation.org/packages/sf/versions/0.6-3/topics/st_relate)
-
 ```{r}
 st_rook = function(a, b = a) st_relate(a, b, pattern = "F***1****")
-```
-
-
-```{r}
 sf.sgbp.rook <- st_rook(us.bound)
 ```
-
-
-
 
 We now check the class of our resulting object from the the `st_rook` function
 with the base R function `class`. It is **sgbp**, which we will have to convert in order to
 work with **spdep** and the `plot` function later on.
-
 ```{r}
 class(sf.sgbp.rook)
-```
-
-
-We can get a comprehensive view of what the **sgbp** data structure looks like with
-the `str` command. We will see a list of 3085 vectors that contain the id numbers of
-each observation's neighbors. Along with this we will see some attributes. These
-are the same attributes as an **nb** and the data structure follows the same form
-as **nb**. This is important for later operations where we will need to convert
-to type **nb**.
-
-
-```{r}
-str(sf.sgbp.rook)
 ```
 
 Now we will start our conversion from class **sgbp** to **nb**. To do this,
@@ -217,9 +189,6 @@ reapply our attributes to the resulting structure from the `lapply` function. Th
 is done by calling the `attributes` function and assigning our stored attributes.
 The final step is to explicitly change the class to **nb** by using the `class` function
 and assigning `"nb"`. We then return our object **x**.
-
-
-
 ```{r}
 as.nb.sgbp <- function(x, ...) {
   attrs <- attributes(x)
@@ -232,46 +201,27 @@ as.nb.sgbp <- function(x, ...) {
 
 
 Now we use the function we created to convert our **sgbp** object to **nb**.
-
 ```{r}
 sf.nb.rook <- as.nb.sgbp(sf.sgbp.rook)
 ```
 
-
-
-Now we take a comprehensive look at our resulting **nb** object with the `str` command.
-It is essentially the same as before, just the class now says **nb** instead of **sgbp**. This makes our earlier steps seem a bit unnecessary and overcomplicated, 
-but they are important, as all datasets, will not have the same circumstances as 
-this one, and it is important for these things to work across the board.
-
-```{r}
-str(sf.nb.rook)
-```
-
 Now that we are converted to **nb**, we can use the `summary` command to give us more
 useful information about the neighbors list.
-
 ```{r}
 summary(sf.nb.rook)
 ```
 
 We use the `class` command to check and make sure we have **nb**.
-
 ```{r}
 class(sf.nb.rook)
 ```
 
 We check the length to make sure it corresponds with the GeoDa tutorial example.
-
 ```{r}
 length(sf.nb.rook)
 ```
 
-
-
-
 ### Queen Contiguity {-}
-
 
 We proceed in the same fashion to construct queen contiguity weights. The difference
 between the rook and queen criterion to determine neighbors is that the latter also
@@ -287,31 +237,19 @@ To make our queen contiguity weights, we make a function using `st_relate` and
 specifying a DE9-IM pattern. For queen contiguity, our pattern is `"F***T****"`. We
 we don't really need to go into why the pattern is what it is for our purposes, but
 [DE9-IM](https://en.wikipedia.org/wiki/DE-9IM) and [st_relate documentation](https://www.rdocumentation.org/packages/sf/versions/0.6-3/topics/st_relate) can help explain this to a degree.
-
-
 ```{r}
 st_queen <- function(a, b = a) st_relate(a, b, pattern = "F***T****")
 ```
 
-
 Now we use our `st_queen` function to get another **sgbp** neighbor list
-
 ```{r}
 sf.sgbp.queen <- st_queen(us.bound)
 ```
 
 To convert to type **nb** we use `as.nb.sgbp`, which we created earlier.
-
-
 ```{r}
 sf.nb.queen <- as.nb.sgbp(sf.sgbp.queen)
 ```
-
-
-```{r}
-str(sf.nb.queen)
-```
-
 
 ## Higher Order Contiguity {-}
 
@@ -325,7 +263,6 @@ second order neighbors. We can select from this data structure by double bracket
 notation, for instance `[[1]]` will give the **nb** object for first order neighbors.
 Using a `2` instead of a `1` will give us the second order neighbors.
 
-
 ```{r}
 second.order.queen <- nblag(sf.nb.queen, 2)
 ```
@@ -335,50 +272,36 @@ data structure from `nblag`. As said earlier, it is a list of 2 **nb** objects. 
 for 1st order neighbors and one for 2nd order. It is important to examine this, so
 we can make use of specific elements of the data structure in our visualizations
 of the neighbors.
-
 ```{r}
 str(second.order.queen)
 ```
 
 Now we can look at, specifically, the 2nd order neighbors by using the double bracket
 selection.
-
 ```{r}
 str(second.order.queen[[2]])
 ```
 
 We store the second order neighbors in **sf.nb.queen2** to make things simpler
 for our visuals.
-
 ```{r}
 sf.nb.queen2 <- second.order.queen[[2]]
 ```
 
-
-
-
 Now if we want to include both 1st and 2nd order neighbors in our visualizations, we
 need the `nblag_cumul` function. This will give us an **nb** object with both 1st and 2nd order neighbors, instead of separating them as in the result of `nblag`. To use this
 function, we need the resulting object from the `nblag` function. `nblag_cumul` combines the two separate **nb** objects from the `nblag` function into one.
-
-
 ```{r}
 second.order.queen.cumul <- nblag_cumul(second.order.queen)
 ```
 
-
 Here we take another in depth look at result. We can see that, we now have one **nb**
 object with both 1st and 2nd order neighbors.
-
 ```{r}
 str(second.order.queen.cumul)
 ```
 
-
-
 ## Visualizing Contiguity Neighbors {-}
-
-
 
 ### Connectivity Graph {-}
 
@@ -386,8 +309,6 @@ A connectivity graph takes a point and displays a line to each neighboring point
 working with polygons at the moment, so we will need to get points in order to make
 our connectivity graphs. The most typically method for this will be polygon centroids.
 We will calculate these in the **sf** package before moving onto the graphs.
-
-
 
 #### Getting Latitude and Longitude of Polygon Centroids {-}
 
@@ -400,39 +321,30 @@ same length. Our input vector will be the geometry column of **us.bound**. Our
 function will be `st_centroid`. We will be using `map_dbl` variation of `map` from
 the **purrr** package. For more documentation, check out [map documentation](https://www.rdocumentation.org/packages/purrr/versions/0.2.5/topics/map)
 
-
 To get our longitude values we map the `st_centroid` function over the geometry 
 column of **us.bound** and access the longitude value through double bracket notation
 [[]] and 1. This allows us to get only the longitude, which is the first value in each
 centroid.
-
-
 ```{r}
 longitude <- map_dbl(us.bound$geometry, ~st_centroid(.x)[[1]])
 ```
 
 We do the same for latitude with one key difference. We access the second value per
 each centroid with `[[2]]`.
-
 ```{r}
 latitude <- map_dbl(us.bound$geometry, ~st_centroid(.x)[[2]])
 ```
 
 Now that we have latitude and longitude, we use `cbind` to put longitude and latitude
 into the same object.
-
 ```{r}
 coords <- cbind(longitude, latitude)
 ```
-
 
 We check the first few observations to see if things are formatted correctly.
 ```{r}
 head(coords)
 ```
-
-
-
 
 #### Rook Connectivity Graphs {-}
 
@@ -443,12 +355,9 @@ add extra customizations, so we can actually see what is going on in the graph.
 We use `lwd = .2` to make the line length less thick, we set the `col ="blue"`, and 
 finally `cex = .5` to make the point symbols smaller. The default options make the
 graph near indecipherable, so it is important to add these extra parameters.
-
 ```{r}
 plot(sf.nb.rook, coords, lwd=.2, col="blue", cex = .5)
 ```
-
-
 
 #### Queen Connectivity Graphs {-}
 
@@ -477,19 +386,13 @@ order tends to have more neighbors than first order.
 plot(sf.nb.queen2, coords, lwd=.2, col="blue", cex = .5)
 ```
 
-
 ##### Cumulative {-}
 
 We will take a look a plot with both second and first order neighbors here. It will
 be a very busy graph. 
-
-
 ```{r}
 plot(second.order.queen.cumul, coords, lwd=.2, col="blue", cex = .5)
 ```
-
-
-
 
 ### Connectivity Histogram {-}
 
@@ -499,9 +402,6 @@ We first have to get the cardinality before we can make the histograms. We can
 do this by using the `card` function from the **spdep** package. This will give
 us a vector of 3085 observations with each one containing the corresponding
 number of neighbors from the input neighbors list.
-
-
-
 ```{r}
 rook.card <- card(sf.nb.rook)
 ```
@@ -523,13 +423,10 @@ We can visualize the cardinality through a **ggplot2** histogram. For this we ju
 need to call the `ggplot` function and add `geom_histogram` as a layer. We specify the
 `aes()` in `geom_histogram` to be our rook cardinality. This will give us a basic plot, which
 we will customize further a little later.
-
 ```{r}
 ggplot() +
   geom_histogram(aes(x=rook.card))
 ```
-
-
 
 Here we will add a few customizations to make the plot nicer. The most important is with
 the `breaks =` parameter, as the bars are spaced out kind of weirdly in our opening plot.
@@ -537,7 +434,6 @@ We can avoid manually typing in the breaks by using the `seq` function, which wi
 a list of numbers 0 to 13, incrementing by 1 each time. We specify the range in the first
 two arguments and then use `by =` to pick the number to increment by. In our case, 1 makes
 the most sense as you cannot have half of a neighbor.
-
 ```{r}
 ggplot() +
   geom_histogram(aes(x=rook.card), breaks = seq(0,13, by = 1)) +
@@ -551,9 +447,6 @@ statistics for the cardinality of the neighbors list.
 summary(rook.card)
 ```
 
-
-
-
 ## Saving Neighbors {-}
 To save our neighbors list, we use the `write.nb.gal` function from
 the **spdep** package. The file format is a GAL Lattice file. We
@@ -566,12 +459,9 @@ or the new GeoDa header style.
 The oldstyle just saves the neighbor list with then number of observations
 at the top of the file. We can save in this format by setting `oldstyle =`
 to `TRUE`.
-
 ```{r}
 write.nb.gal(sf.nb.rook, "rook_contiguity_old.gal", oldstyle = TRUE)
 ```
-
-
 
 ### GeoDA Header Format {-}
 
@@ -579,7 +469,6 @@ The new GeoDA header style, also takes the shapefile name taken from GAL file fo
 the dataset and the region id indicator variable name. It puts this information
 in a header for the file. All we have to do is set `oldstyle =` to FALSE and
 enter names for `shpfile` and `ind` parameters.
-
 ```{r}
 write.nb.gal(sf.nb.rook, "rook_contiguity_new.gal", oldstyle = FALSE, shpfile ="NAT.shp", ind ="region id")
 ```

@@ -2,7 +2,7 @@
 title: "Global Spatial Autocorrelation 1"
 subtitle: "R Notes"
 author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
-date: "09/17/2018"
+date: "12/28/2019"
 output:
   html_document:
     fig_caption: yes
@@ -108,7 +108,7 @@ actually be saving any files.^[Use `setwd(directorypath)` to specify the working
 First, we load all the required packages using the `library` command. If you don't have some of these in your system, make sure to install them first as well as
 their dependencies.^[Use 
 `install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
-```{r}
+```{r,message=FALSE,warning=FALSE}
 library(sf)
 library(spdep)
 library(ggplot2)
@@ -154,7 +154,7 @@ voronoi polygons. The only inputs needed are a vector of the x coordinates and a
 coordinates. The base R `plot` function can give us a preliminary look at the voronoi polygons. 
 We will need a few additional parameters other than **vtess**, so the plot is legitable. 
 Set `wlines = "tess"`, `wpoints = "none"` and `lty = 1`.
-```{r}
+```{r,message=FALSE}
 vtess <- deldir(clev.points$x, clev.points$y)
 plot(vtess, wlines="tess", wpoints="none",
       lty=1)
@@ -350,7 +350,6 @@ to build the Moran'I scatterplot. Standardized values are just z scores for each
 observation($z_i =\frac{ x_i -\mu}{\sqrt{Var(x)}}$). To get the standardized values, we will use `standardize`
 from the **robustHD** package. We could very easily calculate these with Base R
 vectorized operations, but it is faster to just use a package function.
-
 ```{r}
 clev.points$standardized_sale_price <- standardize(clev.points$sale_price)
 clev.points$standardized_lag_sale_price <- standardize(clev.points$lagged_sale_price)
@@ -369,7 +368,6 @@ default option is a loess smooth line, we specify the `method = lm` to get a sta
 x and y axis to separate the 4 types of spatial autocorrelation. We do this with
 `geom_hline` for the x axis and `geom_vline` for the y axis. To get the speciifcations of
 the scatterplot to better match up with GeoDa, we set the x and y scale limits to -10 and 10.
-
 ```{r}
 ggplot(data = clev.points, aes(x=standardized_sale_price, y = standardized_lag_sale_price)) +
   geom_point() +
@@ -382,7 +380,6 @@ ggplot(data = clev.points, aes(x=standardized_sale_price, y = standardized_lag_s
 ```
 
 #### Interpretation
-
 
 We can see that the shape of the point cloud is determined by the presence of
 several outliers on the high end (e.g., larger than three standard deviational
@@ -403,6 +400,14 @@ which will directly affect the minimum pseudo p-value we can obtain for the test
 In the case of 999 permutation the minimum p-value would be .001, which would mean none
 of the sample distribution statistics are as extreme or more extreme than the test statistic.
 
+##### Replicability - the random seed
+
+To faciliate replication, it is best to set a seed for the random number generator. The one
+used in GeoDa is 123456789, so we will demonstrate how to set the seed here. It is just 
+`set.seed` and the desired seed number as an input.
+```{r}
+set.seed(123456789)
+```
 #### Reference distribution
 
 To make the reference distribution, we
@@ -514,17 +519,6 @@ ggplot(data = df, aes(x=moran)) +
   geom_vline(xintercept = moran[[1]], col = "green") +
   geom_vline(xintercept = mean(randomized_moran), col = "blue")
 ```
-
-#### Replicability - the random seed
-
-To faciliate replication, it is best to set a seed for the random number generator. The one
-used in GeoDa is 123456789, so we will demonstrate how to set the seed here. It is just 
-`set.seed` and the desired seed number as an input.
-```{r}
-set.seed(123456789)
-```
-
-
 #### LOWESS smoother
 
 The LOWESS smoother is not implemented directly in **ggplot2**, but can be found in an
@@ -683,7 +677,7 @@ dist.band.nb <- dnearneigh(coords,0,4823.27)
 Using the **spdep** function `sp.correlogram, we can get measures of spatial autocorrelation
 for an input number of lag orders. We can then use the base R plotting function to get a look
 at the autocorrelation values for each lag order.
-```{r}
+```{r,message=FALSE,warning=FALSE}
 sp <- sp.correlogram(dist.band.nb, clev.points$sale_price, order = 10, method = "I",style = "W", randomisation = TRUE, spChk = NULL, zero.policy = TRUE)
 plot(sp)
 ```
@@ -738,7 +732,7 @@ for (i in 1:10){
 Now we create a data frame from the two vectors we create with the lag order values and 
 associated euclidean distance values.
 ```{r}
-df <- data_frame(lag_order = 1:10, auto_corr = morans, num_pairs = pairs)
+df <- data.frame(lag_order = 1:10, auto_corr = morans, num_pairs = pairs)
 df$euclidean_distance <- df$lag_order * 4823
 ```
 
