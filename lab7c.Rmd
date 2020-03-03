@@ -1,0 +1,139 @@
+---
+title: "Cluster Analysis (3)"
+subtitle: "Advanced Clustering Methods"
+author: "Luc Anselin^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu]"
+date: "Latest update 11/19/2018"
+output:
+  bookdown::html_document2:
+    fig_caption: yes
+    self_contained: no
+    toc: yes
+    toc_depth: 4
+    includes:
+      in_header: "../header.html"
+      before_body: "../doc_before.html"
+      after_body: "../footer.html"
+    theme: null
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+  word_document:
+    toc: yes
+    toc_depth: '4'
+bibliography: "../workbook.bib"
+bibliography-style: "apalike"
+link-citations: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+<br>
+
+## Introduction {-}
+In this final chapter that deals with standard (non-spatial) clustering
+techniques, we consider some more advanced partitioning methods. First, we cover two
+variants of K-means, i.e., K-medians and K-medoids. These operate in the same
+manner as K-means, but differ in the way the central point of each cluster is assigned.
+For K-means, we recall this was the centroid. In contrast, for K-median the central point
+is the median for each dimension, whereas for K-medoid it is the median location, i.e., the 
+actual observation that minimizes the distance to all the points in the cluster.^[Note
+that the centroid in the K-mean approach and the median in the K-median approach typically
+are not actual observations, whereas in the K-medoid method, they are.]
+
+
+### Objectives {-}
+
+- Carry out k-median and k-medoid clustering
+
+- Carry out and interpret the results of spectral clustering
+
+- Carry out and interpret the results of HDBScan clustering
+
+
+#### GeoDa functions covered {-}
+
+* Clusters > K Medians
+    + select variables
+* Clusters > K Medoids
+* Clusters > Spectral
+* Clusters > HDBScan
+
+<br>
+
+### Getting started {-}
+As before, with GeoDa launched and all previous projects closed, we again load the Guerry sample data set from the **Connect to Data Source** interface. We either load it from the sample data 
+collection and then save the file in a working directory, or we use a previously saved version.  The process should yield the familiar themeless base map, showing the 85 French departments,
+as in Figure \@ref(fig:guerrybase).
+
+```{r guerrybase, out.width='80%',fig.align="center",fig.cap="French departments themeless map"}
+knitr::include_graphics('./pics7c/0_547_themelessbasemap.png')
+```
+
+## K Medians {-}
+
+### Principle {-}
+K-medians is a variant of K-means clustering. As a partitioning method, it starts
+by randomly assigning observations to K clusters. Each cluster is then characterized
+by a central point. In contrast to K-means, the central point is not the average
+(in multiattribute space), but instead the median of the cluster observations. 
+
+K-medians is often
+confused with K-medoids. However, there is a subtle difference. In the K-medians algorithm
+as implemented in GeoDa, the cluster center is the point that corresponds to the median
+along each variable dimension. As is the case for the average, this point does not
+necessarily correspond to an actual observation. This is the main difference with
+K-medoids, where the central point has to be one of the observations (see the next
+section).
+
+Once an initial assignment is carried out and the central point computed, observations
+are assigned to the cluster whose central point is the closest. In contrast to the
+K-means method, a Manhattan distance (absolute difference) metric is used in the assignment.
+This makes the method more robust to the influence of outliers, since large
+distances are penalized less.
+
+In all other respects, the implementation and interpretation is the same as for 
+K-means.
+
+### Implementation {-}
+
+
+
+
+
+
+
+#### Variable Settings Panel {-}
+
+#### Cluster results {-}
+
+### Options and sensitivity analysis {-}
+
+## K Medoids {-}
+
+### Principle {-}
+
+@Hastieetal:09, pp. 515-520
+
+@KaufmanRousseeuw:05, Chapter 2
+
+
+### Implementation {-}
+
+## Spectral Clustering  {-}
+
+### Principle {-}
+
+### Implementation {-}
+
+## HDBScan Clustering {-}
+
+### Principle {-}
+
+### Implementation {-}
+
+
+<br>
+
+## References {-}
