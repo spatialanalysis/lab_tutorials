@@ -1,0 +1,648 @@
+---
+title: "Cluster Analysis (2)"
+subtitle: "Classic Clustering Methods"
+author: "Luc Anselin^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu]"
+date: "Latest update 11/19/2018"
+output:
+  bookdown::html_document2:
+    fig_caption: yes
+    self_contained: no
+    toc: yes
+    toc_depth: 4
+    includes:
+      in_header: "../header.html"
+      before_body: "../doc_before.html"
+      after_body: "../footer.html"
+    theme: null
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+  word_document:
+    toc: yes
+    toc_depth: '4'
+bibliography: "../workbook.bib"
+bibliography-style: "apalike"
+link-citations: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+<br>
+
+## Introduction {-}
+
+In this second of three chapters that deal with multivariate clustering methods, we will 
+cover two classic clustering methods, i.e.,  **k-means**, and **hierarchical clustering**. 
+
+The problem addressed
+by a clustering method is to group the *n* observations into *k* **clusters** such that
+the intra-cluster similarity is maximized (or, dissimilarity minimized), and the 
+between-cluster similarity minimized (or, dissimilarity maximized). K-means is a so-called
+partitioning clustering method in which the data are *partitioned* into k groups, with
+k determined beforehand. In constrast,
+hierarchical clustering builds up the clusters from the bottom up (or top down) and can be considered for
+many values of k.
+
+The clustering methods
+are standard tools of so-called unsupervised learning and constitute a core element in 
+any machine learning toolbox. An extensive technical discussion is beyond the scope
+of this document, but a thorough treatment can be found in @Hastieetal:09 and
+@Jamesetal:13, among others.
+
+GeoDa implements the cluster algorithms by leveraging the *C Clustering Library*
+[@deHoonetal:17], augmented by the k-means++ algorithm from @ArthurVassilvitskii:07.
+
+To illustrate these techniques, we will continue to use the Guerry data set on
+moral statistics in 1830 France, which comes pre-installed with GeoDa.
+
+### Objectives {-}
+
+- Carry out k-means clustering
+
+- Interpret the characteristics of a cluster analysis
+
+- Carry out a sensitivity analysis to starting options
+
+- Impose a bound on the clustering solutions
+
+- Compute aggregate values for the new clusters
+
+- Carry out hierarchical clustering
+
+#### GeoDa functions covered {-}
+
+* Clusters > K Means
+    + select variables
+    + select k-means starting algorithms
+    + k-means characteristics
+    + mapping the clusters
+    + changing the cluster labels
+    + saving the cluster classification
+    + setting a minimum bound
+* Clusters > Hierarchical
+    + select distance criterion
+* Table > Aggregate
+
+
+<br>
+
+### Getting started {-}
+As before, with GeoDa launched and all previous projects closed, we again load the Guerry sample data set from the **Connect to Data Source** interface. We either load it from the sample data 
+collection and then save the file in a working directory, or we use a previously saved version.  The process should yield the familiar themeless base map, showing the 85 French departments,
+as in Figure \@ref(fig:guerrybase).
+
+```{r guerrybase, out.width='80%',fig.align="center",fig.cap="French departments themeless map"}
+knitr::include_graphics('./pics7b/0_547_themelessbasemap.png')
+```
+
+## K Means {-}
+
+### Principle {-}
+The k-means algorithm starts with an initial (random) partioning of the **n** data
+points into **k**
+groups, and then incrementally improves upon this until convergence. In a general sense,
+observations are assigned to the cluster centroid to which they are closest, using
+ an Euclidean (squared difference) dissimilarity 
+criterion.
+
+A key element in this method is the choice of the number of clusters, k. Typically, 
+several values for k are considered, and the resulting clusters are then compared in terms of the
+objective function. Since the total variance equals the sum of the within-group variances
+and the total between-group variance, a common criterion is to assess the ratio of the total
+between-group variance to the total variance. A higher value for this ratio suggests a better
+separation of the clusters. However, since this ratio increases with k, the selection
+of a *best* k is not straightforward. In practice, one can plot the ratio against values for
+k and select a point where the additional improvement in the objective is no longer
+meaningful. Several ad hoc rules have been suggested, but none is totally satisfactory.
+
+The k-means algorithm does not guarantee a global optimum, but only a local one.
+In addition, it is sensitive to the starting
+point used to initiate the iterative procedure. In GeoDa, two different approaches are
+implemented. One uses a series of random initial assignments, creating several initial clusters and starting
+the iterative process with the best among these solutions. In order to ensure replicability, it
+is important to set a seed value for the random number generator. Also, to assess the 
+sensitivity of the result to the starting point, different seeds should be tried (as well as a
+different number of initial solutions).
+
+A second approach uses a careful consideration of initial seeds, following the procedure
+outlined in @ArthurVassilvitskii:07, commonly referred to as **k-means++**. While generally being
+faster and 
+resulting in a superior solution in small to medium sized data sets,
+this method does not scale well (as it requires
+k passes through the whole data set to find the initial values). Note that a choice of a large number of random initial allocations may
+yield a better outcome than the application of k-means++, at the expense of a
+somewhat longer execution time.
+
+### Implementation {-}
+We invoke the k-means functionality from the **Clusters** toolbar icon,
+in Figure \@ref(fig:kmeansicon).
+
+```{r kmeansicon, out.width='15%',fig.align="center",fig.cap="Clusters toolbar icon"}
+knitr::include_graphics('./pics7b/1_683_cluster_toolbaricon.png')
+```
+
+We select **K Means** from the list of options. Alternatively, from the main menu,
+shown in Figure \@ref(fig:kmeansmenu), we
+can select **Clusters > K Means**.
+
+```{r kmeansmenu, out.width='15%',fig.align="center",fig.cap="K Means Option"}
+knitr::include_graphics('./pics7b/1_714_kmeans_option.png')
+```
+
+This brings up the **K Means Clustering Settings** dialog, shown
+in Figure \@ref(fig:kmeansvars), the main interface through which variables
+are chosen, options selected, and summary results are provided.
+
+#### Variable Settings Panel {-}
+We select the variables and set the parameters for the K Means cluster analysis 
+through the options in the left hand panel of the interface. We choose the same six
+variables as in the previous chapter: **Crm_prs**,
+**Crm_prp**, **Litercy**, **Donatns**, **Infants**, and **Suicids**.
+ These variables
+appear highlighted in the **Select Variables** panel.
+
+```{r kmeansvars, out.width='80%',fig.align="center",fig.cap="K Means variable selection"}
+knitr::include_graphics('./pics7b/2_715_kmeans_variables.png')
+```
+
+The next option is to select the **Number of Clusters**. The initial setting is blank. One can either choose a value from
+the drop-down list, or enter an integer value directly.^[The drop-down list goes from 2 to 85, 
+which may be insufficient in *big data* settings. Hence GeoDa now offers the option to enter
+a value directly.] In our example, we set the number of clusters to **5**.
+
+A default option is to use the variables in standardized form, i.e., in standard
+deviational units,^[The Z standardization subtracts the mean and divides by the
+standard deviation. An alternative standardization is to use the mean absolute
+deviation, MAD.] expressed with **Transformation** set to **Standardize (Z)**.
+
+The default algorithm is
+**KMeans++** with initialization re-runs set to 150 and maximal iterations to 1000.
+The **seed** is the global random number seed set for GeoDa, which can be changed by means of the
+**Use specified seed** option. Finally, the default **Distance Function** is **Euclidean**.
+For k-means, this option cannot be changed, but for hierarchical clustering, there is also
+a **Manhattan** distance metric.
+
+The cluster classification will be
+saved in the variable specified in the **Save Cluster in Field** box. The default of **CL**
+is likely not very useful if several options will be explored. In our first example, we
+set the variable name to **CLa**.
+
+#### Cluster results {-}
+
+After pressing **Run**, and keeping all the settings as above, a cluster map is created as a new view and the characteristics of 
+the cluster are listed in the **Summary** panel.
+
+The cluster map in Figure \@ref(fig:kmeansmap5) reveals quite evenly balanced clusters, with 22, 19, 18, 16 and 10 members
+respectively. Keep in mind that the clusters are based on attribute similarity and they do not respect
+contiguity or compactness (we will examine this aspect in a later chapter). 
+
+```{r kmeansmap5, out.width='80%',fig.align="center",fig.cap="K Means cluster map (k=5)"}
+knitr::include_graphics('./pics7b/2_717_clustermap_5.png')
+```
+
+The cluster characteristics are listed in the **Summary** panel, shown
+in Figure \@ref(fig:kmeanssummary5). This lists, for each cluster, the
+method (KMeans), the value of k (here, 5), as well as
+the parameters specified (i.e., the initialization methods, number of initialization
+re-runs, the maximum iterations, transformation, and  distance function). Next
+follows the values of the cluster centers for each of the variables involved in the
+clustering algorithm (with the **Standardize** option on, these variables have been transformed to have zero mean and variance one overall, but not in each of the clusters).
+
+In addition, some summary measures are provided to assess the extent to which the clusters
+achieve within-cluster similarity and between-cluster dissimilarity. The total sum of
+squares is listed, as well as the within-cluster sum of squares for each of the clusters.
+Finally, these statistics are summarized as the total within-cluster sum of squares,
+the total between-cluster sum of squares, and the ratio of between-cluster to total 
+sum of squares. In our initial example, the latter is 0.497467.
+
+```{r kmeanssummary5, out.width='80%',fig.align="center",fig.cap="K Means cluster characteristics (k=5)"}
+knitr::include_graphics('./pics7b/2_716_cluster_chars_5.png')
+```
+
+The cluster labels (and colors in the map) are arbitrary and can be changed in the cluster
+map, using the same technique we saw earlier for unique value maps (in fact, the cluster
+maps are a special case of unique value maps). For example, if we wanted to switch 
+category 4 with 3 and the corresponding colors, we would move the light green rectangle
+in the legend with label 4 up to the third spot in the legend, as shown in
+Figure \@ref(fig:changelabels).
+
+```{r changelabels, out.width='25%',fig.align="center",fig.cap="Change cluster labels"}
+knitr::include_graphics('./pics7b/2_722_change_labels1.png')
+```
+
+Once we release the cursor, an updated cluster map is produced, with the categories (and colors)
+for 3 and 4 switched, as in Figure \@ref(fig:kmeanschangelabels).
+
+```{r kmeanschangelabels, out.width='80%',fig.align="center",fig.cap="Relabeled cluster map"}
+knitr::include_graphics('./pics7b/2_723_changed_labels.png')
+```
+
+As the clusters are computed, a new categorical variable is added to the data table
+(the variable name is specified in the **Save Cluster in Field** option).
+It contains the assignment of each observation to one of the clusters as an 
+integer variable. However, this
+is not automatically updated when we change the labels, as we did in the example above.
+
+In order to save the updated classification, we can still use the generic **Save Categories** option 
+available in any map view (right click in the map).
+After specifying a variable name (e.g., **cat_a**), we can see both the original categorical
+variable and the new classification in the data table. 
+
+In the table, shown in Figure \@ref(fig:kmeanscattable), wherever **CLa** (the original
+classification) is **3**, the new classification (**cat_a**) is **4**.
+As always, the new variables do not become permanent additions until the table is saved.
+
+
+```{r kmeanscattable, out.width='25%',fig.align="center",fig.cap="Cluster categories in table"}
+knitr::include_graphics('./pics7b/2_725_labels.png')
+```
+
+#### Saving the cluster results {-}
+The summary results listed in the **Summary** panel can be saved to a text file. Right clicking
+on the panel to brings up a dialog with a **Save** option,
+as in Figure \@ref(fig:kmeanssave). Selecting this and specifying a file name
+for the results will provide a permanent record of the analysis.
+
+```{r kmeanssave, out.width='60%',fig.align="center",fig.cap="Saving summary results to a text file"}
+knitr::include_graphics('./pics7b/2_731_savesummary.png')
+```
+
+### Options and sensitivity analysis {-}
+The k-means algorithm depends crucially on its initialization. In GeoDa, there are
+two methods to approach this. The default
+k-means++ algorithm usually picks a very good starting point. However, the number
+of initial runs may need to be increased to obtain the best solution.
+
+The second method is so-called random initialization. In this approach, k observations are
+randomly picked and used as seeds for an initial cluster assignment, for which the summary
+characteristics are then computed. This is repeated many times and the best solution is used
+as the starting point for the actual k-means algorithm.
+
+It is important to assess the sensitivity of the results to the starting point, and
+several combinations of settings should be compared.
+
+In addition to the starting options, it is also possible to *constrain* the k-means
+clustering by imposing a minimum value for a spatially extensive variable, such as a
+total population. This ensures that the clusters meet a minimum size for that variable.
+For example, we may want to create neighborhood types (clusters) based on a number
+of census variables, but we also want to make sure that each type has a  minimum
+overall population size, to avoid creating clusters that are *too small* in terms
+of population. We will encounter this approach again when we discuss the max-p
+method for spatially constrained clustering.
+
+#### Changing the number of initial runs in k-means++ {-}
+The default number of initial re-runs for the k-means++ algorithm is **150**. Sometimes,
+this is not sufficient to guarantee the best possible result (in terms of the ratio of between
+to total sum of squares). We can change this value in the **Initialization Re-runs** dialog, as
+illustrated in Figure \@ref(fig:kppinit) for a value of **1000** iterations.
+
+
+```{r kppinit, out.width='40%',fig.align="center",fig.cap="K-means++ initialization re-runs"}
+knitr::include_graphics('./pics7b/4_042_kppinitialize1000.png')
+```
+
+The result is slightly different from what we obtained for the default setting.
+As shown in Figure \@ref(fig:kppinitmap), the first category now has 23 elements, and
+the second 18. The other groupings remain the same.
+
+
+```{r kppinitmap, out.width='80%',fig.align="center",fig.cap="Cluster map for 1000 initial re-runs"}
+knitr::include_graphics('./pics7b/4_043_kpp1000map.png')
+```
+
+The revised initialization results in a slight improvement of the sum of squares ratio, 
+changing from 0.497467 to 0.497772, as shown in
+Figure \@ref(fig:kppinitresults).
+
+```{r kppinitresults, out.width='80%',fig.align="center",fig.cap="Cluster characteristics for 1000 initial reruns"}
+knitr::include_graphics('./pics7b/4_044_kppinitresults.png')
+```
+
+
+#### Random initialization {-}
+The alternative to the KMeans++ initialization is to select **Random** as the **Initialization Method**,
+as shown in Figure  \@ref(fig:randominit). We keep the number of initialization re-runs
+to the default value of 150 and save the result in the
+variable **CLr**.
+
+
+```{r randominit, out.width='40%',fig.align="center",fig.cap="Random initialization"}
+knitr::include_graphics('./pics7b/3_732_randominit.png')
+```
+
+The result is identical to what we obtained for K-means++ with 1000 initialization re-runs,
+with the cluster map as in  Figure \@ref(fig:kppinitmap) and the cluster summary
+as in Figure \@ref(fig:kppinitresults). However, if we had run the random initialization with
+much fewer runs (e.g., 10), the results would be inferior to what we obtained before.
+This highlights the effect of the starting values on the ultimate result.
+
+#### Setting a minimum bound {-}
+The minimum bound is set in the variable settings dialog by checking the
+box next to **Minimum Bound**, as in Figure \@ref(fig:minbound). In our example, we
+select the variable **Pop1831** to set the constraint. Note that we specify a bound
+of **15%** (or **4855**) rather than the default **10%**. This is because the 
+standard k-means solution satisfies the default constraint already, so that no actual bounding
+is carried out.
+
+```{r minbound, out.width='40%',fig.align="center",fig.cap="Setting a minimum bound"}
+knitr::include_graphics('./pics7b/7_075_minbound.png')
+```
+
+With the cluster size at 5 and all other options at their default value, we obtain
+the cluster result shown in the map in Figure \@ref(fig:minboundmap). These results
+differ slightly from the unconstrained map in Figure \@ref(fig:kmeansmap5).
+
+```{r minboundmap, out.width='80%',fig.align="center",fig.cap="Cluster map with minimum bound constraint"}
+knitr::include_graphics('./pics7b/7_076_minboundmap.png')
+```
+
+The cluster characteristics show a slight deterioriation of our summary criterion,
+to a value of **0.484033** (compared to **0.497772**), as shown in 
+Figure \@ref(fig:minboundresults). This is the price to pay to
+satisfy the minimum population constraint.
+
+```{r minboundresults, out.width='80%',fig.align="center",fig.cap="Cluster characteristics with minimum bound"}
+knitr::include_graphics('./pics7b/7_077_minboundsummary.png')
+```
+
+
+#### Aggregation by cluster {-}
+With the clusters at hand, as defined for each observation by the category in the cluster
+field, we can now compute aggregate values for the new clusters. We illustrate this
+as a quick check on the population totals we imposed in the bounded cluster procedure.
+
+The aggregation is invoked from the **Table** as an option by right-clicking. This
+brings up the list of options, from which we select **Aggregate**, as in 
+Figure \@ref(fig:tabagg).
+
+```{r tabagg, out.width='20%',fig.align="center",fig.cap="Table Aggregate option"}
+knitr::include_graphics('./pics7b/7_002_table_aggregate.png')
+```
+
+The following dialog, shown in Figure \@ref(fig:tabaggpop), provides the specific
+aggregation method, i.e., count, average, max, min, or **Sum**, the **key** on which
+to aggregate and a selection of variable to aggregate. In our example, we use the
+cluster field key, e.g., **CLb** and select only the population variable **Pop1831**,
+which we will sum over the departments that make up each cluster. This can be readily
+extended to multiple variables, as well as to different summary measures, such
+as the average.^[In the current implementation, the same summary method needs to 
+be applied to all the variables.]
+
+```{r tabaggpop, out.width='40%',fig.align="center",fig.cap="Aggregation of total population by cluster"}
+knitr::include_graphics('./pics7b/7_079_aggregate_vars.png')
+```
+
+Pressing the **Aggregate** key brings up a dialog to select the file in which the new
+results will be saved. For example, we can select a **dbf** format and specify the
+file name. The contents of the new file are given in Figure \@ref(fig:clusterpop),
+with the total population for each cluster. Clearly, each cluster meets the minimum
+requirement of 4855 that was specified.
+
+```{r clusterpop, out.width='40%',fig.align="center",fig.cap="Total population by cluster"}
+knitr::include_graphics('./pics7b/7_084_minbound_agg.png')
+```
+
+The same procedure can be used to create new values for any variable, aggregated
+to the new cluster scale.
+
+## Hierarchical Clustering {-}
+
+### Principle {-}
+In contrast to a partioning method (like k-means), a hierarchical clustering approach 
+builds the clusters step by step. This can be approached in a top-down fashion or in
+a bottom-up fashion. 
+
+In a top-down approach, we start with the full data set as one cluster,
+and find the best break point to create two clusters. This process continues until each
+observation is its own cluster. The result of the successive divisions of the data is
+visualized in a so-called *dendrogram*, i.e., a representation as a tree.
+
+The bottom-up approach starts with each observation being assigned to its own cluster.
+Next, the two observations are found that are *closest* (using a given distance criterion),
+and they are combined into a cluster. This process repeats itself, by using a *representative
+point* for each grouping once multiple observations are combined. At the end of this process,
+there is a single cluster, containing all the observations. Again, the results of the
+sequential grouping of observations (and clusters) are visually represented by a dendrogram.
+
+The dendrogram is used to set a *cut* level for a specified k. By placing the cut point
+at different levels in the tree, clusters with varying dimensions are obtained.
+
+A key aspect of the hierarchical clustering process is how to compute the *distance* between
+two existing clusters in order to decide how to group the *closest* two together. There are
+several criteria in use, such as single linkage, complete linkage, average linkage, and
+Ward's method (or centroid linkage).
+
+With *single linkage*, the distance between two clusters is defined by the distance between
+the *closest* (in attribute space) observations from each cluster. In contrast, for *complete linkage*, the distance
+is between the observations that are furthest apart. *Average linkage* uses the average of all the
+pairwise distances, whereas *Ward's method* utilizes the distance between a central point in
+each cluster.
+
+A common default is to use Ward's method, which tend to result in nicely balanced clusters.
+The complete linkage method yields similar clusters. In contrast, single linkage and average
+linkage tends to result in many singletons and a few very large clusters.
+
+### Implementation {-}
+Hierarchical clustering is invoked in GeoDa from the same toolbar icon as k-means, shown
+in Figure \@ref(fig:kmeansicon), by selecting the proper item from the drop down list. The desired clustering functionality can also be selected by using **Clusters > Hierarchical** from the
+menu, as shown in Figure \@ref(fig:hierarchicalmenu).
+
+```{r hierarchicalmenu, out.width='15%',fig.align="center",fig.cap="Hierarchical clustering option"}
+knitr::include_graphics('./pics7b/4_035_hierarchical.png')
+```
+
+#### Variable Settings Panel {-}
+As before, the variables to be clustered are selected in the **Variables Settings** panel. We
+continue with the same six variables, shown in Figure \@ref(fig:hiervars).
+
+```{r hiervars, out.width='40%',fig.align="center",fig.cap="Hierarchical clustering variable selection"}
+knitr::include_graphics('./pics7b/5_048_hiervars.png')
+```
+
+The panel also allows one to set several options, such as the **Transformation** (default value
+is a standardized z-value), the linkage **Method** (default is Ward's method), and the
+**Distance Function** (default is Euclidean). In the same way as for k-means, the cluster
+classification is saved in the data table under the variable name specified in
+**Save Cluster in Field**.
+
+### Cluster results {-}
+The actual computation of the clusters proceeds in two steps. In the first step, 
+after clicking on **Run**, a dendrogram is presented. The default cut point is set to 5,
+but this can be changed interactively (see below). Once a cut point is selected, clicking on
+**Save/Show Map** creates the cluster map, computes the summary characteristics, and saves the
+cluster classification in the data table.
+
+#### Dendrogram {-}
+With all options set to the default, the resulting dendrogram is as in Figure \@ref(fig:dendrogram5).
+The dashed red line corresponds to a cut point that yields five clusters (the default). The
+dendrogram shows how individual observations are combined into groups of two, and subsequently
+into larger and larger groups, by combining pairs of clusters. The colors on the right hand
+side match the colors of the observations in the cluster map (see next).
+
+```{r dendrogram5, out.width='60%',fig.align="center",fig.cap="Dendrogram (k=5)"}
+knitr::include_graphics('./pics7b/5_049_dendrogram5.png')
+```
+
+The dashed line (cut point) can be moved interactively. For example, in Figure \@ref(fig:dendrogram8),
+we *grabbed* the line at the top (it can equally be grabbed at the bottom), and moved
+it to the right to yield eight clusters. The corresponding colors are shown on the
+right hand bar.
+
+```{r dendrogram8, out.width='60%',fig.align="center",fig.cap="Dendrogram (k=8)"}
+knitr::include_graphics('./pics7b/5_050_dendrogram8.png')
+```
+
+#### Cluster map {-}
+As mentioned before, once the dendrogram cut point is specified, clicking on **Save/Show Map**
+will generate the cluster map, shown in Figure \@ref(fig:hiermapW5). Note how the colors for
+the map categories match the colors in the dendrogram. Also, the number of observations
+in each class also are the same between the groupings in the dendrogram and the cluster map.
+
+```{r hiermapW5, out.width='80%',fig.align="center",fig.cap="Hierarchical cluster map (Ward, k=5)"}
+knitr::include_graphics('./pics7b/5_051_hierclusmapW5.png')
+```
+
+#### Cluster summary {-}
+Similarly, once **Save/Show Map** has been selected, the cluster descriptive statistics
+become available from the **Summary** button in the dialog. The same characteristics are reported
+as for k-means. In comparison to our k-means solution, this set of clusters is slightly 
+inferior in terms of the ratio of between to total sum of squares, achieving 0.482044. However,
+setting the number of clusters at five is by no means necessarily the best solution. In a 
+real application, one would experiment with different cut points and evaluate the solutions
+relative to the k-means solution. 
+
+```{r, out.width='80%',fig.align="center",fig.cap="Hierarchical cluster characteristics (Ward, k=5"}
+knitr::include_graphics('./pics7b/5_052_hierW5summary.png')
+```
+
+The two k-means and hierarchical clustering approaches can also be used in conjunction with each other. For example, one could
+explore the dendrogram to find a good cut-point, and then use this value for k in a k-means
+or other partitioning method.
+
+### Options and sensitivity analysis {-}
+The main option of interest in hierarchical clustering is the linkage **Method**. In
+addition, we can alter the **Distance Function** and the **Transformation**.  The
+latter operates in the
+same fashion as for k-means.
+
+So far, we have used the default setting for **Ward's-linkage**. We now consider each of the other linkage options in turn and illustrate the associated dendrogram, cluster map and cluster
+characteristics.
+
+#### Single linkage {-}
+The linkage options are chosen from the **Method** item in the dialog. For example, 
+in Figure \@ref(fig:singlelinkagemethod), we select **Single-linkage**. The other
+options are chosen in the same way.
+
+```{r singlelinkagemethod, out.width='40%',fig.align="center",fig.cap="Single linkage"}
+knitr::include_graphics('./pics7b/5_053_single_linkage.png')
+```
+
+The cluster results for single linkage are typically characterized by one or a few very
+large clusters and several singletons (one observation per cluster). In our example,
+this is illustrated by the dendrogram in Figure \@ref(fig:dendrosingle5), and the
+corresponding cluster map in Figure \@ref(fig:single5map). Four *clusters* consist of a
+single observation, with the main cluster collecting the 81 other observations. This
+situation is not remedied by moving the cut point such that more clusters result, since
+almost all of the additional clusters are singletons as well.
+
+```{r dendrosingle5, out.width='60%',fig.align="center",fig.cap="Dendrogram single linkage (k=5)"}
+knitr::include_graphics('./pics7b/5_054_dendrogram_single.png')
+```
+
+```{r single5map, out.width='80%',fig.align="center",fig.cap="Hierarchical cluster map (single linkage, k=5)"}
+knitr::include_graphics('./pics7b/5_055_single_map.png')
+```
+
+The characteristics of the single linkage hierarchical cluster are similarly dismal. Since
+four *clusters* are singeltons, their within cluster sum of squares is **0**. Hence,
+the total within-cluster sum of squares equals the sum of squares for cluster 5.
+The resulting ratio of between to total sum of squares is only 0.214771.
+
+```{r, out.width='80%',fig.align="center",fig.cap="Hierarchical cluster characteristics (single linkage, k=5)"}
+knitr::include_graphics('./pics7b/5_056_single_summary5.png')
+```
+
+In practice, in most situations, single linkage will not be a good choice, unless the
+objective is to identify a lot of singletons.
+
+#### Complete linkage {-}
+The complete linkage method yields clusters that are similar in balance to Ward's method.
+For example, in Figure \@ref(fig:dendrocomplete5), the dendrogram is shown for our example,
+using a cut point with five clusters. The corresponding cluster map is given as
+Figure \@ref(fig:completemap). The map is similar in structure to that obtained with Ward's
+method (Figure \@ref(fig:hiermapW5)), but note that the largest category (at 39) is much larger
+than the largest for Ward (25).
+
+```{r dendrocomplete5, out.width='60%',fig.align="center",fig.cap="Dendrogram complete linkage (k=5)"}
+knitr::include_graphics('./pics7b/5_057_dendro_complete5.png')
+```
+
+
+```{r completemap, out.width='80%',fig.align="center",fig.cap="Hierarchical cluster map (complete linkage, k=5)"}
+knitr::include_graphics('./pics7b/5_058_complete_map.png')
+```
+
+In terms of the cluster characteristics, shown in Figure \@ref(fig:completesummary), we note
+a slight deterioration relative to Ward's results, with the ratio of between to total sum
+of squares at 0.423101 (but much better than single linkage).
+
+```{r completesummary, out.width='80%',fig.align="center",fig.cap="Hierarchical cluster characteristics (complete linkage, k=5)"}
+knitr::include_graphics('./pics7b/5_059_complete_summary.png')
+```
+
+
+#### Average linkage {-}
+Finally, the average linkage criterion suffers from some of the same problems as single
+linkage, although it yields slightly better results. The dendrogram and cluster map
+are shown in Figures \@ref(fig:dendroavg5) and \@ref(fig:avgmap).
+
+
+```{r dendroavg5, out.width='60%',fig.align="center",fig.cap="Dendrogram average linkage (k=5)"}
+knitr::include_graphics('./pics7b/5_060_dendro_average.png')
+```
+
+```{r avgmap, out.width='80%',fig.align="center",fig.cap="Hierarchical cluster map (average linkage, k=5)"}
+knitr::include_graphics('./pics7b/5_061_average_map.png')
+```
+
+As given in Figure \@ref(fig:avgsummary), the summary characteristics are slighly better
+than in the single linkage case, with only two singletons. However, the overall ratio of
+between to total sum of squares is still much worse than for the other two methods,
+at 0.296838.
+
+```{r avgsummary, out.width='80%',fig.align="center",fig.cap="Hierarchical cluster characteristics (average linkage, k=5)"}
+knitr::include_graphics('./pics7b/5_062_average_summary.png')
+```
+
+#### Distance metric {-}
+The default metric to gauge the distance between the center of each cluster is the
+Euclidean distance. In some contexts, it may be preferable to use absolute or Manhattan
+block distance, which penalizes larger distances less. This option can be selected
+through the **Distance Function** item in the dialog, as in Figure  \@ref(fig:kmeansdist).
+
+```{r kmeansdist, out.width='40%',fig.align="center",fig.cap="Manhattan distance metric"}
+knitr::include_graphics('./pics7b/6_065_hier_manhattan.png')
+```
+
+We run this for the same variables using  Ward's linkage and a cut point yielding 5 clusters.
+The corresponding cluster map is shown in Figure \@ref(fig:mandistmap), with the summary
+characteristics given in Figure \@ref(fig:mandistsummary).
+
+```{r mandistmap, out.width='80%',fig.align="center",fig.cap="Manhattan distance cluster map"}
+knitr::include_graphics('./pics7b/6_066_h_man_map.png')
+```
+
+```{r mandistsummary, out.width='80%',fig.align="center",fig.cap="Manhattan distance cluster characteristics"}
+knitr::include_graphics('./pics7b/6_067_h_man_summary.png')
+```
+
+Relative to the Euclidean distance results, the ratio of between to total sum of squares
+is somewhat worse, at 0.44549 (compared to 0.482044). However, this is not a totally fair comparison, since the
+criterion for grouping is not based on a variance measure, but on an absolute difference.
+
+
+<br>
+
+## References {-}
