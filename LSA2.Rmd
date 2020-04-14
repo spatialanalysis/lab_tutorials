@@ -91,7 +91,6 @@ and a comprehensive list of options, please consult the
 
 - **RColorBrewer: `brewer.pal`
 
-
 ## Preliminaries
 
 Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not
@@ -102,8 +101,6 @@ actually be saving any files.^[Use `setwd(directorypath)` to specify the working
 First, we load all the required packages using the `library` command. If you don't have some of these in your system, make sure to install them first as well as
 their dependencies.^[Use 
 `install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
-
-
 ```{r}
 library(sf)
 library(spdep)
@@ -111,24 +108,21 @@ library(tmap)
 library(tidyverse)
 library(RColorBrewer)
 library(robustHD)
+library(geodaData)
 ```
 
+### geodaData
 
-
-
-
-
-### Obtaining the Data from the GeoDa website {-}
-
-To get the data for this notebook, you will and to go to [Guerry](https://geodacenter.github.io/data-and-lab/Guerry/) The download format is a
-zipfile, so you will need to unzip it by double clicking on the file in your file
-finder. From there move the resulting folder titled: nyc into your working directory
-to continue. Once that is done, you can use the **sf** function: `st_read()` to read
-the shapefile into your R environment. 
+All of the data for the R notebooks is available in the **geodaData**
+package. We loaded the library earlier, now to access the individual
+data sets, we use the double colon notation. This works similar to
+to accessing a variable with `$`, in that a drop down menu will 
+appear with a list of the datasets included in the package. For this
+notebook, we use `guerry`.
 
 
 ```{r}
-us.homocides <- st_read("ncovr/NAT.shp")
+us.homocides <- geodaData::ncovr
 ```
 
 
@@ -140,7 +134,6 @@ us.homocides <- st_read("ncovr/NAT.shp")
 
 To start we create a function for queen contiguity, which is just `st_relate` with
 the specified pattern for queen contiguity which is `F***T****`
-
 ```{r}
 st_queen <- function(a, b = a) st_relate(a, b, pattern = "F***T****")
 ```
@@ -149,8 +142,6 @@ st_queen <- function(a, b = a) st_relate(a, b, pattern = "F***T****")
 We apply the queen contiguity function to the guerry polygons and see that the class
 of the output is **sgbp**. This structure is close to the **nb** structure, but has
 a few difference that we will need to correct to use the rest of **spdep** functionality.
-
-
 ```{r}
 queen.sgbp <- st_queen(us.homocides)
 class(queen.sgbp)
@@ -160,7 +151,6 @@ class(queen.sgbp)
 This function converts type **sgbp** to **nb**. It is covered in more depth in the 
 Contiguity Based Weight notebook. In short, it explicitly changes the name of the 
 class and deals with the observations that have no neighbors.
-
 ```{r}
 as.nb.sgbp <- function(x, ...) {
   attrs <- attributes(x)
@@ -186,19 +176,9 @@ queen.weights <- nb2listw(queen.nb, style = "B", zero.policy = TRUE)
 ```
 
 
-
-
-
-
-
 ## Extensions of Local Moran's I
 
-
-
 ### Bivariate Local Moran's I
-
-
-
 
 #### Concept
 
@@ -239,7 +219,6 @@ Before proceeding we will turn the weights structure into a **symmetricMatrix**.
 can do this with `as`, our queen weights and "symmetricMatrix" as arguments. Next
 we use `as.matrix` with **W/rowSums(W)** as a precaution to make sure our weights 
 are row-standardized. Lastly we assign 0 to all NA's.
-
 ```{r}
 W  <- as(queen.weights, "symmetricMatrix")
 W  <- as.matrix(W/rowSums(W))
@@ -265,7 +244,6 @@ bivariate_moran <- function(x, y = NULL, W){
 
 
 Here we use the function made above on our x and y variables.
-
 ```{r}
 lmoran <- bivariate_moran(us.homocides$HR90, us.homocides$HR80,W)
 ```
@@ -282,8 +260,6 @@ significance.
 Before we proceed with the conditional permutation process, we set the seed to `123456789`.
 This is the same randomization seed as GeoDa. Randomization seeds are used for replicability
 in research.
-
-
 ```{r}
 set.seed(123456789)
 ```
@@ -346,7 +322,6 @@ local.sims <- bivariate_moran_sim(us.homocides$HR90,us.homocides$HR80, W)
 To assess significance at the .05 level for a two-sided test as in GeoDa, we will us an
 alpha level of .1. `probs` will be .05 and .95, which corresponds with a two sided test
 at the .05 level. 
-
 ```{r}
 alpha <- .1  # for a 90% confidence interval
 probs <- c(alpha/2, 1-alpha/2)
@@ -361,7 +336,6 @@ To build the classifications, we will need the standardized scores for both the 
 build the classifications in the same manner as the univariate Local Moran. The quadrant of the
 moran scatterplot gives us the cluster classification. Positive values give the designation "High",
 and negative values "Low"
-
 ```{r}
 xs <- standardize(us.homocides$HR90)
 ys <- standardize(us.homocides$HR80)
@@ -564,10 +538,6 @@ same point in time.
 ### Differential Local Moran's I
 
 
-
-
-
-
 #### Concept
 
 
@@ -590,10 +560,7 @@ $$I_{D,i} = c(y_{i,t} - y_{i,t-1})\Sigma_jw_{ij}(y_{j,t} - y_{j,t-1})$$
 The scaling constant c can be ignored. Inference is based on conditional permutation. All
 the usual caveats hold about multiple comparisons, etc.
 
-
 #### Implementation
-
-
 
 To start we need the difference between the two temporal variables, which we will use
 as the variable for a univariate local moran.
@@ -606,18 +573,12 @@ that we created earlier in the notebook. This function works for the univariate 
 we just need to enter the x variable as the y as well and it will output the
 univariate LISA map. Additionally, we can use the `+` operator and additonal **tmap**
 function with this function. Below we use `tm_layout` to give the map a title.
-
 ```{r}
 bivariate_lisa_map(us.homocides, us.homocides$differ, y =us.homocides$differ,queen.weights,999,.05 ) +
   tm_layout(main.title = "Differential Local Moran's I")
 ```
 
-
-
-
 #### Interpretation
-
-
 
 The first aspect of the results is a much smaller number of significant locations compared
 to the univariate and bivariate cluster maps. These are locations where the change in the
@@ -639,9 +600,6 @@ When all changes are of the same sign, the interpretation of high-high and low-l
 on the sign. Due to the standardization, large positive values will be considered high
 (above the mean), whereas large negative values will be labeled low (below the mean). This
 should be kept in mind when interpreting the results.
-
-
-
 
 
 ### Local Moran with EB Rate
@@ -716,7 +674,7 @@ z_i <- (r_i - beta) / se
 
 ```{r}
 bivariate_lisa_map(us.homocides, z_i, y =z_i,queen.weights,999,.05 ) +
-  tm_layout(main.title = "Differential Local Moran's I")
+  tm_layout(main.title = "EB Local Moran's I")
 ```
 
 
@@ -747,44 +705,6 @@ implemented under Bivariate Local Join Count.
 While the natural application of Join Count statistics is to deal with binary variables,
 they can also be extended to a notion of quantile spatial autocorrelation, which is further
 elaborated upon below.
-
-
-### Bivariate - No Co-Location
-
-
-
-
-
-#### Preliminaries
-
-
-##### Getting the data from the GeoDa website
-
-
-
-
-
-
-
-##### Unique values
-
-
-
-
-
-
-
-
-##### Making the weights
-
-
-
-
-
-
-
-
-
 
 
 #### Concept
@@ -1087,15 +1007,7 @@ significance_map(guerry, p_values,999)
 
 ### Multivariate Local Geary
 
-
-
-
-
 #### Preliminaries
-
-
-
-
 
 
 #### Concept
@@ -1320,12 +1232,6 @@ tm_shape(guerry) +
 ```{r}
 bivariate_local_geary_map(guerry,x,y,queen.weights,999,.05)
 ```
-
-
-
-
-
-
 
 
 #### Interpretation

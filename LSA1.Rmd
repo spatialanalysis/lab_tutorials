@@ -1,15 +1,19 @@
 ---
 title: "Local Spatial Autocorrelation 1"
-subtitle: "R Notes"
-author: "Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]"
+author: Luc Anselin and Grant Morrison^[University of Chicago, Center for Spatial
+  Data Science -- anselin@uchicago.edu,morrisonge@uchicago.edu]
 date: "06/30/2019"
 output:
   html_document:
+    css: tutor.css
     fig_caption: yes
     self_contained: no
     toc: yes
     toc_depth: 4
-    css: tutor.css
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+subtitle: R Notes
 ---
 
 ```{r setup, include=FALSE}
@@ -100,58 +104,51 @@ their dependencies.^[Use
 `install.packages(packagename)`.] You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.
 
 
-```{r}
+```{r, message = FALSE}
 library(sf)
 library(spdep)
 library(tmap)
 library(tidyverse)
 library(RColorBrewer)
 library(robustHD)
+library(geodaData)
+library(Matrix)
+library(biclust)
+library(ggplot2)
 ```
 
 
+### geodaData
 
-### Obtaining the Data from the GeoDa website {-}
-
-To get the data for this notebook, you will and to go to [Guerry](https://geodacenter.github.io/data-and-lab/Guerry/) The download format is a
-zipfile, so you will need to unzip it by double clicking on the file in your file
-finder. From there move the resulting folder titled: nyc into your working directory
-to continue. Once that is done, you can use the **sf** function: `st_read()` to read
-the shapefile into your R environment. 
-
-
+All of the data for the R notebooks is available in the **geodaData**
+package. We loaded the library earlier, now to access the individual
+data sets, we use the double colon notation. This works similar to
+to accessing a variable with `$`, in that a drop down menu will 
+appear with a list of the datasets included in the package. For this
+notebook, we use `guerry`.
 ```{r}
-guerry <- st_read("guerry/Guerry.shp")
+guerry <- geodaData::guerry
 ```
-
 
 ### Making the weights
 
-
-
 To start we create a function for queen contiguity, which is just `st_relate` with
 the specified pattern for queen contiguity which is `F***T****`
-
 ```{r}
 st_queen <- function(a, b = a) st_relate(a, b, pattern = "F***T****")
 ```
 
-
 We apply the queen contiguity function to the voronoi polygons and see that the class
 of the output is **sgbp**. This structure is close to the **nb** structure, but has
 a few difference that we will need to correct to use the rest of **spdep** functionality.
-
-
 ```{r}
 queen.sgbp <- st_queen(guerry)
 class(queen.sgbp)
 ```
 
-
 This function converts type **sgbp** to **nb**. It is covered in more depth in the 
 Contiguity Based Weight notebook. In short, it explicitly changes the name of the 
 class and deals with the observations that have no neighbors.
-
 ```{r}
 as.nb.sgbp <- function(x, ...) {
   attrs <- attributes(x)
@@ -162,10 +159,6 @@ as.nb.sgbp <- function(x, ...) {
 }
 ```
 
-
-
-
-
 ```{r}
 queen.nb <- as.nb.sgbp(queen.sgbp)
 ```
@@ -173,16 +166,10 @@ queen.nb <- as.nb.sgbp(queen.sgbp)
 To go from neighbors object to weights object, we use `nb2listw`, with default parameters, we will 
 get row standardized weights.
 ```{r}
-queen.weights <- nb2listw(queen.nb)
+queen.weights <- nb2listw(queen.nb,style = "B", zero.policy = TRUE)
 ```
 
-
-
-
-
 ### Univariate analysis
-
-
 
 Throughout the notebook, we will focus on the variable **Donatns**, which is
 charitable donations per capita. Before proceeding with the local spatial statistics
@@ -201,14 +188,9 @@ tm_shape(guerry) +
   tm_layout(legend.outside = TRUE, legend.outside.position = "left")
 ```
 
-
-
 ## Local Moran
 
-
-
 ### Principle
-
 
 The local Moran statistic was suggested in Anselin(1995) as a way to identify
 local clusters and local spaital outliers. Most global spatial autocorrelation
@@ -238,90 +220,112 @@ and should not be interpreted in an absolute sense.
 
 ### Implementation
 
-
-To compute the local Moran statistic, we will need the standardized scores of the variable and the
-the lag variable. To get this, we first use `standardized` from **robustHD** and the compute the lag
-vraible with our queen contiguity weights and this standardized variable. `lag.listw` computes 
-the spatial lag variable for us.
-
-
-
+Throughout many of the mapping function we make in this notebook, the weights from *spdep* need to be
+convert to a full size spatial weights matrix for statistical computations. Here we make a function
+`convert_matrix` to accomplish this. We use `as` to convert to type `symmetricMatrix`. 
 ```{r}
-guerry$s_don <- standardize(guerry$Donatns)
-guerry$lag_s_don <- lag.listw(queen.weights, guerry$s_don)
+convert_matrix <- function(weights){
+ W  <- as(weights, "symmetricMatrix")
+ W  <- as.matrix(W/Matrix::rowSums(W))
+ W[which(is.na(W))] <- 0
+ W
+}
+W <- convert_matrix(queen.weights)
 ```
 
-
-The local moran is just the standardized variable and the lagged variable multiplied together. This
-gets use the observed local Moran statistic for each observation or French department. The statistics
-alone doesn't allow us to say anything about significance. We will need to compute a reference distribution
-for each location to assess significance.
+To compute the observed value of the local moran statistc, we make a function. The computation is pretty
+simple it is the standardized variable time the spatial lag of the standardized variable. The spatial
+lag variable can be calculated as the full spatial weights matrix times the standardized variable. To 
+compute the spatial lag variable, we use matrix multiplication, which is done with **%*%** in R. Then
+the local statistic is just `z*W%*%z` We then use our function on the **Donatns** variable and **W**,
+which we converted from the queen contiguity weights.
 ```{r}
-lmoran <- guerry$s_don * guerry$lag_s_don
-lmoran
+univariate_moran <- function(x, W){
+        z <- standardize(x)
+        local  <- (z*W%*%z)
+        local
+}
+lmoran <- univariate_moran(guerry$Donatns,W)
 ```
 
 Throughout this notebook, we will be taking a conditional random approach to assess significance with
 each local spatial statistic as outlined in (Anselin 1995). The basic approach here is to compute
 a reference distribution for each location. This is done by holding the value constant at each location
 then taking a random samples from the rest of the obseravtions for the neighbors. With spatially 
-random draws for the neighbors, we then calculate the statistic for the permutation. The runtimes
-for these computations are not ideal in R, especially when using more than 10,000 permuations. When
-we absolutely need more permuations, there are work arounds, but they are not ideal.
+random draws for the neighbors, we then calculate the statistic for the permutation. 
 
-
-When constructing a reference distribution for each location, we will need a data structure to store the
-results of each permutation and access later to assess significance. There are many ways to do this,
-but I found a data.frame to be the most intuitive way to do this. We want an empty data frame with
-85 columns for each location and 1000 rows for each permutation and the observed statistics. To set this
-up, we use `matrix`. The first argument is empty to specify that we want an empty matrix, then we set 
-the number of columns to 85 and the number of rows to 1000. From here we just convert our matrix to 
-a data frame with `as.data.frame` and set the first row to be the observed Local Moran statistic.
-
-```{r}
-mat <-matrix(,nrow =1000, ncol =85)
-df <- as.data.frame(mat)
-df[1,] <- lmoran
-```
-
-
-Before computing the spatially random permutations for each location, we set the seed to 123456789, which
-is the random seed used in GeoDa.
-
+We can build a function that computes a reference distribution of local moran statistics for each location.
+These references distributions are used to assess the significance of the observed local moran statistics. To
+start, we get the number of locations by using `nrow` on the weights matrix. Then we get the corresponding
+id index numbers with `1:n`. We create two matrices, one to store the reference local moran statistics, 
+and the other to store the spatially random samples our x variable. The number of rows corresponds to 
+the number of locations and the number of columns is the number of permutations used. The final product in
+the `local.sims` matrix will be a reference distribution for each location in a row. We will show this
+explicitly after we've made the function. To fill the sample matrix, we use `sample` on **id**, of length
+**permutations**. We sample the **id** vector for all indices except i, which is the location for which we
+are constructing the distribution. This is common practice for all of the spatial statistics we will 
+encounter in this notebook. After getting the sample indices, we use them to assess the corresponding value
+in the **x** variable. This results in a matrix with spatially randomized values of the **x** variable.
+Next we use `apply` to standardize the values in the sample matrix. Lastly, we compute the local statistics
+for each permutation and location by multiplying the standardized sample values matrix by the weights 
+matrix
 
 ```{r}
-set.seed(123456789)
-```
+univariate_moran_sim <- function(x, W, permutations){
+        
+        n   <- nrow(W)
+        id  <- 1:n
 
-
-To compute the reference distributions for each location, we will need a nested `for` loop. One loop to 
-run through each location and one compute each permutation of the reference distribution 999 times. To start,
-we label **guerry$s_don** to be **z_i**. This is just to keep the same notation as the Local Moran
-in the formula. Before taking a spatiall random sample for each location's neighbors, we must access
-the specific number of neighbors for that location. For this we just access the ith item of the neighbors
-structure, which will be a vector of neighbor indexes, then take the length of this list. In taking a sample
-for each permutation, we must sample from all of the observations, but the ith observation, which is held fixed
-for the location. To do this we write **z_i[-i]**. This gives a vector of all observation in **z_i**, except
-the ith observation. Then the sample is of length **n** for the number of neighbors a location has. After 
-taking the sample, we can compute the lag value for the location, which is just the mean of the sample because
-we are only working with row-standardized weights(which means each neighbor carries equal weight in the
-calculation of the spatial lag variable). The local moran is just the lag variable times the original
-variable. We store the result in **df[row,column]** The first row is taken by the observed statistic,
-so we start with **j +1**.
-
-```{r}
-z <- guerry$s_don
-for(i in 1:85){
-  nb.index <- queen.nb[[i]]
-  n <- length(nb.index)
-  for(j in 1:999){
-    nb.values <- sample(z[-i], n)
-    lm <- mean(nb.values) * z[i]
-    df[j + 1,i] <- lm
-  }
+        #place to store results
+        local.sims  <- matrix(NA, nrow = n, ncol=permutations)
+        x.sample = matrix(NA, nrow = n, ncol = permutations)
+        
+        # filling each column of the sample matrix
+        for(i in 1:n){
+          sample.indices <- sample(id[-i], permutations, replace = TRUE)
+          x.sample[i,] <- x[sample.indices]
+        }
+        
+        #standardizing the x sample values
+        z.sample <- (x.sample - apply(x.sample, 1, mean))/apply(x.sample, 1, sd)
+        
+        #standardizing x
+        z <- standardize(x)
+        
+        #calculating the local statistics
+        local.sims  <- (z*W%*%z.sample)
+        local.sims
 }
 
 ```
+
+We use the function created above with **Donatns**, **W**, and 999 permutations.
+```{r}
+moran_ref <- univariate_moran_sim(guerry$Donatns,W,999)
+```
+
+
+Here we show the reference distribution of local moran statistics for the 1st location in the sf data frame.
+To do this, we just grab the first row of **moran_ref**, put it into a data frame and then plot it with 
+**ggplot2**. The blue corresponds the the observed local moran statistic. The p_value here would be the area
+under the density curve to the left of the observed statistic.
+```{r}
+observed_1 <- lmoran[1]
+location_1 <- data.frame(local_moran  = moran_ref[1,])
+ggplot(location_1, aes(x=local_moran)) +
+  geom_density() +
+  geom_vline(xintercept = observed_1, col = "blue")
+```
+
+The location corresponding to the reference distribution above is found here:
+```{r}
+guerry_location_1 <- guerry[1,]
+tm_shape(guerry) +
+  tm_borders() +
+  tm_shape(guerry_location_1) +
+  tm_fill(col = "blue")
+```
+
 
 With the reference distributions and observed statistics for each location, we can compute a pseudo pvalue for
 each location. For this, we just loop through each location and calculate the number of permuations that
@@ -329,25 +333,29 @@ are greater than the observed statistic and store them in a vector. The pvalue i
 fraction of **1 + number greater** divided by the number of permuations plus one. Since the significance is
 two-sided, we will need to account for p-values close to one. For this, we use `ifelse` to assign (1- value)
 if the value is greater than .5. This allows us to account for both ends of the conditional distribution.
-
 ```{r}
-p_value <- rep(NA, 85)
-for(i in 1:85){
-  num_greater <- length(which(df[,i] > df[1,i]))
-  p_value[i] <- (num_greater + 1) / 1000
+get_p_value <- function(mat, observed,type = "one-sided") {
+  nperm <- ncol(mat)
+  nlocs <- nrow(mat)
+  p_value <- rep(NA,nlocs)
+  for(i in 1:nlocs){
+    num_greater <- length(which(mat[i,] >= observed[i]))
+    p_value[i] <- (num_greater + 1) / (nperm + 1)
+  }
+  if (type == "two-sided"){
+    p_value <- ifelse(p_value > .5, 1-p_value, p_value)
+    p_value
+  } else {
+    p_value
+  }
 }
-p_value <- ifelse(p_value > .5, 1-p_value, p_value)
+p_value <- get_p_value(moran_ref, lmoran,type="two-sided")
 p_value
 ```
-
-
 
 Here we add coumn in the sf data frame, so we can use **tmap** functions to make significance and
 cluster maps.
 
-```{r}
-guerry$p_value <- p_value
-```
 
 With the p-values, we can now move on to mapping. For the LISA significance map
 and the LISA cluster map, we will need to know which areas have significant
@@ -361,10 +369,8 @@ interval in the breaks paramter would be .01 to 1. Additionaly, if we want to sh
 higher levels of significance we would include the values in the breaks parameter. 
 For example to add .0001, we would include it in between 0 and .001. When choosing
 the breaks, make sure the labels corrrespond to the correct level of significance.
-
-
 ```{r}
-guerry$significance <- cut(guerry$p_value,
+guerry$significance <- cut(p_value,
                            breaks = c(0, .001, .01, .05, 1),
                            labels = c("p = .001", "p = .01", "p = .05", "Not Significant"))
 ```
@@ -379,7 +385,6 @@ tm_shape(guerry) +
   tm_fill("significance", palette = "-Greens") + 
   tm_borders() +
   tm_layout(legend.outside = TRUE, title = "LISA significance map")
-  
 ```
 
 To get closer to the GeoDa mapping style, we can use **RColorBrewer** to create a specialized palette
@@ -407,7 +412,7 @@ Each spatial statistic in this tutorial comes with a significance mapping compon
 code, we will make a significance map function, using the process outlined above. It is a bit tricky in that we
 must get the proper breaks and labels for the map from the p-value data.
 ```{r}
-significance_map <- function(polys, pvalue_vector, permutations, sig = .05){
+significance_map <- function(polys, pvalues, permutations, alpha){
   # function to create significance map
   # arguments:
   #    polys: sf dataframe
@@ -419,22 +424,22 @@ significance_map <- function(polys, pvalue_vector, permutations, sig = .05){
   
   target_p <- 1 / (1 + permutations)
   potential_brks <- c(.00001, .0001, .001, .01)
-  brks <- potential_brks[which(potential_brks > target_p & potential_brks < sig)]
-  brks2 <- c(target_p, brks, sig)
+  brks <- potential_brks[which(potential_brks > target_p & potential_brks < alpha)]
+  brks2 <- c(target_p, brks, alpha)
   labels <- c(as.character(brks2), "Not Significant")
   brks3 <- c(-.000001, brks2, 1)
   
-  cuts <- cut(pvalue_vector, breaks = brks3,labels = labels)
-  polys <- polys %>% mutate(significance = cuts)
+  cuts <- cut(pvalues, breaks = brks3,labels = labels)
+  polys <- polys %>% mutate(sig = cuts)
   
   
   pal <- rev(brewer.pal(length(labels), "Greens"))
   pal[length(pal)] <- "#D3D3D3"
   
   tm_shape(polys) +
-    tm_fill("significance", palette = pal) +
+    tm_fill("sig", palette = pal) +
     tm_borders() +
-    tm_layout(title = "significance map")
+    tm_layout(title = "Significance Map", legend.outside = TRUE)
 }
 
 
@@ -445,70 +450,167 @@ Moran's I scatterplot each location is in. To do this, we will create the starda
 version of the the variable and the lag of this variable. High-high will correspond
 to positive values for both the original variable and the lag. High-low will be 
 positive for the original variable and negative for the lag variable. Vice versa 
-for low-high.
+for low-high. We use `standardize` to standardize our variable.
 ```{r}
-guerry$s_don <- standardize(guerry$Donatns)
-guerry$lag_s_don <- lag.listw(queen.weights, guerry$s_don)
+z <- standardize(guerry$Donatns)
 ```
 
-
-We add a new variable to hold the different Moran scatterplot classifications.
+There are many ways to assign the correct LISA patterns, but some are more concise and intuitive than
+others. We use interacction to assign TRUE and FALSE boolean values based on two condtionals. One for
+the standardized variable being greater than 0 and the other for the lagged standardized variable or $Wx$
+being greater than zero. We use `as.character` to convert the booleans to characters. Next, we use 
+`str_replace_all` to replace "TRUE" with "High" and "FASLE" with "Low". With this, we have the correct 
+LISA cluster designations assigned to each location. The last step is assign "Not Significant" to 
+the locations with p_values of greater than .05, which we computed earlier.
 ```{r}
-guerry$quad_sig <- NA
+ patterns <- as.character( interaction(z > 0, W%*%z > 0) ) 
+  patterns <- patterns %>% 
+        str_replace_all("TRUE","High") %>% 
+        str_replace_all("FALSE","Low")
+  patterns[which(p_value > .05)] <- "Not Significant"
+guerry <- guerry %>% mutate(patterns = patterns)
 ```
-
-
-We can access and assign the Moran scatterplot classifications by bracket notation and conditionals.
-Each conditional indicates a quadrant of the Motran scatterplot and assigns the corresponding
-classification, "high-high", "low-low", and etc.
-```{r}
-guerry[guerry$s_don >= 0 & guerry$lag_s_don >= 0, "quad_sig"] <- "high-high"
-guerry[guerry$s_don >= 0 & guerry$lag_s_don <= 0, "quad_sig"] <- "high-low"
-guerry[guerry$s_don <= 0 & guerry$lag_s_don >= 0, "quad_sig"] <- "low-high"
-guerry[guerry$s_don <= 0 & guerry$lag_s_don <= 0, "quad_sig"] <- "low-low"
-guerry[guerry$p_value >.05, "quad_sig"] <- "Not Significant" 
-```
-
 
 Before building the plot, we will need to know which classifications are significant. We will build a palette that contains colors for the significant classifications. All of the classifications will
-not always be significant in eahc plot. We check this with `unique` on the **quad_sig** variable.
+not always be significant in eahc plot. We check this with `unique` on the **patterns** variable.
 ```{r}
-unique(guerry$quad_sig)
+unique(guerry$patterns)
 ```
 
-Since only two of the classifications are significant, we will need to build a palette with three 
-colors, red, blue, and grey. The simplest way to do this is just by building a vector of color
-strings. We could also use `brewer.pal` again to build this, but that is complicated than necessary.
 ```{r}
-pal <- c("#DE2D26","#FCBBA1","#C6DBEF", "#3182BD", "#D3D3D3")
+match_palette <- function(patterns, classifications, colors){
+  classes_present <- unique(patterns)
+  mat <- matrix(c(classifications,colors), ncol = 2)
+  logi <- classifications %in% classes_present
+  pre_col <- matrix(mat[logi], ncol = 2)
+  pal <- pre_col[,2]
+  pal
+}
 ```
 
+
+
+
+```{r}
+colors <- c("#DE2D26","#FCBBA1","#C6DBEF", "#3182BD", "#D3D3D3")
+classes <- c("High.High","High.Low","Low.High", "Low.Low", "Not Significant")
+pal <- match_palette(patterns, classes, colors)
+```
 
 Using the palette from above, we can create our LISA cluster map with the color scheme used
 in GeoDa.
 ```{r}
 tm_shape(guerry) +
-  tm_fill("quad_sig", palette = pal) +
-  tm_borders()
+  tm_fill("patterns", palette = pal) +
+  tm_borders() +
+  tm_layout("LISA map")
+```
+
+
+
+#### Putting it all together
+
+
+With this function, we put together all of the previous steps and functions to create a lisa map and a 
+correspondign significance map. The only new code in this function is the code to create the correct 
+palette based on the cluster classifications present. This code gives the correct classification palette
+when there are some not present. So if there are no High.Low classifications that are significant, that color
+will not appear on the map and the other classification will have the correct colors.
+
+In order to use this function, the helper functions must also be loaded in your environment. These include:
+`convert_matrix`, `univariate_moran`, `univariate_moran_sims`, `get_p_value`, and `significance_map`
+
+
+```{r}
+univariate_lisa_map <- function(area,x, weights, permutations, alpha){
+  # function to create a bivariate LISA map
+  # arguments:
+  #    area: sf dataframe
+  #    x: vectors of x values
+  #    y: a vector of y values
+  #    nperms: the number of permuations used to calculate the pvalues
+  #    alpha: the alpha level required for significance
+  # returns:
+  #    a LISA map in GeoDa style
+ 
+  
+  # Converting the weights
+  W <- convert_matrix(weights)
+  
+  # Computing the observed statistics and reference distributions
+  observed <- univariate_moran(x,W)
+  sims <- univariate_moran_sim(x,W, permutations = permutations)
+  
+  
+  #computing p-value from observed statistics and reference distribution
+  p_value <- get_p_value(sims,observed, type = "two-sided")
+
+  # Standardizing the x and y vars
+  z <- standardize(x)
+  
+  #Assigning classifications
+  lisa_patterns <- as.character( interaction(z > 0, W%*%z > 0) ) 
+  lisa_patterns <- patterns %>% 
+        str_replace_all("TRUE","High") %>% 
+        str_replace_all("FALSE","Low")
+  lisa_patterns[which(p_value > alpha)] <- "Not Significant"
+  
+  # Adding the classifications to the data frame
+  area <- area %>% mutate(lisa_patterns)
+  
+  # Constructing the correct palette based on presense of classifications
+  patts <- c("High.High", "High.Low", "Low.High", "Low.Low", "Not Significant")
+  colors <- c("#DE2D26","#FCBBA1","#C6DBEF", "#3182BD", "#D3D3D3")
+  pal <- match_palette(lisa_patterns,patts,colors)
+
+  # Making the LISA map
+  p1 <- tm_shape(area) +
+  tm_fill("lisa_patterns", palette = pal) +
+  tm_borders() +
+  tm_layout(title = "LISA cluster map", legend.outside = TRUE)  
+  
+  p2 <- significance_map(area, p_value, permutations = permutations,alpha = alpha)
+  
+  tmap_arrange(p1,p2, ncol = 1)
+}
+```
+
+Here we use the mapping function made above, it outputs both a local moran cluster map and the 
+corresponding significance map.
+```{r}
+p <- univariate_lisa_map(guerry,guerry$Donatns,queen.weights,999,.05)
+p
+```
+
+We can assess the individual plots with doublt brackets. 1 will give us the local moran cluster map
+```{r}
+p[[1]]
+```
+
+index 2 gives us the significance map.
+```{r}
+p[[2]]
 ```
 
 
 
 ### Randomization Options
 
-
 To obtain higher significance levels, we need to use more permutations in the calculation
 of the the local moran for each location. For instance, a pseudo pvalue of .00001 would 
-require 999999 permutations. The process for computing the reference distribution in R
-with 999999 takes a fairly long time, while in GeoDa it is much quicker. 
+require 999999 permutations. To get more permutations, we just use 99999 instead of 999 for
+the permutations parameter in our local moran mapping function.
+```{r}
+p <- univariate_lisa_map(guerry,guerry$Donatns,queen.weights,99999,.05)
+p[[1]]
+```
 
-To choose a set level of significance in the LISA plots, we do this when setting the breaks
-for LISA maps. 
-
+```{r}
+p[[2]]
+```
 
 
 ### Significance
-
 
 An important methodological issue associated with the local spatial autocorrelation statistics
 is the selection of the p-value cut-off to properly reflect the desired Type I error. Not only
@@ -518,132 +620,30 @@ discussion, see de Castro and Singer 2006). The bottom line is that a traditiona
 is likely to lead to many false positives, i.e., rejections of the null when in fact it holds.
 
 
-
 #### Bonferroni bound
 
 The Bonferroni bound constructs a bound on the overall p-value by taking $\alpha$ and 
 dividing it by the number of comparisons. In our context, the latter corresponds to the
 number of observation, n. As a result, the Bonferroni bound would be $\alpha/n = .00012$,
-the cutoff p-value to be used to determine significance.
-
-In order to implement this, we will need to use 999999 permutations. If we just change the 
-number of permutations in the code we used above for 999 permutations, it will take a long time
-to run. We can avoid this run time by only doing the full number of permutations for the 
-observations with a chance of passing the Bonferroni cutoff. We already have a decent idea
-of what these observations will be since we calculated the p-values for 999 permutations. 
-We will select these locations and run the permuations for the observation with a p-value of less than 
-.005. This will greatly reduce our run time
-
-The process here will be similar to the one for the 999 permutations, but we will only do it for location
-with a p-value of less than .005. This approach can be a bit risky in that a higher pseudo p-value at
-999 permuations can be due to random variability. 
-```{r}
-indices <- which(p_value < .005)
-indices
-```
-
-As before, we create a data frame to store the results of each permuation for each location. The only
-difference here is that the number of columns is now the length of the number of observation with p-values
-less than .005.
-```{r}
-mat <-matrix(,nrow =100000, ncol =length(indices))
-df <- as.data.frame(mat)
-df[1,] <- lmoran[indices]
-```
-
-
-The loop set up is very similar to the one used earlier with the main difference being that we will only
-compute reference distribution for the indices with p-values less than .005. We will need a counter here(k)
-for the column placement in the loop. 
-
-```{r}
-k <- 1
-for(i in indices){
-  nb.index <- queen.nb[[i]]
-  n <- length(nb.index)
-  for(j in 1:99999){
-    nb.values <- sample(z_i[-i], n)
-    lm <- mean(nb.values) * z_i[i]
-    df[j + 1,k] <- lm
-  }
-  k <- k + 1
-}
-```
-
-
-The code for calculating the p-value is almost the same as earlier, with the only difference being that
-we will on have p-values for the indices selected. We get this by using `length` on **indices**.
-```{r}
-p_value <- rep(NA, length(indices))
-for(i in 1:length(indices)){
-  num_greater <- length(which(df[,i] > df[1,i]))
-  p_value[i] <- (num_greater + 1) / 100000
-}
-p_value <- ifelse(p_value > .5, 1-p_value, p_value)
-p_value
-
-```
-
-Now we can compute significant values by using `which` and only taking p-values that are less than
-the bonferroni bound.
+the cutoff p-value to be used to determine significance. To implement the bonferroni 
+bound, we use 99999 permutations and set the alpha level to be `bonferroni` or .01 / 85
 ```{r}
 bonferroni <- .01 / 85
-sig_values <- indices[which(bonferroni > p_value)]
+p <- univariate_lisa_map(guerry,guerry$Donatns,queen.weights,99999,bonferroni)
 ```
-
 
 
 
 
 ```{r}
-guerry$significance <- "Not Significant"
-guerry$significance[sig_values] <- "Significant"
-```
-
-
-
-
-
-
-
-
-
-
-
-
-#### False Discovery Rate(FDR)
-
-
-```{r}
-df1 <- data.frame(indices = indices, p = p_value)
+p[[1]]
 ```
 
 
 
 ```{r}
-df1 <- df1[order(df1$p),]
+p[[2]]
 ```
-
-
-
-```{r}
-df1 <- df1 %>% mutate(fdr = 1:5 * bonferroni)
-```
-
-
-
-```{r}
-sig_fdr <-  df1 %>% filter(p < fdr)
-```
-
-
-
-```{r}
-guerry$significance <- "Not Significant"
-guerry$significance[df1$indices] <- "Significant"
-```
-
-
 
 
 
@@ -698,21 +698,12 @@ cluster map. The only addition is `tm_facets`, which will use the two categorica
 above.
 ```{r}
 tm_shape(guerry) +
-  tm_fill("quad_sig", palette = pal) +
+  tm_fill("patterns", palette = pal) +
   tm_borders() +
   tm_facets(by = c("cut.clergy", "cut.literacy"),free.coords = FALSE,drop.units=FALSE)
 ```
 
-
-
-
-
-
-
-
 ## Local Geary
-
-
 
 ### Principle
 
@@ -751,9 +742,6 @@ possible to assess whether the association is between high-low or low-high outli
 the squaring of the differences removes the sign.
 
 
-
-
-
 ### Implementation
 
 
@@ -764,111 +752,102 @@ we begin, we will need to break up the formula for local Geary into managable pi
 
 $$LG_i = \Sigma_jw_{ij}(x_i-x_j)^2$$
 
-$$LG_i = \Sigma_jw_{ij}x_i^2 - \Sigma_j2w_{ij}x_ix_j + \Sigma_jw_{ij}x_j^2$$
-Since we are summing over j, $x_i$ can be brought out as a constant. 
-
-$$LG_i = x_i^2\Sigma_jw_{ij} - 2x_i\Sigma_jw_{ij}x_j + \Sigma_jw_{ij}x_j^2$$
-
-The sum of the weights is just 1 in each case because we are using row standardized weights
+The above formula can be simplified into this:
 
 $$LG_i = x_i^2 - 2x_i\Sigma_jw_{ij}x_j + \Sigma_jw_{ij}x_j^2$$
 With this simplification, we have three managable parts that can be easily calculated with
 the function available to us. Notice the middle terms is 2 times the $x_i$ times the lag
 variable of x. The third term is the lag variable of x squared. 
 
+We start with a function to compute the observed statistic same as with the local moran. Using the 
+simplified formula above we can compute the local geary statistic, which is `x2 - 2*x*(W%*%x) + W%*%x2`,
+with **x2** being the **x** variable squared.
 
 ```{r}
-x_i <- guerry$Donatns
-x_sq <- x_i ^ 2
-lag_x_sq <- lag.listw(queen.weights, x_sq)
-lag_x<- lag.listw(queen.weights, x_i)
-Local_geary <-  x_sq - 2 * x_i * lag_x + lag_x_sq 
-Local_geary
+local_geary <- function(x,W){
+  x2 <- x^2
+  lg_x <- x2 - 2*x*(W%*%x) + W%*%x2
+  lg_x
+} 
+lg <- local_geary(guerry$Donatns,W)
 ```
 
 
 As with the local moran, we will have to compute reference distributions for each location to compare
-the observed statistic with. We will follow a similar process with a few differences.
-
-To store the local moran statistic for each location and permutation, we will use a data frame, as with
-the local moran.
+the observed statistic with. We will follow a similar process with a few differences. The main difference
+here is that we need $x^2$ values and the formula for the local statistic is different. The sampling process
+and structure for storing the local reference statistics is the same.
 ```{r}
-mat <- matrix(, nrow = 1000, ncol = 85)
-df <- as.data.frame(mat)
-df[1,] <- Local_geary
-```
-
-
-
-The process for computing the permutations is the same structure as the local moran, but here we use the
-formula for the local geary. Essentially we need the mean of the squared difference between the an observation
-and its neighbors. `mean` works here because we are working with row standardized weights and each
-neighbor carries equal weight.
-
-
-```{r}
-x <- guerry$Donatns
-for(i in 1:85){
-  nb.index <- queen.nb[[i]]
-  for(j in 1:999){
-    nb.values <- sample(x[-i], length(nb.index))
-    sum_sq <- (x[i] - nb.values)^2
-    lg <- mean(sum_sq)
-    df[j + 1,i] <- lg
+local_geary_sims <- function(x,W,permutations){
+  n <- nrow(W)
+  id  <- 1:n
+  
+  local.sims  <- matrix(NA, nrow = n, ncol=permutations)
+  x.sample = matrix(NA, nrow = n, ncol = permutations)
+  
+  for(i in 1:n){
+    sample.indices <- sample(id[-i], permutations, replace = TRUE)
+    x.sample[i,] <- x[sample.indices]
   }
+  x2 <- x^2
+  x2.sample <- x.sample ^ 2
+  
+  local.sims <- (x2 - 2*x*W%*%x.sample + W%*%x2.sample) 
+  local.sims
+}
+```
+
+We use the function created above with the **Donatns** variable, **W**, and 999 permutations
+```{r}
+sims <- local_geary_sims(guerry$Donatns,W,999)
+```
+
+Here we use the `get_p_value` function that we created earlier. On the local geary reference distributions
+and the observed local geary statistics.
+```{r}
+p_value <- get_p_value(sims,lg,type = "two-sided")
+```
+
+With the p-values, we can make a significance map with `significance_map`
+```{r}
+significance_map(guerry,p_value,999,.05)
+```
+
+
+In order to build the local geary map classifications, we will need the mean of the reference distribution
+of local geary statistics for each location. This is simple to compute, we just need to take the mean of 
+each row in **sims**. We use a `for` loop and 85 iterations, which is the number of polygon locations.
+```{r}
+mean_lg <- rep(NA, 85)
+for (i in 1:85){
+  mean_lg[i] <- mean(sims[i,]) 
 }
 ```
 
 
-With the resulting data frame, we can loop through and calculate the p-value for each location's 
-local geary statistic. To accomplish this, we will loop through each column(location i) and calculate
-the number of spatially random permutations that are greater than the original test statistic. This
-will get us part of the way to a correct p-value. For results above .5, we will need to assign
-1-result to the p-value because we are testing signifcance as a two-sided test.
+We start by assigning the "High-High" and "Low-Low" classifications, which follow the same rule as for the
+local moran. If both the standized variable and the lag of the standardized variable are positive
+it is "High-High", and if they are both negative, it is "Low-Low". Next we assign Negative for
+locations that a local geary statistic that is higher than the reference mean for its location. For locations 
+with a lower observed local geary statistic than the reference mean, that also do not fit into the "High-High" or "Low-Low" 
+classification, we assign "Other-Positive". Lastly we assign "Not Significant" for all locations that don't have a p-value
+of less than .05. 
 ```{r}
-p_value <- rep(NA, 85)
-mean_lg <- rep(NA,85)
-for(i in 1:85){
-  num_greater <- length(which(df[,i] > df[1,i]))
-  p_value[i] <- (num_greater + 1) / 1000
-  mean_lg[i] <- mean(df[2:1000,i])
-}
-p_value <- ifelse(p_value > .5, 1-p_value, p_value)
-p_value
+lg_classification <- rep(NA,85)
+lg_classification[z >= 0 & W%*%z >= 0] <- "High-High"
+lg_classification[z <= 0 & W%*%z <= 0] <- "Low-Low"
+lg_classification[lg > mean_lg] <- "Negative"
+lg_classification[lg < mean_lg & z*W%*%z < 0] <- "Other-Positive"
+lg_classification[p_value >.05] <- "Not Significant"
+guerry <- guerry %>% mutate(lg_classification)
 ```
 
 
+Here we build the palette to match the local geary classifications
 ```{r}
-guerry$lg_pvalue <- p_value
-```
-
-
-
-
-```{r}
-guerry$lg <- Local_geary
-guerry$ref_dist_mean <- mean_lg
-guerry$lg_classification <- NA
-guerry$cross_product <- guerry$s_don * guerry$lag_s_don
-```
-
-
-
-
-```{r}
-guerry[guerry$s_don >= 0 & guerry$lag_s_don >= 0, "lg_classification"] <- "high-high"
-guerry[guerry$s_don <= 0 & guerry$lag_s_don <= 0, "lg_classification"] <- "low-low"
-guerry[guerry$lg > guerry$ref_dist_mean, "lg_classification"] <- "negative"
-
-guerry[guerry$lg < guerry$ref_dist_mean & guerry$cross_product < 0,"lg_classification"] <- "other-positive"
-guerry[guerry$lg_pvalue >.05, "lg_classification"] <- "Not Significant"
-```
-
-
-
-```{r}
-pal <- c("#DE2D26","#FCBBA1","#9ECAE1", "#D3D3D3", "#FEE5D9")
-brewer.pal(6,"Reds")
+classes <- c("High-High", "Low-Low", "Negative", "Other-Positive", "Not Significant")
+colors <- c("#DE2D26","#FCBBA1","#9ECAE1", "#FEE5D9","#D3D3D3")
+pal <- match_palette(lg_classification,classes,colors)
 ```
 
 
@@ -880,6 +859,63 @@ tm_shape(guerry) +
 ```
 
 
+```{r}
+local_geary_map <- function(polys,x,weights,permutations,alpha){
+  
+  #converting the matrix 
+  W <- convert_matrix(weights)
+  
+  n <- nrow(W)
+  
+  #computing local geary statsitic and reference distributions for each location
+  lg <- local_geary(x,W)
+  sims <- local_geary_sims(x,W,permutations)
+  
+  #computing p_values from the observed statistics and reference distributions
+  p_value <- get_p_value(sims,lg,type = "two-sided")
+  
+  #computing mean local geary values for each location based on the reference distributions
+  mean_lg <- rep(NA, n)
+  for (i in 1:n){
+    mean_lg[i] <- mean(sims[i,]) 
+  }
+  
+  # standardizing x
+  z <- standardize(x)
+  
+  #classifying local geary patterns
+  lg_patterns <- rep(NA,n)
+  lg_patterns[z >= 0 & W%*%z >=0] <- "High-High"
+  lg_patterns[z <= 0 & W%*%z <=0] <- "Low-Low"
+  lg_patterns[lg > mean_lg] <- "Negative"
+  lg_patterns[lg < mean_lg & z*W%*%z < 0] <- "Other-Positive"
+  lg_patterns[p_value > alpha] <- "Not Significant"
+  
+  polys <- polys %>% mutate(lg_patterns)
+  
+  # creating the correct palette for the map
+  classes <- c("High-High", "Low-Low", "Negative", "Other-Positive", "Not Significant")
+  colors <- c("#DE2D26","#FCBBA1","#9ECAE1", "#FEE5D9","#D3D3D3")
+  pal <- match_palette(lg_patterns,classes,colors)
+  
+  # Making the local geary map
+  p1 <- tm_shape(polys) +
+  tm_fill("lg_patterns", palette = pal) +
+  tm_borders() +
+  tm_layout(legend.outside = TRUE, title = "Local Geary Cluster Map")
+  
+  #Making the significance map
+  p2 <- significance_map(polys,p_value,permutations,alpha)
+  
+  # Outputing both the significance map and the local geary cluster map
+  tmap_arrange(p1,p2,ncol = 1)
+}
+```
+
+
+```{r}
+local_geary_map(guerry,guerry$Donatns,queen.weights,99999,.01)
+```
 
 
 ### Interpretation and significance
@@ -897,11 +933,9 @@ tm_shape(guerry) +
 #### Changing the significance threshold
 
 
-
-
-
-
-
+```{r}
+local_geary_map(guerry,guerry$Donatns,queen.weights,99999,bonferroni)
+```
 
 
 
@@ -950,86 +984,132 @@ other statistics.
 
 
 ```{r}
-x <- guerry$Donatns
-g <- rep(NA, 85)
-for(i in 1:85){
-  nb.index <- queen.nb[[i]]
-  values <- x[nb.index]
-  g[i] <- mean(values) / sum(x[-i])
+local_g <- function(x,W){
+  lag <- W%*%x
+  sum <- sum(x)
+  g <- lag/sum
 }
+g <- local_g(guerry$Donatns,W)
+g
 ```
 
 
-
 ```{r}
-mat <- matrix(, nrow = 1000, ncol = 85)
-df <- as.data.frame(mat)
-df[1,] <- g
-```
-
-
-
-
-
-
-```{r}
-for(i in 1:85){
-  nb.index <- queen.nb[[i]]
-  for(j in 1:999){
-    nb.values <- sample(x[-i], length(nb.index))
-    gstat <- mean(nb.values) / sum(x[-i])
-    df[j + 1,i] <- gstat
+local_g_sims <- function(x,W, permutations){
+  n <- nrow(W)
+  id <- 1:n
+  
+  local.sims  <- matrix(NA, nrow = n, ncol=permutations)
+  x.sample = matrix(NA, nrow = n, ncol = permutations)
+  for(i in 1:n){
+    sample.indices <- sample(id[-i], permutations, replace = TRUE)
+    x.sample[i,] <- x[sample.indices]
   }
+  
+  B <- binarize(W,threshold = .001)
+  lag <- W%*%x.sample
+  sum <- sum(x)
+  local.sims <- lag / sum
+  local.sims
 }
+
 ```
 
 
+```{r}
+sims <- local_g_sims(guerry$Donatns,W,999)
+```
 
 ```{r}
-p_value <- rep(NA, 85)
-for(i in 1:85){
-  num_greater <- length(which(df[,i] > df[1,i]))
-  p_value[i] <- (num_greater + 1) / 1000
-}
-p_value <- ifelse(p_value > .5, 1-p_value, p_value)
+p_value <- get_p_value(sims,g,type = "two-sided")
 p_value
-
-```
-
-
-
-```{r}
-significance_map(guerry, pvalue_vector = p_value, 999)
 ```
 
 ```{r}
-guerry$doub_sig <- NA
-guerry$gpvalue <- p_value
-guerry$g <- g
+significance_map(guerry,p_value,999,.05)
 ```
 
 
-
-
 ```{r}
-guerry[guerry$g > mean(g), "doub_sig"] <- "high"
-guerry[guerry$g < mean(g), "doub_sig"] <- "low"
-guerry[guerry$gpvalue >.05, "doub_sig"] <- "Not Significant" 
+g_pattern <- rep(NA,85)
+g_pattern[g > mean(g)] <- "High"
+g_pattern[g < mean(g)] <- "Low"
+g_pattern[p_value > .05] <- "Not Significant" 
+guerry <- guerry %>% mutate(g_pattern)
 ```
 
 
 ```{r}
 pal <- c("#DE2D26", "#3182BD", "#D3D3D3")
-brewer.pal(6,"Blues")
 ```
 
 
 ```{r}
 tm_shape(guerry) +
-  tm_fill("doub_sig", palette = pal) +
+  tm_fill("g_pattern", palette = pal) +
   tm_borders() +
   tm_layout(legend.outside = TRUE)
 ```
+
+
+```{r}
+local_g_map <- function(polys,x,weights,permutations,alpha,type = "G"){
+  #converting the matrix
+  W <- convert_matrix(weights)
+  
+  #testing for type G or G* and including diagonal elements for G*
+  if (type == "G*"){
+    diag(W) <- 1
+  }
+  
+  #computing local statistics and p_values
+  g <- local_g(x,W)
+  sims <- local_g_sims(x,W,permutations)
+  p_value <- get_p_value(sims,g,type = "two-sided")
+  
+  
+  #assigning cluster classifications
+  n <- nrow(W)
+  g_patterns <- rep(NA,n)
+  g_patterns[g > mean(g)] <- "High"
+  g_patterns[g < mean(g)] <- "Low"
+  g_patterns[p_value > alpha] <- "Not Significant" 
+  
+  polys <- polys %>% mutate(g_patterns)
+  
+  #Creating the correct color palette
+  classes <- c("High", "Low", "Not Significant")
+  colors <- c("#DE2D26", "#3182BD", "#D3D3D3")
+  pal <- match_palette(g_patterns,classes,colors)
+  
+  #Making the correct map title
+  if (type == "G*"){
+    map_type <- "G*"
+  } else {
+    map_type <- "G"
+  }
+  map_title <- paste0(map_type, " Cluster Map")
+  
+  #making the cluster map
+  p1 <- tm_shape(polys) +
+  tm_fill("g_patterns", palette = pal) +
+  tm_borders() +
+  tm_layout(title = map_title,legend.outside = TRUE)
+  
+  #making the corresponding significance map
+  p2 <- significance_map(polys,p_value,permutations,alpha)
+  
+  #outputing both plots
+  tmap_arrange(p1,p2,ncol = 1)
+}
+```
+
+
+
+```{r}
+local_g_map(guerry,guerry$Donatns,queen.weights,999,.05)
+```
+
 
 
 
@@ -1089,8 +1169,6 @@ guerry$doncat <- doncat
 
 
 
-
-
 ```{r}
 tm_shape(guerry) +
   tm_fill("doncat", style = "cat", palette = c("white", "blue")) +
@@ -1100,312 +1178,42 @@ tm_shape(guerry) +
 
 
 ```{r}
-bb <- rep(NA, 85)
-x <- guerry$doncat
-for (i in 1:85){
-  nb.index <- queen.nb[[i]]
-  nb.values <- x[nb.index]
-  bb[i] <- x[i] * sum(nb.values)
+local_bb <- function(x,W){
+  B <- binarize(W,threshold = .00001)
+  bb <- x * B%*%x
 }
+bb <- local_bb(guerry$doncat,W)
 ```
 
 
 
-```{r}
-mat <- matrix(, nrow = 1000, ncol = 85)
-df <- as.data.frame(mat)
-df[1,] <- bb
-```
-
-
 
 ```{r}
-for(i in 1:85){
-  nb.index <- queen.nb[[i]]
-  for(j in 1:999){
-    nb.values <- sample(x[-i], length(nb.index))
-    bb_stat <- x[i] * sum(nb.values)
-    df[j + 1,i] <- bb_stat
+local_bb_sims <- function(x,W,permutations){
+  n <- nrow(W)
+  id <- 1:n
+  
+  local.sims <- matrix(NA, nrow = n, ncol=permutations)
+  x.sample = matrix(NA, nrow = n, ncol = permutations)
+  for(i in 1:n){
+    sample.indices <- sample(id[-i], permutations, replace = TRUE)
+    x.sample[i,] <- x[sample.indices]
   }
+  
+  B <- binarize(W,threshold = .00001)
+  local.sims <- x.sample * B%*%x.sample
+  local.sims
 }
 ```
 
-```{r}
-p_value <- rep(NA, 85)
-for(i in 1:85){
-  num_greater <- length(which(df[,i] > df[1,i]))
-  p_value[i] <- (num_greater + 1) / 1000
-}
-p_value <- ifelse(p_value > .5, 1-p_value, p_value)
-p_value
-```
-
-
-```{r}
-indices <- which(guerry$doncat == 0)
-p_value[indices] <- 1
-```
-
-
 
 
 
 ```{r}
-significance_map(guerry,p_value,999)
+sims <- local_bb_sims(guerry$doncat,W,999)
+p_value <- get_p_value(sims,bb,type = "one-sided")
+significance_map(guerry,p_value,999,.05)
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
