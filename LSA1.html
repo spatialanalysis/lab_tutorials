@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Luc Anselin and Grant Morrison" />
+
+<meta name="date" content="2019-06-30" />
+
+<title>Local Spatial Autocorrelation 1</title>
+
+<script src="LSA1_files/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="LSA1_files/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="LSA1_files/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="LSA1_files/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="LSA1_files/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="LSA1_files/navigation-1.1/tabsets.js"></script>
+<link href="LSA1_files/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="LSA1_files/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+<link rel="stylesheet" href="tutor.css" type="text/css" />
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+</style>
+
+
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Local Spatial Autocorrelation 1</h1>
+<h3 class="subtitle">R Notes</h3>
+<h4 class="author">Luc Anselin and Grant Morrison<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a></h4>
+<h4 class="date">06/30/2019</h4>
+
+</div>
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction">Introduction</a><ul>
+<li><a href="#objectives">Objectives</a><ul>
+<li><a href="#r-packages-used">R Packages used</a></li>
+<li><a href="#r-commands-used">R Commands used</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#preliminaries">Preliminaries</a><ul>
+<li><a href="#load-packages">Load packages</a></li>
+<li><a href="#geodadata">geodaData</a></li>
+<li><a href="#making-the-weights">Making the weights</a></li>
+<li><a href="#univariate-analysis">Univariate analysis</a></li>
+</ul></li>
+<li><a href="#local-moran">Local Moran</a><ul>
+<li><a href="#principle">Principle</a></li>
+<li><a href="#implementation">Implementation</a><ul>
+<li><a href="#putting-it-all-together">Putting it all together</a></li>
+</ul></li>
+<li><a href="#randomization-options">Randomization Options</a></li>
+<li><a href="#significance">Significance</a><ul>
+<li><a href="#bonferroni-bound">Bonferroni bound</a></li>
+<li><a href="#interpretation-of-significance">Interpretation of significance</a></li>
+</ul></li>
+<li><a href="#interpretation-of-clusters">Interpretation of clusters</a></li>
+<li><a href="#conditional-local-cluster-maps">Conditional local cluster maps</a></li>
+</ul></li>
+<li><a href="#local-geary">Local Geary</a><ul>
+<li><a href="#principle-1">Principle</a></li>
+<li><a href="#implementation-1">Implementation</a></li>
+<li><a href="#interpretation-and-significance">Interpretation and significance</a><ul>
+<li><a href="#changing-the-significance-threshold">Changing the significance threshold</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#getis-ord-statistics">Getis-Ord Statistics</a><ul>
+<li><a href="#principle-2">Principle</a></li>
+<li><a href="#implementation-2">Implementation</a></li>
+<li><a href="#interpretation-and-significance-1">Interpretation and significance</a></li>
+</ul></li>
+<li><a href="#local-join-count-statistic">Local Join Count Statistic</a><ul>
+<li><a href="#principle-3">Principle</a></li>
+<li><a href="#implementation-3">Implementation</a></li>
+</ul></li>
+</ul>
+</div>
+
+<p><br></p>
+<div id="introduction" class="section level2 unnumbered">
+<h2>Introduction</h2>
+<p>This notebook cover the functionality of the <a href="https://geodacenter.github.io/workbook/6a_local_auto/lab6a.html">Local Spatial Autocorrelation</a> section of the GeoDa workbook. We refer to that document for details on the methodology, references, etc. The goal of these notes is to approximate as closely as possible the operations carried out using GeoDa by means of a range of R packages.</p>
+<p>The notes are written with R beginners in mind, more seasoned R users can probably skip most of the comments on data structures and other R particulars. Also, as always in R, there are typically several ways to achieve a specific objective, so what is shown here is just one way that works, but there often are others (that may even be more elegant, work faster, or scale better).</p>
+<p>For this notebook, we use Cleveland house price data. Our goal in this lab is show how to assign spatial weights based on different distance functions.</p>
+<div id="objectives" class="section level3">
+<h3>Objectives</h3>
+<p>After completing the notebook, you should know how to carry out the following tasks:</p>
+<ul>
+<li><p>Identify clusters with the Local Moran cluster map and significance map</p></li>
+<li><p>Identify clusters with the Local Geary cluster map and significance map</p></li>
+<li><p>Identify clusters with the Getis-Ord Gi and Gi* statistics</p></li>
+<li><p>Identify clusters with the Local Join Count statistic</p></li>
+<li><p>Interpret the spatial footprint of spatial clusters</p></li>
+<li><p>Assess potential interaction effects by means of conditional cluster maps</p></li>
+<li><p>Assess the significance by means of a randomization approach</p></li>
+<li><p>Assess the sensitivity of different significance cut-off values</p></li>
+<li><p>Interpret significance by means of Bonferroni bounds and the False Discovery Rate (FDR)</p></li>
+</ul>
+<div id="r-packages-used" class="section level4">
+<h4>R Packages used</h4>
+<ul>
+<li><p><strong>sf</strong>: To read in the shapefile and make queen contiguity weights</p></li>
+<li><p><strong>spdep</strong>: To create spatial weights structure from neighbors structure</p></li>
+<li><p><strong>robustHD</strong>: To compute standarized scores for variables and lag variables</p></li>
+<li><p><strong>tmap</strong>: To construct significance and cluster maps with custom functions</p></li>
+<li><p><strong>tidyverse</strong>: To manipulate the data</p></li>
+<li><p><strong>RColorBrewer</strong>: To create custom color palattes that mirror the GeoDa cluster and significance maps</p></li>
+</ul>
+</div>
+<div id="r-commands-used" class="section level4">
+<h4>R Commands used</h4>
+<p>Below follows a list of the commands used in this notebook. For further details and a comprehensive list of options, please consult the <a href="https://www.rdocumentation.org">R documentation</a>.</p>
+<ul>
+<li><p><strong>Base R</strong>: <code>install.packages</code>, <code>library</code>, <code>setwd</code>, <code>summary</code>, <code>attributes</code>, <code>lapply</code>, <code>class</code>, <code>length</code>, <code>rev</code>, <code>cut</code>, <code>mean</code>, <code>sample</code>, <code>as.data.frame</code>, <code>matrix</code>, <code>unique</code>, <code>as.character</code>, <code>which</code>, <code>order</code>, <code>data.frame</code>, <code>ifelse</code>, <code>sum</code>, <code>rep</code>, <code>set.seed</code></p></li>
+<li><p><strong>sf</strong>: <code>st_read</code>, <code>st_relate</code></p></li>
+<li><p><strong>spdep</strong>: <code>nb2listw</code>, <code>lag.listw</code></p></li>
+<li><p><strong>robustHD</strong>: <code>standardized</code></p></li>
+<li><p><strong>tmap</strong>: <code>tm_shape</code>, <code>tm_borders</code>, <code>tm_fill</code>, <code>tm_layout</code>, <code>tm_facets</code></p></li>
+<li><p><strong>tidyverse</strong>: <code>filter</code>, <code>mutate</code></p></li>
+<li><p>**RColorBrewer: <code>brewer.pal</code></p></li>
+</ul>
+</div>
+</div>
+</div>
+<div id="preliminaries" class="section level2">
+<h2>Preliminaries</h2>
+<p>Before starting, make sure to have the latest version of R and of packages that are compiled for the matching version of R (this document was created using R 3.5.1 of 2018-07-02). Also, optionally, set a working directory, even though we will not actually be saving any files.<a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a></p>
+<div id="load-packages" class="section level3">
+<h3>Load packages</h3>
+<p>First, we load all the required packages using the <code>library</code> command. If you don’t have some of these in your system, make sure to install them first as well as their dependencies.<a href="#fn3" class="footnoteRef" id="fnref3"><sup>3</sup></a> You will get an error message if something is missing. If needed, just install the missing piece and everything will work after that.</p>
+<pre class="r"><code>library(sf)
+library(spdep)
+library(tmap)
+library(tidyverse)
+library(RColorBrewer)
+library(robustHD)
+library(geodaData)
+library(Matrix)
+library(biclust)
+library(ggplot2)</code></pre>
+</div>
+<div id="geodadata" class="section level3">
+<h3>geodaData</h3>
+<p>All of the data for the R notebooks is available in the <strong>geodaData</strong> package. We loaded the library earlier, now to access the individual data sets, we use the double colon notation. This works similar to to accessing a variable with <code>$</code>, in that a drop down menu will appear with a list of the datasets included in the package. For this notebook, we use <code>guerry</code>.</p>
+<pre class="r"><code>guerry &lt;- geodaData::guerry</code></pre>
+</div>
+<div id="making-the-weights" class="section level3">
+<h3>Making the weights</h3>
+<p>To start we create a function for queen contiguity, which is just <code>st_relate</code> with the specified pattern for queen contiguity which is <code>F***T****</code></p>
+<pre class="r"><code>st_queen &lt;- function(a, b = a) st_relate(a, b, pattern = &quot;F***T****&quot;)</code></pre>
+<p>We apply the queen contiguity function to the voronoi polygons and see that the class of the output is <strong>sgbp</strong>. This structure is close to the <strong>nb</strong> structure, but has a few difference that we will need to correct to use the rest of <strong>spdep</strong> functionality.</p>
+<pre class="r"><code>queen.sgbp &lt;- st_queen(guerry)
+class(queen.sgbp)</code></pre>
+<pre><code>## [1] &quot;sgbp&quot;</code></pre>
+<p>This function converts type <strong>sgbp</strong> to <strong>nb</strong>. It is covered in more depth in the Contiguity Based Weight notebook. In short, it explicitly changes the name of the class and deals with the observations that have no neighbors.</p>
+<pre class="r"><code>as.nb.sgbp &lt;- function(x, ...) {
+  attrs &lt;- attributes(x)
+  x &lt;- lapply(x, function(i) { if(length(i) == 0L) 0L else i } )
+  attributes(x) &lt;- attrs
+  class(x) &lt;- &quot;nb&quot;
+  x
+}</code></pre>
+<pre class="r"><code>queen.nb &lt;- as.nb.sgbp(queen.sgbp)</code></pre>
+<p>To go from neighbors object to weights object, we use <code>nb2listw</code>, with default parameters, we will get row standardized weights.</p>
+<pre class="r"><code>queen.weights &lt;- nb2listw(queen.nb,style = &quot;B&quot;, zero.policy = TRUE)</code></pre>
+</div>
+<div id="univariate-analysis" class="section level3">
+<h3>Univariate analysis</h3>
+<p>Throughout the notebook, we will focus on the variable <strong>Donatns</strong>, which is charitable donations per capita. Before proceeding with the local spatial statistics and visualizations, we will take preliminary look at the spatial distribution of this variable. This is done with <strong>tmap</strong> functions. We will not go into too much detail on these because there is a lot to cover local spatial statistics and this functionality was covered in a previous notebook. Please the Basic Mapping notebook for more information on basic <strong>tmap</strong> functionality</p>
+<p>For the univariate map, we use the natural breaks or jenks style to get a general sense of the spatial distribution for our variable.</p>
+<pre class="r"><code>tm_shape(guerry) +
+  tm_fill(&quot;Donatns&quot;, style = &quot;jenks&quot;, n = 6) +
+  tm_borders() +
+  tm_layout(legend.outside = TRUE, legend.outside.position = &quot;left&quot;)</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+</div>
+</div>
+<div id="local-moran" class="section level2">
+<h2>Local Moran</h2>
+<div id="principle" class="section level3">
+<h3>Principle</h3>
+<p>The local Moran statistic was suggested in Anselin(1995) as a way to identify local clusters and local spaital outliers. Most global spatial autocorrelation can be expressed as a double sum over i and j indices, such as <span class="math inline">\(\Sigma_i\Sigma_jg_{ij}\)</span>. The local form of such a statistic would then be, for each observation(location)i, the sum of the relevant expression over the j index, <span class="math inline">\(\Sigma_jg_{ij}\)</span>.</p>
+<p>Specifically, the local Moran statistic takes the form <span class="math inline">\(cz_i\Sigma_jw_{ij}z_j\)</span>, with z in deviations from the mean. The scalar c is the same for all locations and therefore does not play a role in the assessment of significance. The latter is obtained by means of a conditional permutation method, where, in turn, each <span class="math inline">\(z_i\)</span> is held fixed, and the remaining z-values are randomly permuted to yield a reference distribution for the statistic. This operates in the same fashion as for the global Moran’s I, except that the permutation is carried out for each observation in turn. The result is a pseudo p-value for each location, which can then be used to assess significance. Note that this notion of significance is not the standard one, and should not be interpreted that way (see the discussion of multiple comparisons below).</p>
+<p>Assessing significance in and of itself is not that useful for the Local Moran. However, when an indication of significance is combined with the location of each observation in the Moran Scatterplot, a very powerful interpretation becomes possible. The combined information allows for a classification of the significant locations as high-high and low-low spatial clusters, and high-low and low-high spatial outliers. It is important to keep in mind that the reference to high and low is relative to the mean of the variable, and should not be interpreted in an absolute sense.</p>
+</div>
+<div id="implementation" class="section level3">
+<h3>Implementation</h3>
+<p>Throughout many of the mapping function we make in this notebook, the weights from <em>spdep</em> need to be convert to a full size spatial weights matrix for statistical computations. Here we make a function <code>convert_matrix</code> to accomplish this. We use <code>as</code> to convert to type <code>symmetricMatrix</code>.</p>
+<pre class="r"><code>convert_matrix &lt;- function(weights){
+ W  &lt;- as(weights, &quot;symmetricMatrix&quot;)
+ W  &lt;- as.matrix(W/Matrix::rowSums(W))
+ W[which(is.na(W))] &lt;- 0
+ W
+}
+W &lt;- convert_matrix(queen.weights)</code></pre>
+<pre><code>## Registered S3 methods overwritten by &#39;spatialreg&#39;:
+##   method                   from 
+##   residuals.stsls          spdep
+##   deviance.stsls           spdep
+##   coef.stsls               spdep
+##   print.stsls              spdep
+##   summary.stsls            spdep
+##   print.summary.stsls      spdep
+##   residuals.gmsar          spdep
+##   deviance.gmsar           spdep
+##   coef.gmsar               spdep
+##   fitted.gmsar             spdep
+##   print.gmsar              spdep
+##   summary.gmsar            spdep
+##   print.summary.gmsar      spdep
+##   print.lagmess            spdep
+##   summary.lagmess          spdep
+##   print.summary.lagmess    spdep
+##   residuals.lagmess        spdep
+##   deviance.lagmess         spdep
+##   coef.lagmess             spdep
+##   fitted.lagmess           spdep
+##   logLik.lagmess           spdep
+##   fitted.SFResult          spdep
+##   print.SFResult           spdep
+##   fitted.ME_res            spdep
+##   print.ME_res             spdep
+##   print.lagImpact          spdep
+##   plot.lagImpact           spdep
+##   summary.lagImpact        spdep
+##   HPDinterval.lagImpact    spdep
+##   print.summary.lagImpact  spdep
+##   print.sarlm              spdep
+##   summary.sarlm            spdep
+##   residuals.sarlm          spdep
+##   deviance.sarlm           spdep
+##   coef.sarlm               spdep
+##   vcov.sarlm               spdep
+##   fitted.sarlm             spdep
+##   logLik.sarlm             spdep
+##   anova.sarlm              spdep
+##   predict.sarlm            spdep
+##   print.summary.sarlm      spdep
+##   print.sarlm.pred         spdep
+##   as.data.frame.sarlm.pred spdep
+##   residuals.spautolm       spdep
+##   deviance.spautolm        spdep
+##   coef.spautolm            spdep
+##   fitted.spautolm          spdep
+##   print.spautolm           spdep
+##   summary.spautolm         spdep
+##   logLik.spautolm          spdep
+##   print.summary.spautolm   spdep
+##   print.WXImpact           spdep
+##   summary.WXImpact         spdep
+##   print.summary.WXImpact   spdep
+##   predict.SLX              spdep</code></pre>
+<p>To compute the observed value of the local moran statistc, we make a function. The computation is pretty simple it is the standardized variable time the spatial lag of the standardized variable. The spatial lag variable can be calculated as the full spatial weights matrix times the standardized variable. To compute the spatial lag variable, we use matrix multiplication, which is done with **%*%<strong> in R. Then the local statistic is just <code>z*W%*%z</code> We then use our function on the </strong>Donatns<strong> variable and </strong>W**, which we converted from the queen contiguity weights.</p>
+<pre class="r"><code>univariate_moran &lt;- function(x, W){
+        z &lt;- standardize(x)
+        local  &lt;- (z*W%*%z)
+        local
+}
+lmoran &lt;- univariate_moran(guerry$Donatns,W)</code></pre>
+<p>Throughout this notebook, we will be taking a conditional random approach to assess significance with each local spatial statistic as outlined in (Anselin 1995). The basic approach here is to compute a reference distribution for each location. This is done by holding the value constant at each location then taking a random samples from the rest of the obseravtions for the neighbors. With spatially random draws for the neighbors, we then calculate the statistic for the permutation.</p>
+<p>We can build a function that computes a reference distribution of local moran statistics for each location. These references distributions are used to assess the significance of the observed local moran statistics. To start, we get the number of locations by using <code>nrow</code> on the weights matrix. Then we get the corresponding id index numbers with <code>1:n</code>. We create two matrices, one to store the reference local moran statistics, and the other to store the spatially random samples our x variable. The number of rows corresponds to the number of locations and the number of columns is the number of permutations used. The final product in the <code>local.sims</code> matrix will be a reference distribution for each location in a row. We will show this explicitly after we’ve made the function. To fill the sample matrix, we use <code>sample</code> on <strong>id</strong>, of length <strong>permutations</strong>. We sample the <strong>id</strong> vector for all indices except i, which is the location for which we are constructing the distribution. This is common practice for all of the spatial statistics we will encounter in this notebook. After getting the sample indices, we use them to assess the corresponding value in the <strong>x</strong> variable. This results in a matrix with spatially randomized values of the <strong>x</strong> variable. Next we use <code>apply</code> to standardize the values in the sample matrix. Lastly, we compute the local statistics for each permutation and location by multiplying the standardized sample values matrix by the weights matrix</p>
+<pre class="r"><code>univariate_moran_sim &lt;- function(x, W, permutations){
+        
+        n   &lt;- nrow(W)
+        id  &lt;- 1:n
+
+        #place to store results
+        local.sims  &lt;- matrix(NA, nrow = n, ncol=permutations)
+        x.sample = matrix(NA, nrow = n, ncol = permutations)
+        
+        # filling each column of the sample matrix
+        for(i in 1:n){
+          sample.indices &lt;- sample(id[-i], permutations, replace = TRUE)
+          x.sample[i,] &lt;- x[sample.indices]
+        }
+        
+        #standardizing the x sample values
+        z.sample &lt;- (x.sample - apply(x.sample, 1, mean))/apply(x.sample, 1, sd)
+        
+        #standardizing x
+        z &lt;- standardize(x)
+        
+        #calculating the local statistics
+        local.sims  &lt;- (z*W%*%z.sample)
+        local.sims
+}</code></pre>
+<p>We use the function created above with <strong>Donatns</strong>, <strong>W</strong>, and 999 permutations.</p>
+<pre class="r"><code>moran_ref &lt;- univariate_moran_sim(guerry$Donatns,W,999)</code></pre>
+<p>Here we show the reference distribution of local moran statistics for the 1st location in the sf data frame. To do this, we just grab the first row of <strong>moran_ref</strong>, put it into a data frame and then plot it with <strong>ggplot2</strong>. The blue corresponds the the observed local moran statistic. The p_value here would be the area under the density curve to the left of the observed statistic.</p>
+<pre class="r"><code>observed_1 &lt;- lmoran[1]
+location_1 &lt;- data.frame(local_moran  = moran_ref[1,])
+ggplot(location_1, aes(x=local_moran)) +
+  geom_density() +
+  geom_vline(xintercept = observed_1, col = &quot;blue&quot;)</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+<p>The location corresponding to the reference distribution above is found here:</p>
+<pre class="r"><code>guerry_location_1 &lt;- guerry[1,]
+tm_shape(guerry) +
+  tm_borders() +
+  tm_shape(guerry_location_1) +
+  tm_fill(col = &quot;blue&quot;)</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
+<p>With the reference distributions and observed statistics for each location, we can compute a pseudo pvalue for each location. For this, we just loop through each location and calculate the number of permuations that are greater than the observed statistic and store them in a vector. The pvalue is then calculated as a fraction of <strong>1 + number greater</strong> divided by the number of permuations plus one. Since the significance is two-sided, we will need to account for p-values close to one. For this, we use <code>ifelse</code> to assign (1- value) if the value is greater than .5. This allows us to account for both ends of the conditional distribution.</p>
+<pre class="r"><code>get_p_value &lt;- function(mat, observed,type = &quot;one-sided&quot;) {
+  nperm &lt;- ncol(mat)
+  nlocs &lt;- nrow(mat)
+  p_value &lt;- rep(NA,nlocs)
+  for(i in 1:nlocs){
+    num_greater &lt;- length(which(mat[i,] &gt;= observed[i]))
+    p_value[i] &lt;- (num_greater + 1) / (nperm + 1)
+  }
+  if (type == &quot;two-sided&quot;){
+    p_value &lt;- ifelse(p_value &gt; .5, 1-p_value, p_value)
+    p_value
+  } else {
+    p_value
+  }
+}
+p_value &lt;- get_p_value(moran_ref, lmoran,type=&quot;two-sided&quot;)
+p_value</code></pre>
+<pre><code>##  [1] 0.024 0.271 0.338 0.046 0.068 0.001 0.408 0.398 0.082 0.159 0.012 0.002
+## [13] 0.208 0.321 0.036 0.053 0.130 0.334 0.348 0.011 0.028 0.059 0.377 0.053
+## [25] 0.094 0.495 0.076 0.001 0.034 0.272 0.192 0.022 0.299 0.101 0.432 0.045
+## [37] 0.253 0.099 0.423 0.115 0.051 0.092 0.438 0.409 0.342 0.013 0.147 0.040
+## [49] 0.276 0.192 0.431 0.261 0.146 0.021 0.193 0.388 0.463 0.388 0.118 0.452
+## [61] 0.262 0.396 0.019 0.057 0.404 0.183 0.122 0.019 0.233 0.314 0.349 0.356
+## [73] 0.134 0.384 0.046 0.451 0.002 0.035 0.004 0.002 0.080 0.029 0.032 0.345
+## [85] 0.286</code></pre>
+<p>Here we add coumn in the sf data frame, so we can use <strong>tmap</strong> functions to make significance and cluster maps.</p>
+<p>With the p-values, we can now move on to mapping. For the LISA significance map and the LISA cluster map, we will need to know which areas have significant p-values. We will need to assign categorical labels to indicate this for mapping purposes. There are many ways to assign these labels for instance it can be done with <code>ifelse</code> statements, but it is very messy. I found that using <code>cut</code> is the most concise way to accomplish this task. In <code>cut</code>, we specify breaks that correspond with the desired level of significance. In our case the minimum level of significance is .05. If we wanted the minimum classification of significance to be .01, the last interval in the breaks paramter would be .01 to 1. Additionaly, if we want to show higher levels of significance we would include the values in the breaks parameter. For example to add .0001, we would include it in between 0 and .001. When choosing the breaks, make sure the labels corrrespond to the correct level of significance.</p>
+<pre class="r"><code>guerry$significance &lt;- cut(p_value,
+                           breaks = c(0, .001, .01, .05, 1),
+                           labels = c(&quot;p = .001&quot;, &quot;p = .01&quot;, &quot;p = .05&quot;, &quot;Not Significant&quot;))</code></pre>
+<p>With the significance variable, we can make a preliminary LISA significance map with <strong>tmap</strong>. This tutorial focuses on local spatial autocorrelation, so we will not go into too much depth on <strong>tmap</strong>, but for more indepth coverage please see the Basic Mapping Notebook or the <strong>tmap</strong> documentation.</p>
+<pre class="r"><code>tm_shape(guerry) +
+  tm_fill(&quot;significance&quot;, palette = &quot;-Greens&quot;) + 
+  tm_borders() +
+  tm_layout(legend.outside = TRUE, title = &quot;LISA significance map&quot;)</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-18-1.png" width="672" /></p>
+<p>To get closer to the GeoDa mapping style, we can use <strong>RColorBrewer</strong> to create a specialized palette for the significance map. For this we will need to use <code>brewer.pal</code> to generate a palette of Greens. We will need to reverse the order of this palette to recreate the the plot, which is done with the base R function <code>rev</code>. At the end of the palette, we replace the last green shade with the hexadecimal number for grey.</p>
+<pre class="r"><code>pal &lt;- rev(brewer.pal(4, &quot;Greens&quot;))
+pal[4] &lt;- &quot;#D3D3D3&quot;</code></pre>
+<p>With the new palette, we can create the map. The difference here is that we use our palette <code>pal</code> instead of <code>&quot;-Greens&quot;</code></p>
+<pre class="r"><code>tm_shape(guerry) +
+  tm_fill(&quot;significance&quot;, palette = pal) + 
+  tm_borders() +
+  tm_layout(legend.outside = TRUE, title = &quot;LISA significance map&quot;)</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-20-1.png" width="672" /></p>
+<p>Each spatial statistic in this tutorial comes with a significance mapping component. In order to avoid repetitive code, we will make a significance map function, using the process outlined above. It is a bit tricky in that we must get the proper breaks and labels for the map from the p-value data.</p>
+<pre class="r"><code>significance_map &lt;- function(polys, pvalues, permutations, alpha){
+  # function to create significance map
+  # arguments:
+  #    polys: sf dataframe
+  #    pvalue_vector: a vector of p-values
+  #    permutations: the number of permuations used to calculate the pvalues
+  #    min.sig: the alpha level required for significance
+  # returns:
+  #    a significance map in GeoDa style
+  
+  target_p &lt;- 1 / (1 + permutations)
+  potential_brks &lt;- c(.00001, .0001, .001, .01)
+  brks &lt;- potential_brks[which(potential_brks &gt; target_p &amp; potential_brks &lt; alpha)]
+  brks2 &lt;- c(target_p, brks, alpha)
+  labels &lt;- c(as.character(brks2), &quot;Not Significant&quot;)
+  brks3 &lt;- c(-.000001, brks2, 1)
+  
+  cuts &lt;- cut(pvalues, breaks = brks3,labels = labels)
+  polys &lt;- polys %&gt;% mutate(sig = cuts)
+  
+  
+  pal &lt;- rev(brewer.pal(length(labels), &quot;Greens&quot;))
+  pal[length(pal)] &lt;- &quot;#D3D3D3&quot;
+  
+  tm_shape(polys) +
+    tm_fill(&quot;sig&quot;, palette = pal) +
+    tm_borders() +
+    tm_layout(title = &quot;Significance Map&quot;, legend.outside = TRUE)
+}</code></pre>
+<p>To build the LISA cluster map, we will need to know which quadrant of the global Moran’s I scatterplot each location is in. To do this, we will create the stardardized version of the the variable and the lag of this variable. High-high will correspond to positive values for both the original variable and the lag. High-low will be positive for the original variable and negative for the lag variable. Vice versa for low-high. We use <code>standardize</code> to standardize our variable.</p>
+<pre class="r"><code>z &lt;- standardize(guerry$Donatns)</code></pre>
+<p>There are many ways to assign the correct LISA patterns, but some are more concise and intuitive than others. We use interacction to assign TRUE and FALSE boolean values based on two condtionals. One for the standardized variable being greater than 0 and the other for the lagged standardized variable or <span class="math inline">\(Wx\)</span> being greater than zero. We use <code>as.character</code> to convert the booleans to characters. Next, we use <code>str_replace_all</code> to replace “TRUE” with “High” and “FASLE” with “Low”. With this, we have the correct LISA cluster designations assigned to each location. The last step is assign “Not Significant” to the locations with p_values of greater than .05, which we computed earlier.</p>
+<pre class="r"><code> patterns &lt;- as.character( interaction(z &gt; 0, W%*%z &gt; 0) ) 
+  patterns &lt;- patterns %&gt;% 
+        str_replace_all(&quot;TRUE&quot;,&quot;High&quot;) %&gt;% 
+        str_replace_all(&quot;FALSE&quot;,&quot;Low&quot;)
+  patterns[which(p_value &gt; .05)] &lt;- &quot;Not Significant&quot;
+guerry &lt;- guerry %&gt;% mutate(patterns = patterns)</code></pre>
+<p>Before building the plot, we will need to know which classifications are significant. We will build a palette that contains colors for the significant classifications. All of the classifications will not always be significant in eahc plot. We check this with <code>unique</code> on the <strong>patterns</strong> variable.</p>
+<pre class="r"><code>unique(guerry$patterns)</code></pre>
+<pre><code>## [1] &quot;Low.Low&quot;         &quot;Not Significant&quot; &quot;High.High&quot;       &quot;Low.High&quot;       
+## [5] &quot;High.Low&quot;</code></pre>
+<pre class="r"><code>match_palette &lt;- function(patterns, classifications, colors){
+  classes_present &lt;- unique(patterns)
+  mat &lt;- matrix(c(classifications,colors), ncol = 2)
+  logi &lt;- classifications %in% classes_present
+  pre_col &lt;- matrix(mat[logi], ncol = 2)
+  pal &lt;- pre_col[,2]
+  pal
+}</code></pre>
+<pre class="r"><code>colors &lt;- c(&quot;#DE2D26&quot;,&quot;#FCBBA1&quot;,&quot;#C6DBEF&quot;, &quot;#3182BD&quot;, &quot;#D3D3D3&quot;)
+classes &lt;- c(&quot;High.High&quot;,&quot;High.Low&quot;,&quot;Low.High&quot;, &quot;Low.Low&quot;, &quot;Not Significant&quot;)
+pal &lt;- match_palette(patterns, classes, colors)</code></pre>
+<p>Using the palette from above, we can create our LISA cluster map with the color scheme used in GeoDa.</p>
+<pre class="r"><code>tm_shape(guerry) +
+  tm_fill(&quot;patterns&quot;, palette = pal) +
+  tm_borders() +
+  tm_layout(&quot;LISA map&quot;)</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-27-1.png" width="672" /></p>
+<div id="putting-it-all-together" class="section level4">
+<h4>Putting it all together</h4>
+<p>With this function, we put together all of the previous steps and functions to create a lisa map and a correspondign significance map. The only new code in this function is the code to create the correct palette based on the cluster classifications present. This code gives the correct classification palette when there are some not present. So if there are no High.Low classifications that are significant, that color will not appear on the map and the other classification will have the correct colors.</p>
+<p>In order to use this function, the helper functions must also be loaded in your environment. These include: <code>convert_matrix</code>, <code>univariate_moran</code>, <code>univariate_moran_sims</code>, <code>get_p_value</code>, and <code>significance_map</code></p>
+<pre class="r"><code>univariate_lisa_map &lt;- function(area,x, weights, permutations, alpha){
+  # function to create a bivariate LISA map
+  # arguments:
+  #    area: sf dataframe
+  #    x: vectors of x values
+  #    y: a vector of y values
+  #    nperms: the number of permuations used to calculate the pvalues
+  #    alpha: the alpha level required for significance
+  # returns:
+  #    a LISA map in GeoDa style
+ 
+  
+  # Converting the weights
+  W &lt;- convert_matrix(weights)
+  
+  # Computing the observed statistics and reference distributions
+  observed &lt;- univariate_moran(x,W)
+  sims &lt;- univariate_moran_sim(x,W, permutations = permutations)
+  
+  
+  #computing p-value from observed statistics and reference distribution
+  p_value &lt;- get_p_value(sims,observed, type = &quot;two-sided&quot;)
+
+  # Standardizing the x and y vars
+  z &lt;- standardize(x)
+  
+  #Assigning classifications
+  lisa_patterns &lt;- as.character( interaction(z &gt; 0, W%*%z &gt; 0) ) 
+  lisa_patterns &lt;- patterns %&gt;% 
+        str_replace_all(&quot;TRUE&quot;,&quot;High&quot;) %&gt;% 
+        str_replace_all(&quot;FALSE&quot;,&quot;Low&quot;)
+  lisa_patterns[which(p_value &gt; alpha)] &lt;- &quot;Not Significant&quot;
+  
+  # Adding the classifications to the data frame
+  area &lt;- area %&gt;% mutate(lisa_patterns)
+  
+  # Constructing the correct palette based on presense of classifications
+  patts &lt;- c(&quot;High.High&quot;, &quot;High.Low&quot;, &quot;Low.High&quot;, &quot;Low.Low&quot;, &quot;Not Significant&quot;)
+  colors &lt;- c(&quot;#DE2D26&quot;,&quot;#FCBBA1&quot;,&quot;#C6DBEF&quot;, &quot;#3182BD&quot;, &quot;#D3D3D3&quot;)
+  pal &lt;- match_palette(lisa_patterns,patts,colors)
+
+  # Making the LISA map
+  p1 &lt;- tm_shape(area) +
+  tm_fill(&quot;lisa_patterns&quot;, palette = pal) +
+  tm_borders() +
+  tm_layout(title = &quot;LISA cluster map&quot;, legend.outside = TRUE)  
+  
+  p2 &lt;- significance_map(area, p_value, permutations = permutations,alpha = alpha)
+  
+  tmap_arrange(p1,p2, ncol = 1)
+}</code></pre>
+<p>Here we use the mapping function made above, it outputs both a local moran cluster map and the corresponding significance map.</p>
+<pre class="r"><code>p &lt;- univariate_lisa_map(guerry,guerry$Donatns,queen.weights,999,.05)
+p</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-29-1.png" width="672" /></p>
+<p>We can assess the individual plots with doublt brackets. 1 will give us the local moran cluster map</p>
+<pre class="r"><code>p[[1]]</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-30-1.png" width="672" /></p>
+<p>index 2 gives us the significance map.</p>
+<pre class="r"><code>p[[2]]</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-31-1.png" width="672" /></p>
+</div>
+</div>
+<div id="randomization-options" class="section level3">
+<h3>Randomization Options</h3>
+<p>To obtain higher significance levels, we need to use more permutations in the calculation of the the local moran for each location. For instance, a pseudo pvalue of .00001 would require 999999 permutations. To get more permutations, we just use 99999 instead of 999 for the permutations parameter in our local moran mapping function.</p>
+<pre class="r"><code>p &lt;- univariate_lisa_map(guerry,guerry$Donatns,queen.weights,99999,.05)
+p[[1]]</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-32-1.png" width="672" /></p>
+<pre class="r"><code>p[[2]]</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-33-1.png" width="672" /></p>
+</div>
+<div id="significance" class="section level3">
+<h3>Significance</h3>
+<p>An important methodological issue associated with the local spatial autocorrelation statistics is the selection of the p-value cut-off to properly reflect the desired Type I error. Not only are the pseudo p-values not analytical, since they are the result of a computational permutation process, but they also suffer from the problem of multiple comparisons (for a detailed discussion, see de Castro and Singer 2006). The bottom line is that a traditional choice of 0.05 is likely to lead to many false positives, i.e., rejections of the null when in fact it holds.</p>
+<div id="bonferroni-bound" class="section level4">
+<h4>Bonferroni bound</h4>
+<p>The Bonferroni bound constructs a bound on the overall p-value by taking <span class="math inline">\(\alpha\)</span> and dividing it by the number of comparisons. In our context, the latter corresponds to the number of observation, n. As a result, the Bonferroni bound would be <span class="math inline">\(\alpha/n = .00012\)</span>, the cutoff p-value to be used to determine significance. To implement the bonferroni bound, we use 99999 permutations and set the alpha level to be <code>bonferroni</code> or .01 / 85</p>
+<pre class="r"><code>bonferroni &lt;- .01 / 85
+p &lt;- univariate_lisa_map(guerry,guerry$Donatns,queen.weights,99999,bonferroni)</code></pre>
+<pre class="r"><code>p[[1]]</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-35-1.png" width="672" /></p>
+<pre class="r"><code>p[[2]]</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-36-1.png" width="672" /></p>
+</div>
+<div id="interpretation-of-significance" class="section level4">
+<h4>Interpretation of significance</h4>
+<p>As mentioned, there is no fully satisfactory solution to deal with the multiple comparison problem. Therefore, it is recommended to carry out a sensitivity analysis and to identify the stage where the results become interesting. A mechanical use of 0.05 as a cut off value is definitely not the proper way to proceed.</p>
+<p>Also, for the Bonferroni and FDR procedures to work properly, it is necessary to have a large number of permutations, to ensure that the minimum p-value can be less than <span class="math inline">\(\alpha/n\)</span>. Currently, the largest number of permutations that GeoDa can support is 99999. In R, we can do more, however the runtime is not ideal. For the bonferroni criterion to yield significant values, we must implement a minimum number of permutations, otherwise we cannot assess significance. This is not due to a characteristic of the data, but to the lack of sufficient permutations to yield a pseudo p-value that is small enough.</p>
+</div>
+</div>
+<div id="interpretation-of-clusters" class="section level3">
+<h3>Interpretation of clusters</h3>
+<p>Strictly speaking, the locations shown as significant on the significance and cluster maps are not the actual clusters, but the cores of a cluster. In contrast, in the case of spatial outliers, they are the actual locations of interest.</p>
+</div>
+<div id="conditional-local-cluster-maps" class="section level3">
+<h3>Conditional local cluster maps</h3>
+<p>To make the conditional map, we first need to make two categorical variables, with two categories. <code>cut</code> breaks the data up into two equal pieces. With the two categorical variables, we can create facets with <strong>tmap</strong>.</p>
+<pre class="r"><code>guerry$cut.literacy &lt;- cut(guerry$Litercy, breaks = 2)
+guerry$cut.clergy &lt;- cut(guerry$Clergy, breaks = 2)</code></pre>
+<p>To make the conditional maps, we use the same <strong>tmap</strong> function and palette as the LISA cluster map. The only addition is <code>tm_facets</code>, which will use the two categorical variables created above.</p>
+<pre class="r"><code>tm_shape(guerry) +
+  tm_fill(&quot;patterns&quot;, palette = pal) +
+  tm_borders() +
+  tm_facets(by = c(&quot;cut.clergy&quot;, &quot;cut.literacy&quot;),free.coords = FALSE,drop.units=FALSE)</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-38-1.png" width="672" /></p>
+</div>
+</div>
+<div id="local-geary" class="section level2">
+<h2>Local Geary</h2>
+<div id="principle-1" class="section level3">
+<h3>Principle</h3>
+<p>The Local Geary statistic, first outlined in Anselin (1995), and further elaborated upon in Anselin (2018), is a Local Indicator of Spatial Association (LISA) that uses a different measure of attribute similarity. As in its global counterpart, the focus is on squared differences, or, rather, dissimilarity. In other words, small values of the statistics suggest positive spatial autocorrelation, whereas large values suggest negative spatial autocorrelation.</p>
+<p>Formally, the Local Geary statistic is</p>
+<p><span class="math display">\[LG_i = \Sigma_jw_{ij}(x_i-x_j)^2\]</span></p>
+<p>in the usual notation.</p>
+<p>Inference is again based on a conditional permutation procedure and is interpreted in the same way as for the Local Moran statistic. However, the interpretation of significant locations in terms of the type of association is not as straightforward. In essence, this is because the attribute similarity is not a cross-product and thus has no direct correspondence with the slope in a scatter plot. Nevertheless, we can use the linking capability within GeoDa to make an incomplete classification.</p>
+<p>Those locations identified as significant and with the Local Geary statistic smaller than its mean, suggest positive spatial autocorrelation (small differences imply similarity). For those observations that can be classified in the upper-right or lower-left quadrants of a matching Moran scatter plot, we can identify the association as high-high or low-low. However, given that the squared difference can cross the mean, there may be observations for which such a classification is not possible. We will refer to those as other positive spatial autocorrelation.</p>
+<p>For negative spatial autocorrelation (large values imply dissimilarity), it is not possible to assess whether the association is between high-low or low-high outliers, since the squaring of the differences removes the sign.</p>
+</div>
+<div id="implementation-1" class="section level3">
+<h3>Implementation</h3>
+<p>The local geary is not implemented in <strong>spdep</strong>, so we will have to compute the local statistics with base functionality and the <code>lag.listw</code> function from <strong>spdep</strong>. Before we begin, we will need to break up the formula for local Geary into managable pieces.</p>
+<p><span class="math display">\[LG_i = \Sigma_jw_{ij}(x_i-x_j)^2\]</span></p>
+<p>The above formula can be simplified into this:</p>
+<p><span class="math display">\[LG_i = x_i^2 - 2x_i\Sigma_jw_{ij}x_j + \Sigma_jw_{ij}x_j^2\]</span> With this simplification, we have three managable parts that can be easily calculated with the function available to us. Notice the middle terms is 2 times the <span class="math inline">\(x_i\)</span> times the lag variable of x. The third term is the lag variable of x squared.</p>
+<p>We start with a function to compute the observed statistic same as with the local moran. Using the simplified formula above we can compute the local geary statistic, which is <code>x2 - 2*x*(W%*%x) + W%*%x2</code>, with <strong>x2</strong> being the <strong>x</strong> variable squared.</p>
+<pre class="r"><code>local_geary &lt;- function(x,W){
+  x2 &lt;- x^2
+  lg_x &lt;- x2 - 2*x*(W%*%x) + W%*%x2
+  lg_x
+} 
+lg &lt;- local_geary(guerry$Donatns,W)</code></pre>
+<p>As with the local moran, we will have to compute reference distributions for each location to compare the observed statistic with. We will follow a similar process with a few differences. The main difference here is that we need <span class="math inline">\(x^2\)</span> values and the formula for the local statistic is different. The sampling process and structure for storing the local reference statistics is the same.</p>
+<pre class="r"><code>local_geary_sims &lt;- function(x,W,permutations){
+  n &lt;- nrow(W)
+  id  &lt;- 1:n
+  
+  local.sims  &lt;- matrix(NA, nrow = n, ncol=permutations)
+  x.sample = matrix(NA, nrow = n, ncol = permutations)
+  
+  for(i in 1:n){
+    sample.indices &lt;- sample(id[-i], permutations, replace = TRUE)
+    x.sample[i,] &lt;- x[sample.indices]
+  }
+  x2 &lt;- x^2
+  x2.sample &lt;- x.sample ^ 2
+  
+  local.sims &lt;- (x2 - 2*x*W%*%x.sample + W%*%x2.sample) 
+  local.sims
+}</code></pre>
+<p>We use the function created above with the <strong>Donatns</strong> variable, <strong>W</strong>, and 999 permutations</p>
+<pre class="r"><code>sims &lt;- local_geary_sims(guerry$Donatns,W,999)</code></pre>
+<p>Here we use the <code>get_p_value</code> function that we created earlier. On the local geary reference distributions and the observed local geary statistics.</p>
+<pre class="r"><code>p_value &lt;- get_p_value(sims,lg,type = &quot;two-sided&quot;)</code></pre>
+<p>With the p-values, we can make a significance map with <code>significance_map</code></p>
+<pre class="r"><code>significance_map(guerry,p_value,999,.05)</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-43-1.png" width="672" /></p>
+<p>In order to build the local geary map classifications, we will need the mean of the reference distribution of local geary statistics for each location. This is simple to compute, we just need to take the mean of each row in <strong>sims</strong>. We use a <code>for</code> loop and 85 iterations, which is the number of polygon locations.</p>
+<pre class="r"><code>mean_lg &lt;- rep(NA, 85)
+for (i in 1:85){
+  mean_lg[i] &lt;- mean(sims[i,]) 
+}</code></pre>
+<p>We start by assigning the “High-High” and “Low-Low” classifications, which follow the same rule as for the local moran. If both the standized variable and the lag of the standardized variable are positive it is “High-High”, and if they are both negative, it is “Low-Low”. Next we assign Negative for locations that a local geary statistic that is higher than the reference mean for its location. For locations with a lower observed local geary statistic than the reference mean, that also do not fit into the “High-High” or “Low-Low” classification, we assign “Other-Positive”. Lastly we assign “Not Significant” for all locations that don’t have a p-value of less than .05.</p>
+<pre class="r"><code>lg_classification &lt;- rep(NA,85)
+lg_classification[z &gt;= 0 &amp; W%*%z &gt;= 0] &lt;- &quot;High-High&quot;
+lg_classification[z &lt;= 0 &amp; W%*%z &lt;= 0] &lt;- &quot;Low-Low&quot;
+lg_classification[lg &gt; mean_lg] &lt;- &quot;Negative&quot;
+lg_classification[lg &lt; mean_lg &amp; z*W%*%z &lt; 0] &lt;- &quot;Other-Positive&quot;
+lg_classification[p_value &gt;.05] &lt;- &quot;Not Significant&quot;
+guerry &lt;- guerry %&gt;% mutate(lg_classification)</code></pre>
+<p>Here we build the palette to match the local geary classifications</p>
+<pre class="r"><code>classes &lt;- c(&quot;High-High&quot;, &quot;Low-Low&quot;, &quot;Negative&quot;, &quot;Other-Positive&quot;, &quot;Not Significant&quot;)
+colors &lt;- c(&quot;#DE2D26&quot;,&quot;#FCBBA1&quot;,&quot;#9ECAE1&quot;, &quot;#FEE5D9&quot;,&quot;#D3D3D3&quot;)
+pal &lt;- match_palette(lg_classification,classes,colors)</code></pre>
+<pre class="r"><code>tm_shape(guerry) +
+  tm_fill(&quot;lg_classification&quot;, palette = pal) +
+  tm_borders() +
+  tm_layout(legend.outside = TRUE)</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-47-1.png" width="672" /></p>
+<pre class="r"><code>local_geary_map &lt;- function(polys,x,weights,permutations,alpha){
+  
+  #converting the matrix 
+  W &lt;- convert_matrix(weights)
+  
+  n &lt;- nrow(W)
+  
+  #computing local geary statsitic and reference distributions for each location
+  lg &lt;- local_geary(x,W)
+  sims &lt;- local_geary_sims(x,W,permutations)
+  
+  #computing p_values from the observed statistics and reference distributions
+  p_value &lt;- get_p_value(sims,lg,type = &quot;two-sided&quot;)
+  
+  #computing mean local geary values for each location based on the reference distributions
+  mean_lg &lt;- rep(NA, n)
+  for (i in 1:n){
+    mean_lg[i] &lt;- mean(sims[i,]) 
+  }
+  
+  # standardizing x
+  z &lt;- standardize(x)
+  
+  #classifying local geary patterns
+  lg_patterns &lt;- rep(NA,n)
+  lg_patterns[z &gt;= 0 &amp; W%*%z &gt;=0] &lt;- &quot;High-High&quot;
+  lg_patterns[z &lt;= 0 &amp; W%*%z &lt;=0] &lt;- &quot;Low-Low&quot;
+  lg_patterns[lg &gt; mean_lg] &lt;- &quot;Negative&quot;
+  lg_patterns[lg &lt; mean_lg &amp; z*W%*%z &lt; 0] &lt;- &quot;Other-Positive&quot;
+  lg_patterns[p_value &gt; alpha] &lt;- &quot;Not Significant&quot;
+  
+  polys &lt;- polys %&gt;% mutate(lg_patterns)
+  
+  # creating the correct palette for the map
+  classes &lt;- c(&quot;High-High&quot;, &quot;Low-Low&quot;, &quot;Negative&quot;, &quot;Other-Positive&quot;, &quot;Not Significant&quot;)
+  colors &lt;- c(&quot;#DE2D26&quot;,&quot;#FCBBA1&quot;,&quot;#9ECAE1&quot;, &quot;#FEE5D9&quot;,&quot;#D3D3D3&quot;)
+  pal &lt;- match_palette(lg_patterns,classes,colors)
+  
+  # Making the local geary map
+  p1 &lt;- tm_shape(polys) +
+  tm_fill(&quot;lg_patterns&quot;, palette = pal) +
+  tm_borders() +
+  tm_layout(legend.outside = TRUE, title = &quot;Local Geary Cluster Map&quot;)
+  
+  #Making the significance map
+  p2 &lt;- significance_map(polys,p_value,permutations,alpha)
+  
+  # Outputing both the significance map and the local geary cluster map
+  tmap_arrange(p1,p2,ncol = 1)
+}</code></pre>
+<pre class="r"><code>local_geary_map(guerry,guerry$Donatns,queen.weights,99999,.01)</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-49-1.png" width="672" /></p>
+</div>
+<div id="interpretation-and-significance" class="section level3">
+<h3>Interpretation and significance</h3>
+<div id="changing-the-significance-threshold" class="section level4">
+<h4>Changing the significance threshold</h4>
+<pre class="r"><code>local_geary_map(guerry,guerry$Donatns,queen.weights,99999,bonferroni)</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-50-1.png" width="672" /></p>
+</div>
+</div>
+</div>
+<div id="getis-ord-statistics" class="section level2">
+<h2>Getis-Ord Statistics</h2>
+<div id="principle-2" class="section level3">
+<h3>Principle</h3>
+<p>A third class of statistics for local spatial autocorrelation was suggested by Getis and Ord (1992), and further elaborated upon in Ord and Getis (1995). It is derived from a point pattern analysis logic. In its earliest formulation the statistic consisted of a ratio of the number of observations within a given range of a point to the total count of points. In a more general form, the statistic is applied to the values at neighboring locations (as defined by the spatial weights). There are two versions of the statistic. They differ in that one takes the value at the given location into account, and the other does not.</p>
+<p>The <span class="math inline">\(G_i\)</span> statistic consists of a ratio of the weighted average of the values in the neighboring locations, to the sum of all values, not including the value at the location <span class="math inline">\(x_i\)</span></p>
+<p><span class="math display">\[G_i = \frac{\Sigma_{j\neq i}w_{ij}x_j}{\Sigma_{j\neq i}x_j}\]</span></p>
+<p>In contrast, the <span class="math inline">\(G_i^*\)</span> statistic includes the value <span class="math inline">\(x_i\)</span> in numerator and denominator:</p>
+<p><span class="math display">\[G_i^*=\frac{\Sigma_jw_{ij}x_j}{\Sigma_jx_j}\]</span></p>
+<p>Note that in this case, the denominator is constant across all observations and simply consists of the total sum of all values in the data set.</p>
+<p>The interpretation of the Getis-Ord statistics is very straightforward: a value larger than the mean (or, a positive value for a standardized z-value) suggests a high-high cluster or hot spot, a value smaller than the mean (or, negative for a z-value) indicates a low-low cluster or cold spot. In contrast to the Local Moran and Local Geary statistics, the Getis-Ord approach does not consider spatial outliers.</p>
+<p>Inference is based on conditional permutation, using an identical procedure as for the other statistics.</p>
+</div>
+<div id="implementation-2" class="section level3">
+<h3>Implementation</h3>
+<pre class="r"><code>local_g &lt;- function(x,W){
+  lag &lt;- W%*%x
+  sum &lt;- sum(x)
+  g &lt;- lag/sum
+}
+g &lt;- local_g(guerry$Donatns,W)
+g</code></pre>
+<pre><code>##           [,1]
+## 1  0.005591602
+## 2  0.009397496
+## 3  0.012869755
+## 4  0.005899573
+## 5  0.005622224
+## 6  0.004857546
+## 7  0.009950736
+## 8  0.009631099
+## 9  0.007032592
+## 10 0.007909610
+## 11 0.006014938
+## 12 0.003933049
+## 13 0.015242825
+## 14 0.009958611
+## 15 0.020170714
+## 16 0.019022821
+## 17 0.015782358
+## 18 0.013051155
+## 19 0.010192047
+## 20 0.027046638
+## 21 0.019429600
+## 22 0.017590355
+## 23 0.012872671
+## 24 0.006371504
+## 25 0.017025325
+## 26 0.011285570
+## 27 0.021983195
+## 28 0.003989335
+## 29 0.006701873
+## 30 0.009517652
+## 31 0.015062592
+## 32 0.005376372
+## 33 0.013162269
+## 34 0.016383426
+## 35 0.011769400
+## 36 0.006855276
+## 37 0.009268883
+## 38 0.006848422
+## 39 0.011896846
+## 40 0.008159237
+## 41 0.006554887
+## 42 0.017878953
+## 43 0.010943477
+## 44 0.010491436
+## 45 0.010038811
+## 46 0.005699567
+## 47 0.015010753
+## 48 0.020501521
+## 49 0.009455241
+## 50 0.008763181
+## 51 0.010454922
+## 52 0.014096245
+## 53 0.007814069
+## 54 0.022016441
+## 55 0.016084496
+## 56 0.010444482
+## 57 0.011435181
+## 58 0.012287351
+## 59 0.015963757
+## 60 0.009673096
+## 61 0.013779378
+## 62 0.012195193
+## 63 0.004918790
+## 64 0.005357999
+## 65 0.010266290
+## 66 0.016196486
+## 67 0.007144145
+## 68 0.005963792
+## 69 0.009375123
+## 70 0.009680095
+## 71 0.008145488
+## 72 0.012935374
+## 73 0.008577042
+## 74 0.010506601
+## 75 0.018976276
+## 76 0.011716555
+## 77 0.005010482
+## 78 0.006246916
+## 79 0.003670573
+## 80 0.004829840
+## 81 0.018780119
+## 82 0.019643080
+## 83 0.018815407
+## 84 0.012918167
+## 85 0.009328728</code></pre>
+<pre class="r"><code>local_g_sims &lt;- function(x,W, permutations){
+  n &lt;- nrow(W)
+  id &lt;- 1:n
+  
+  local.sims  &lt;- matrix(NA, nrow = n, ncol=permutations)
+  x.sample = matrix(NA, nrow = n, ncol = permutations)
+  for(i in 1:n){
+    sample.indices &lt;- sample(id[-i], permutations, replace = TRUE)
+    x.sample[i,] &lt;- x[sample.indices]
+  }
+  
+  B &lt;- binarize(W,threshold = .001)
+  lag &lt;- W%*%x.sample
+  sum &lt;- sum(x)
+  local.sims &lt;- lag / sum
+  local.sims
+}</code></pre>
+<pre class="r"><code>sims &lt;- local_g_sims(guerry$Donatns,W,999)</code></pre>
+<pre class="r"><code>p_value &lt;- get_p_value(sims,g,type = &quot;two-sided&quot;)
+p_value</code></pre>
+<pre><code>##  [1] 0.018 0.273 0.292 0.035 0.046 0.002 0.409 0.364 0.076 0.125 0.007 0.000
+## [13] 0.203 0.346 0.024 0.038 0.116 0.311 0.356 0.007 0.020 0.044 0.375 0.029
+## [25] 0.069 0.478 0.069 0.000 0.042 0.285 0.194 0.017 0.310 0.107 0.444 0.038
+## [37] 0.266 0.109 0.407 0.104 0.033 0.072 0.468 0.382 0.341 0.016 0.141 0.030
+## [49] 0.257 0.187 0.422 0.248 0.136 0.024 0.188 0.418 0.462 0.368 0.106 0.455
+## [61] 0.255 0.361 0.015 0.079 0.401 0.182 0.120 0.020 0.227 0.304 0.351 0.326
+## [73] 0.149 0.439 0.041 0.418 0.006 0.021 0.000 0.001 0.060 0.026 0.037 0.329
+## [85] 0.292</code></pre>
+<pre class="r"><code>significance_map(guerry,p_value,999,.05)</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-55-1.png" width="672" /></p>
+<pre class="r"><code>g_pattern &lt;- rep(NA,85)
+g_pattern[g &gt; mean(g)] &lt;- &quot;High&quot;
+g_pattern[g &lt; mean(g)] &lt;- &quot;Low&quot;
+g_pattern[p_value &gt; .05] &lt;- &quot;Not Significant&quot; 
+guerry &lt;- guerry %&gt;% mutate(g_pattern)</code></pre>
+<pre class="r"><code>pal &lt;- c(&quot;#DE2D26&quot;, &quot;#3182BD&quot;, &quot;#D3D3D3&quot;)</code></pre>
+<pre class="r"><code>tm_shape(guerry) +
+  tm_fill(&quot;g_pattern&quot;, palette = pal) +
+  tm_borders() +
+  tm_layout(legend.outside = TRUE)</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-58-1.png" width="672" /></p>
+<pre class="r"><code>local_g_map &lt;- function(polys,x,weights,permutations,alpha,type = &quot;G&quot;){
+  #converting the matrix
+  W &lt;- convert_matrix(weights)
+  
+  #testing for type G or G* and including diagonal elements for G*
+  if (type == &quot;G*&quot;){
+    diag(W) &lt;- 1
+  }
+  
+  #computing local statistics and p_values
+  g &lt;- local_g(x,W)
+  sims &lt;- local_g_sims(x,W,permutations)
+  p_value &lt;- get_p_value(sims,g,type = &quot;two-sided&quot;)
+  
+  
+  #assigning cluster classifications
+  n &lt;- nrow(W)
+  g_patterns &lt;- rep(NA,n)
+  g_patterns[g &gt; mean(g)] &lt;- &quot;High&quot;
+  g_patterns[g &lt; mean(g)] &lt;- &quot;Low&quot;
+  g_patterns[p_value &gt; alpha] &lt;- &quot;Not Significant&quot; 
+  
+  polys &lt;- polys %&gt;% mutate(g_patterns)
+  
+  #Creating the correct color palette
+  classes &lt;- c(&quot;High&quot;, &quot;Low&quot;, &quot;Not Significant&quot;)
+  colors &lt;- c(&quot;#DE2D26&quot;, &quot;#3182BD&quot;, &quot;#D3D3D3&quot;)
+  pal &lt;- match_palette(g_patterns,classes,colors)
+  
+  #Making the correct map title
+  if (type == &quot;G*&quot;){
+    map_type &lt;- &quot;G*&quot;
+  } else {
+    map_type &lt;- &quot;G&quot;
+  }
+  map_title &lt;- paste0(map_type, &quot; Cluster Map&quot;)
+  
+  #making the cluster map
+  p1 &lt;- tm_shape(polys) +
+  tm_fill(&quot;g_patterns&quot;, palette = pal) +
+  tm_borders() +
+  tm_layout(title = map_title,legend.outside = TRUE)
+  
+  #making the corresponding significance map
+  p2 &lt;- significance_map(polys,p_value,permutations,alpha)
+  
+  #outputing both plots
+  tmap_arrange(p1,p2,ncol = 1)
+}</code></pre>
+<pre class="r"><code>local_g_map(guerry,guerry$Donatns,queen.weights,999,.05)</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-60-1.png" width="672" /></p>
+</div>
+<div id="interpretation-and-significance-1" class="section level3">
+<h3>Interpretation and significance</h3>
+</div>
+</div>
+<div id="local-join-count-statistic" class="section level2">
+<h2>Local Join Count Statistic</h2>
+<div id="principle-3" class="section level3">
+<h3>Principle</h3>
+<p>Recently, Anselin and Li (2019) showed how a constrained version of the <span class="math inline">\(G_i^*\)</span> statistic yields a local version of the well-known join count statistic for spatial autocorrelation of binary variables, popularized by Cliff and Ord (1973). Expressed as a LISA statistic, a local version of the so-called BB join count statistic is</p>
+<p><span class="math display">\[BB_i = x_i\Sigma_jw_{ij}x_j\]</span></p>
+<p>where <span class="math inline">\(x_{i,j}\)</span> can only take on the values of 1 and 0, and <span class="math inline">\(w_{ij}\)</span> are the elements of a binary spatial weights matrix (i.e., not row-standardized). For the most meaningful results, the value of 1 should be chosen for the case with the fewest observations (of course, the definition of what is 1 and 0 can easily be switched).</p>
+<p>The statistic is only meaningful for those observations where <span class="math inline">\(x_i =1\)</span>, since for <span class="math inline">\(x_i =0\)</span> the result will always equal zero. A pseudo p-value is obtained by means of a conditional permutation approach, in the same way as for the other local spatial autocorrelation statistics, but only for those observations with <span class="math inline">\(x_i=1\)</span>. The same caveats as before should be kept in mind when interpreting the results, which are subject to multiple comparisons and the sensitivity of the pseudo p-value to the actual simulation experiment (random seed, number of permutations). Technical details are provided in Anselin and Li (2019).</p>
+</div>
+<div id="implementation-3" class="section level3">
+<h3>Implementation</h3>
+<pre class="r"><code>doncat &lt;- rep(0, 85)
+doncat[guerry$Donatns &gt; 10996] &lt;- 1
+guerry$doncat &lt;- doncat</code></pre>
+<pre class="r"><code>tm_shape(guerry) +
+  tm_fill(&quot;doncat&quot;, style = &quot;cat&quot;, palette = c(&quot;white&quot;, &quot;blue&quot;)) +
+  tm_borders()</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-62-1.png" width="672" /></p>
+<pre class="r"><code>local_bb &lt;- function(x,W){
+  B &lt;- binarize(W,threshold = .00001)
+  bb &lt;- x * B%*%x
+}
+bb &lt;- local_bb(guerry$doncat,W)</code></pre>
+<pre class="r"><code>local_bb_sims &lt;- function(x,W,permutations){
+  n &lt;- nrow(W)
+  id &lt;- 1:n
+  
+  local.sims &lt;- matrix(NA, nrow = n, ncol=permutations)
+  x.sample = matrix(NA, nrow = n, ncol = permutations)
+  for(i in 1:n){
+    sample.indices &lt;- sample(id[-i], permutations, replace = TRUE)
+    x.sample[i,] &lt;- x[sample.indices]
+  }
+  
+  B &lt;- binarize(W,threshold = .00001)
+  local.sims &lt;- x.sample * B%*%x.sample
+  local.sims
+}</code></pre>
+<pre class="r"><code>sims &lt;- local_bb_sims(guerry$doncat,W,999)
+p_value &lt;- get_p_value(sims,bb,type = &quot;one-sided&quot;)
+significance_map(guerry,p_value,999,.05)</code></pre>
+<p><img src="LSA1_files/figure-html/unnamed-chunk-65-1.png" width="672" /></p>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>University of Chicago, Center for Spatial Data Science – <a href="mailto:anselin@uchicago.edu">anselin@uchicago.edu</a>,<a href="mailto:morrisonge@uchicago.edu">morrisonge@uchicago.edu</a><a href="#fnref1">↩</a></p></li>
+<li id="fn2"><p>Use <code>setwd(directorypath)</code> to specify the working directory.<a href="#fnref2">↩</a></p></li>
+<li id="fn3"><p>Use <code>install.packages(packagename)</code>.<a href="#fnref3">↩</a></p></li>
+</ol>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
