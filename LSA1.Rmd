@@ -55,17 +55,15 @@ After completing the notebook, you should know how to carry out the following ta
 
 - Assess the sensitivity of different significance cut-off values
 
-- Interpret significance by means of Bonferroni bounds and the False Discovery Rate (FDR)
+- Interpret significance by means of Bonferroni bounds 
 
 #### R Packages used
 
-- **sf**: To read in the shapefile and make queen contiguity weights
+- **spatmap**: To construct significance and cluster maps for a variety of local statistics
 
-- **spdep**: To create spatial weights structure from neighbors structure
+- **geodaData**: To load the data for this notebook
 
-
-- **tmap**: To construct significance and cluster maps with custom functions
-
+- **tmap**: To format the maps made with **spatmap**
 
 #### R Commands used
 
@@ -73,14 +71,11 @@ Below follows a list of the commands used in this notebook. For further details
 and a comprehensive list of options, please consult the 
 [R documentation](https://www.rdocumentation.org).
 
-- **Base R**: `install.packages`, `library`, `setwd`, `summary`, `attributes`, `lapply`, `class`, `length`, `rev`, `cut`, `mean`, `sample`, `as.data.frame`, `matrix`, `unique`, `as.character`, `which`, `order`, `data.frame`, `ifelse`, `sum`, `rep`, `set.seed`
-
-- **sf**: `st_read`, `st_relate`
+- **Base R**: `install.packages`, `library`, `setwd`, `set.seed`, `cut`, `rep`
 
 - **tmap**: `tm_shape`, `tm_borders`, `tm_fill`, `tm_layout`, `tm_facets`
 
-
-
+- **spatmap**: `moran_map`, `geary_map`, `g_map`, `gstar_map`, `joincount_map`, `significance_map`
 
 ## Preliminaries
 
@@ -90,12 +85,13 @@ actually be saving any files.^[Use `setwd(directorypath)` to specify the working
 
 ### Installing spatmap and geodaData 
 
-**spatmap** and **geodaData** are not yet loaded to CRAN, so to install them, you need `remotes_install_github`. This
+**rgeoda**, **spatmap** and **geodaData** are not yet loaded to CRAN, so to install them, you need `remotes_install_github`. This
 function is from package **remotes**, so use `install.packages("remotes")` if you do not have this package. To install
 **geodaData** use `remotes::install_github("spatialanalysis/geodaData")`. To install **spatmap** use 
-`remotes::install_github("morrisonge/spatmap")`. 
+`remotes::install_github("morrisonge/spatmap")`. To install **rgeoda** use `remotes::install_github("lixun910/rgeoda")`.
 
 ```{r}
+remotes::install_github("lixun910/rgeoda")
 remotes::install_github("spatialanalysis/geodaData")
 remotes::install_github("morrisonge/spatmap")
 ```
@@ -110,8 +106,8 @@ their dependencies.^[Use
 
 ```{r, message = FALSE}
 library(sf)
-library(spdep)
 library(tmap)
+library(rgeoda)
 library(geodaData)
 library(spatmap)
 ```
@@ -120,11 +116,9 @@ library(spatmap)
 ### spatmap
 
 The main package used throughout this notebook will be **spatmap**. This package provides functions
-that compute and visualize a variety of local spatial statistics. The visualizations include cluster maps
-and their associated significance maps. The mapping functions are built off of **tmap** and can have additional
-layers added to them like `tm_borders` or `tm_layout`. 
-
-
+that visualize a variety of local spatial statistics. This package is built off of **rgeoda** for the statistical computations and **tmap** for the mapping component. All of the visualizations are built with a similar style
+to GeoDa. The visualizations include cluster maps and their associated significance maps. The mapping functions
+are built off of **tmap** and can have additional layers added to them like `tm_borders` or `tm_layout`. 
 
 ### geodaData
 
@@ -190,44 +184,25 @@ and should not be interpreted in an absolute sense.
 ### Implementation
 
 With the function `moran_map` from **spatmap**, we can create a local moran cluster map. The parameters
-needed are a **sf** dataframe, which is **guerry** in our case, and the name of a variable from the **sf**
+needed are an **sf** dataframe, which is **guerry** in our case, and the name of a variable from the **sf**
 dataframe. It is important to note the default parameters of `moran_map`. These include `permutations = 999`,
-`alpha = .05`, and `weights = NULL`. We will show examples of these later, but they are important to keep in
-mind. 
-
+`alpha = .05`, and `weights = NULL`. Permutations is the number of permutations used in computing the reference distributions
+of the local statistic for each location. Alpha is the cutoff significance level. The weights parameter is where we specify
+the weights used for the computation of the local statistics. In the NULL case, 1st order queen contiguity are computed. 
 ```{r}
 moran_map(guerry,"Donatns")
 ```
 
-To get a significance map for the local moran cluster map, we use `significance_map`. The default
+To get a significance map for the local moran, we use `significance_map`. The default
 parameters are the same for this function as `moran_map`. Default number of permutations is 999, 
-the alpha level is .05, and there is option for custom weights, but 1st order queen contiguity
+the alpha level is .05, and there is an option for custom weights, but 1st order queen contiguity
 are used as default. For the significance map that corresponds with the local moran cluster map,
-we set `type = "moran"`. To get the significance map that directly corresponds to the cluster map,
-we will need to set the same ranomization seed before running each function. 
+we set `type = "moran"`. 
 ```{r}
 significance_map(guerry,"Donatns", type = "moran") 
 ```
 
 
-#### Random seeds
-
-Both the cluster and significance mapping functions use randomization to assess significance of 
-local statistics. The significance map shows the p-values of location, while the cluster map shows 
-the specific cluster classifcation. To reproduce the randomization used in one map, the same random
-seed must be set before using the associated function. We demonstrate this below by using `set.seed`,
-before `moran_map`, and again before `significance_map`. We use **2020** for the random seed in both cases,
-this will give use the same randomization in both functions. We use `tmap_arrange` To display the maps
-side by side. They both show the same significant counties because the randomization seeds are the same, 
-and the same cut-off p-value is used to assess significance in both maps. If we do not set the same randomization
-seeds, the resulting maps are likely to show differences in significanct locations.
-```{r}
-set.seed(2020)
-p1 <- moran_map(guerry,"Donatns")
-set.seed(2020)
-p2 <- significance_map(guerry,"Donatns", type = "moran") 
-tmap_arrange(p1,p2,ncol = 2)
-```
 
 
 #### tmap additions
@@ -249,7 +224,7 @@ We can set the **tmap** mode to "view"" to get an interactive base map with `tma
 tmap_mode("view")
 moran_map(guerry,"Donatns") +
   tm_borders() +
-  tm_layout(title = "Local Moran Cluster Map of Donatns")
+  tm_layout(title = "Local Moran Cluster Map of Donatns",legend.outside = TRUE)
 ```
 
 We set `tmap_mode("plot")` to get normal maps for the rest of the notebook. While basemaps are a nice
@@ -260,18 +235,21 @@ tmap_mode("plot")
 
 ### Randomization Options
 
-To obtain higher significance levels, we need to use more permutations in the calculation
+To obtain higher significance levels, we need to use more permutations in the computation
 of the the local moran for each location. For instance, a pseudo pvalue of .00001 would 
 require 999999 permutations. To get more permutations, we set `permutations = 99999` in 
 `moran_map`. It is important to note that the maximum number of permutations for this function is 99999. 
 ```{r}
 moran_map(guerry,"Donatns", permutations = 99999) +
-  tm_borders() 
+  tm_borders() +
+  tm_layout(title = "Local Moran Cluster Map of Donatns", legend.outside = TRUE)
 ```
 
-For the significance map the process is the same, we set `permutations = 99999`.
+For the significance map, the process is the same, we set `permutations = 99999`.
 ```{r}
-significance_map(guerry,"Donatns", type = "moran", permutations = 99999) 
+significance_map(guerry,"Donatns", type = "moran", permutations = 99999) +
+  tm_borders() +
+  tm_layout(title = "Local Moran Significance Map of Donatns", legend.outside = TRUE)
 ```
 
 
@@ -288,12 +266,16 @@ To change the cut-off level of significance in the local moran cluster mapping f
 parameter `alpha =`. The default option is .05, but if we want another level, say .01, we set
 `alpha = .01`.
 ```{r}
-moran_map(guerry,"Donatns", permutations = 99999, alpha = .01)
+moran_map(guerry,"Donatns", permutations = 99999, alpha = .01) +
+  tm_borders() +
+  tm_layout(title = "Local Moran Cluster Map of Donatns", legend.outside = TRUE)
 ```
 
 The process is the same in `significance_map`, we set `alpha = .01`.
 ```{r}
-significance_map(guerry,"Donatns", type = "moran",permutations = 99999, alpha = .01) 
+significance_map(guerry,"Donatns", type = "moran",permutations = 99999, alpha = .01) +
+  tm_borders() +
+  tm_layout(title = "Local Moran Significance Map of Donatns", legend.outside = TRUE)
 ```
 
 
@@ -307,12 +289,16 @@ the cutoff p-value to be used to determine significance. We assign **bonferroni*
 will give us a local moran cluster map with a bonferroni significance cut-off.
 ```{r}
 bonferroni <- .01 / 85
-moran_map(guerry,"Donatns", permutations = 99999, alpha = bonferroni)
+moran_map(guerry,"Donatns", permutations = 99999, alpha = bonferroni) +
+  tm_borders() +
+  tm_layout(title = "Local Moran Cluster Map of Donatns", legend.outside = TRUE)
 ```
 
 To make the significance map with the bonferroni bound, we set `alpha = bonferroni`.
 ```{r}
-significance_map(guerry,"Donatns", type = "moran",permutations = 99999, alpha = bonferroni) 
+significance_map(guerry,"Donatns", type = "moran",permutations = 99999, alpha = bonferroni) +
+  tm_borders() +
+  tm_layout(title = "Local Moran Significance Map of Donatns", legend.outside = TRUE)
 ```
 
 
@@ -399,7 +385,7 @@ the squaring of the differences removes the sign.
 ### Implementation
 
 For the local geary map, we use `geary_map`. It has the same default parameters as `moran_map`. 
-These are 999 permutations, and alpha level of .05, and queen contiguity weights. There is option
+These are 999 permutations, an alpha level of .05, and 1st order queen contiguity weights. There is an option
 to use custom weights with `weights =` parameter, but this can be left empty. The inputs are the 
 same as `moran_map` with an **sf** dataframe: **guerry**, and a variable name: **Donatns**. We can
 add **tmap** layers to this mapping function too. Here we use `tm_borders` and `tm_layout`
@@ -430,19 +416,16 @@ geary_map(guerry,"Donatns",permutations = 99999)  +
   tm_layout("Local Geary Cluster Map", legend.outside = TRUE)
 ```
 
-
+We do the same thing to get more permutations for the significance map.
 ```{r}
 significance_map(guerry,"Donatns",type = "geary",permutations = 99999) +
   tm_borders() +
   tm_layout("Local Geary Significance Map", legend.outside = TRUE)
 ```
 
-
-
 #### Changing the significance threshold
 
-
-
+We can change the significance cut-off with `alpha =`, as with `moran_map` and `significance_map`
 ```{r}
 geary_map(guerry,"Donatns",permutations = 99999,alpha = .01)  +
   tm_borders() +
@@ -489,47 +472,51 @@ the Getis-Ord approach does not consider spatial outliers.
 Inference is based on conditional permutation, using an identical procedure as for the
 other statistics.
 
-
-
 ### Implementation
 
+We can make a cluster map for the local G statistic with `g_map`. The formatting, parameters, and default options
+are the same with this function as the other mapping functions in **spatmap**. The main difference is that
+this function has a parameter for `type`. This parameter speficies whether the local G statistic is G or 
+$G*$. As with the other mapping functions, we use **tmap** to format the maps.
 ```{r}
-significance_map(guerry,"Donatns",type = "g")
+g_map(guerry, "Donatns") +
+  tm_borders() +
+  tm_layout(title = "Local G Cluster Map",legend.outside = TRUE)
 ```
 
-
-
+To make the $G*$ cluster map, we just change `type = "gstar"`.
 ```{r}
-g_map(guerry, "Donatns", type = "gstar")
+gstar_map(guerry, "Donatns") +
+  tm_borders() +
+  tm_layout(title = "Local G* Cluster Map",legend.outside = TRUE)
 ```
 
-
-
+For the significance map, we use `significance_map` and set `type = g`. For the $G*$
+significance map, we set `type = "gstar"`
 ```{r}
-g_map(guerry, "Donatns", type = "gstar")
+significance_map(guerry,"Donatns",type = "g") +
+  tm_borders() +
+  tm_layout(title = "Local G Significance Map",legend.outside = TRUE)
 ```
-
-
-
 
 ### Interpretation and significance
 
-
-
+To change the permutations and the cut-off significance level, we use `permutation =`, and `alpha =`. The
+default options for these parameters are 999 for permutations and .05 for alpha, as with the other 
+**spatmap** mapping functions. Here we change `permutations = 99999` and `alpha = .01`.
 ```{r}
-significance_map(guerry,"Donatns",type = "g", permutations = 99999)
+g_map(guerry,"Donatns",permutations = 99999,alpha = .01) +
+  tm_borders() +
+  tm_layout(title = "Local G Cluster Map",legend.outside = TRUE)
 ```
 
-
-
+The process is the same for the corresponding significance map. Increasing the permutations gives us 
+more detailed information about the significance at each location.
 ```{r}
-g_map(guerry,"Donatns",permutations = 99999,alpha = .01)
+significance_map(guerry,"Donatns",type = "g", permutations = 99999,alpha = .01) +
+  tm_borders() +
+  tm_layout(title = "Local G Significance Map",legend.outside = TRUE)
 ```
-
-
-
-
-
 
 ## Local Join Count Statistic
 
@@ -562,43 +549,31 @@ comparisons and the sensitivity of the pseudo p-value to the actual simulation e
 
 ### Implementation
 
-
-
-
-
-
+Since the local join count only uses binary variables(numeric variables of 1 or 0), we must make one
+for **guerry**. To get the number of observations in **guerry** we use `nrow`. We create and empty vector
+of 0's of length **n** with `rep`. We assign 1 for the locations that have **Donatns** greater than 10996.
+Lastly we add the binary variable **doncat** to the **sf** dataframe.
 ```{r}
-doncat <- rep(0, 85)
+n <- nrow(guerry)
+doncat <- rep(0, n)
 doncat[guerry$Donatns > 10996] <- 1
 guerry$doncat <- doncat
 ```
 
-
-
-
-
+We map these locations using **tmap** functions. We set `style = "cat"` because the variable is and only has two 
+possible values. We use color white for 0 and color blue for 1.
 ```{r}
 tm_shape(guerry) +
   tm_fill("doncat", style = "cat", palette = c("white", "blue")) +
-  tm_borders()
+  tm_borders() +
+  tm_layout(legend.outside = TRUE)
 ```
 
-
-
-
+To make the local join count cluster map, we use `joincount_map` with **doncat** as the input variables. We change
+permutations to be 99999. This function has the same default options and paramters as the other mapping functions
+of **spatmap**. 
 ```{r}
-significance_map(guerry,"doncat",type = "join_count", permutations = 99999)
+joincount_map(guerry,"doncat",permutations = 99999) +
+  tm_borders() +
+  tm_layout(title = "Local G Cluster Map",legend.outside = TRUE)
 ```
-
-
-
-
-
-```{r}
-jc_map(guerry,"doncat",permutations = 99999) + 
-  tm_borders()
-```
-
-
-
-
